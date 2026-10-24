@@ -135,6 +135,7 @@ class R07Sim:
         self.footprint_radius=math.hypot(self.rover["rover_length_m"]/2,self.rover["rover_total_width_m"]/2)
         self.clearance=self.footprint_radius+0.10
         self.sensor_origin=float(self.rover.get("lidar_height_m",0.17))
+        self.gps_lat=0.0; self.gps_lon=0.0
         self.route=[]
 
     def hit_ray(self, x, y, ang, max_range):
