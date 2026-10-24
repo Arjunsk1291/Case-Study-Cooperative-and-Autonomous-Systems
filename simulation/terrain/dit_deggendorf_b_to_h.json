@@ -112,7 +112,7 @@
     },
     {
       "name": "H",
-      "label": "Building H — destination building",
+      "label": "Staff administration offices (per published building index; verify current function)",
       "x": -10,
       "y": -8,
       "w": 5,
@@ -243,10 +243,10 @@
     "x": -10,
     "y": -5.3,
     "heading_deg": -90,
-    "description": "Simulated stop point just north of Block H footprint; this is an outdoor building-approach goal, not an interior room target"
+    "description": "Approximate outdoor approach point just north of Block H; the simulator stops outside the building footprint"
   },
   "mapping_notes": [
-    "The public THD map labels the buildings, but it does not supply coordinates or metric scale. Geometry is an approximate traced schematic for simulation and must be calibrated with measured site distances or GIS data.",
+    "The official THD campus diagram labels the buildings and shows their relative arrangement, but does not provide surveyed coordinates, metric scale, exact footprints or pedestrian path centerlines.",
     "Building positions use centre x/y plus width/height. In simulation, the path planner inflates building footprints by the rover's circumscribed radius plus a safety margin.",
     "Only rover chassis length 0.30 m and total width 0.20 m are treated as known. Wheel track/radius, box enclosure dimensions, sensor offsets, and ultrasonic bearings remain explicitly editable estimates.",
     "The route from Block B to Block H is an initial candidate based on the published block diagram, not a verified pedestrian route. Access gates, steps, ramps, roads, landscaping and obstacles are not fully represented.",
