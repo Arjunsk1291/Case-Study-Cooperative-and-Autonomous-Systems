@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>r07_simulation</name>
+  <version>0.1.0</version>
+  <description>Gazebo Classic campus world for WAVE ROVER R07 Block B to Block H simulation.</description>
+  <maintainer email="arjun@example.invalid">CAS B3</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>r07_description</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>
