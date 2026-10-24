@@ -177,6 +177,13 @@ class R07Sim:
         # Ultrasound order is firmware order: front, left, right, back, front angled.
         angs=[0,math.pi/2,-math.pi/2,math.pi,math.radians(-35)]
         self.us=[self.hit_ray(self.x,self.y,self.theta+a,2.5) for a in angs]
+        # Map-local to geodetic conversion is only a visual GPS demonstration. The map
+        # origin and building geometry are not surveyed, so these coordinates are approximate.
+        geo=self.cfg.get("georeference_approximate",{})
+        lat0=float(geo.get("latitude_deg",48.82958))
+        lon0=float(geo.get("longitude_deg",12.95471))
+        self.gps_lat=lat0 + self.y/111111.0
+        self.gps_lon=lon0 + self.x/(111111.0*math.cos(math.radians(lat0)))
 
     def plan(self):
         target=(float(self.goal["x"]),float(self.goal["y"]))
@@ -389,7 +396,7 @@ def main():
         draw_text("A run B→H   P pause   SPACE stop   R reset   arrows/WASD manual   mouse wheel zoom   ESC quit",(18,101),(183,201,218),small)
         # sensor summary panel
         panel_x=screen.get_width()-245
-        pygame.draw.rect(screen,(24,32,44),(panel_x,139,230,166),border_radius=8)
+        pygame.draw.rect(screen,(24,32,44),(panel_x,139,230,210),border_radius=8)
         draw_text("SIMULATED SENSORS",(panel_x+12,151),(120,194,255),small)
         draw_text(f"LiDAR: 90 bins × 4° / max {cfg['model'].get('lidar_max_range_m',3.5):.1f} m",(panel_x+12,175),f=small)
         draw_text(f"Front {sim.us[0]:.2f} m",(panel_x+12,199),f=small)
@@ -397,6 +404,8 @@ def main():
         draw_text(f"Back {sim.us[3]:.2f} m   Angled {sim.us[4]:.2f} m",(panel_x+12,243),f=small)
         draw_text(f"Footprint {cfg['model']['rover_length_m']:.2f} × {cfg['model']['rover_total_width_m']:.2f} m",(panel_x+12,265),f=small)
         draw_text(f"Clearance model: {sim.clearance:.2f} m",(panel_x+12,287),f=small)
+        draw_text(f"GPS* {sim.gps_lat:.6f}, {sim.gps_lon:.6f}",(panel_x+12,311),f=small)
+        draw_text("*Approx. georeference; not surveyed",(panel_x+12,331),(255,198,120),small)
         pygame.display.flip()
     pygame.quit()
 
