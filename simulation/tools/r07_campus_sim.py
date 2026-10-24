@@ -398,5 +398,27 @@ def main():
         pygame.display.flip()
     pygame.quit()
 
+def self_test():
+    cfg=json.loads(MAP_PATH.read_text(encoding="utf-8"))
+    sim=R07Sim(cfg)
+    ok=sim.plan()
+    if not ok:
+        print("FAIL: no path from Block B to Block H in current schematic terrain")
+        return 1
+    for a,b in zip(sim.path,sim.path[1:]):
+        if not segment_clear(a,b,sim.buildings,sim.clearance,sim.bounds):
+            print(f"FAIL: path segment intersects inflated footprint: {a} -> {b}")
+            return 1
+    print("PASS: A* found a collision-free candidate route in the current approximate map")
+    print(f"  Start: {sim.path[0]}")
+    print(f"  Goal:  {sim.path[-1]}")
+    print(f"  Smoothed route points: {len(sim.path)}")
+    print(f"  Robot footprint: {cfg['model']['rover_length_m']:.2f} x {cfg['model']['rover_total_width_m']:.2f} m")
+    print(f"  Clearance radius: {sim.clearance:.2f} m (conservative circular approximation)")
+    print("  IMPORTANT: this validates the planner against this schematic only; it does not validate the real campus route.")
+    return 0
+
 if __name__=="__main__":
+    if "--self-test" in sys.argv:
+        raise SystemExit(self_test())
     main()
