@@ -201,12 +201,8 @@ class R07Sim:
             self.cmd_l=self.cmd_r=0; self.status="FINISHED · motors latched to zero"; return
         if not self.path and not self.plan():
             self.cmd_l=self.cmd_r=0; return
-        # If terrain edited while running or path has gone stale, replan occasionally.
-        now=time.perf_counter()
-        if now-self.last_route_plan>2.0 and self.path_i < len(self.path):
-            if not segment_clear((self.x,self.y),self.path[-1],self.buildings,self.clearance,self.bounds):
-                self.corrections+=1
-                if not self.plan(): return
+        # Building geometry is static during a run. Keep the current planned route/index;
+        # replan only after an actual collision-boundary or near-field stop clears self.path.
         tx,ty=self.path[min(self.path_i,len(self.path)-1)]
         dist=math.hypot(tx-self.x,ty-self.y)
         if dist<0.22 and self.path_i<len(self.path)-1:
