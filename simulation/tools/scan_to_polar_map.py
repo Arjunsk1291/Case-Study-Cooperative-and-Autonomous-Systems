@@ -5,7 +5,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 HERE=Path(__file__).resolve().parent
-DEFAULT=HERE/"../../.."/"cas_box"/"route_waypoint_signatures.json"
+DEFAULT=(HERE/"../../cas_box"/"route_waypoint_signatures.json").resolve()
 
 def find_signature(root,label):
     # Route signature file used by this repository.
