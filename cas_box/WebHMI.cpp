@@ -53,7 +53,7 @@ canvas{display:block;margin:0 auto;max-width:100%;}
  <div id='diagIssue' class='issue'>Waiting for live diagnostics…</div>
  <div class='label' id='diagAdvice' style='margin-top:8px'>If the rover does not move, first check rover link/IP, motor battery, wheel obstruction and whether the rover itself is powered.</div>
 </div>
-<div class='card'><div class='sectionTitle'>Autonomous surface-following (experimental)</div><div class='label'>Low-speed prototype. Keep the rover in a clear test area with an operator ready to stop it. Autonomy stops if this page heartbeat is lost.</div><div style='display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'><button id='autoBtn' class='btnTiny'>Enable autonomy (OFF)</button><button id='autoStop' class='btnTiny stop'>Disable autonomy / STOP</button></div><div id='autoStatus' class='label' style='margin-top:8px'>Autonomy OFF · default right-side following</div></div>
+<div class='card'><div class='sectionTitle'>Autonomous scan-and-wander (experimental)</div><div class='label'>Scans 360-degree LiDAR sectors, chooses a verified open direction, pivots in measured 45-degree steps, and moves in short bounded legs. Keep a spotter and physical stop access; autonomy stops if this page heartbeat is lost.</div><div style='display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'><button id='autoBtn' class='btnTiny'>Enable autonomy (OFF)</button><button id='autoStop' class='btnTiny stop'>Disable autonomy / STOP</button></div><div id='autoStatus' class='label' style='margin-top:8px'>Autonomy OFF · default right-side following</div></div>
 <div class='card hidden' id='driveCard'><div class='sectionTitle'>Drive (hold a key)</div>
  <div class='pad'>
   <span></span><button data-d='f'>&#9650;</button><span></span>
@@ -61,7 +61,7 @@ canvas{display:block;margin:0 auto;max-width:100%;}
   <span></span><button data-d='b'>&#9660;</button><span></span>
  </div>
  <div class='label'>Speed <span id='spdVal'></span></div><input type='range' id='spd' min='0.05' step='0.05'></div>
-<div class='card'><div class='sectionTitle'>Indoor mapping data logger</div>
+<div class='card'><div class='sectionTitle'>Indoor scan / route data logger</div>
  <div class='label'>Records sensor snapshots in this browser at the dashboard update rate. Mark physical locations such as A, corridor turn, and B. Download the CSV before closing or refreshing this page.</div>
  <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'>
   <button id='logStart' class='btnTiny'>Start recording</button>
@@ -108,7 +108,7 @@ async function setAuto(on){
   try{await fetch('/autonomy?on='+(on?'1':'0'),{cache:'no-store'});autoOn=on;}
   catch(e){autoOn=false;}
   $('autoBtn').textContent=autoOn?'Autonomy ON':'Enable autonomy (OFF)';
-  $('autoStatus').textContent=autoOn?'AUTONOMY ON · right-side following · low speed':'Autonomy OFF · manual control available';
+  $('autoStatus').textContent=autoOn?'AUTONOMY ON · scan-and-wander · bounded legs':'Autonomy OFF · manual control available';
   if(autoOn)drvStop();
 }
 $('autoBtn').onclick=()=>setAuto(!autoOn);
@@ -280,7 +280,7 @@ function renderDiagnostics(j){
   let good=false;
   if(!connected){issue='ROVER LINK MISSING: the box has not found the rover.';advice='Power the box first, then reboot/power the rover so it joins CAS-Box-07. Check rover battery and the rover station on the box Wi-Fi.';}
   else if(!L.ok || Number(L.crc)>5){issue='LIDAR FAULT: scan data is unavailable or checksum errors are high.';advice='Disable autonomy. Check LiDAR power, UART wiring and the live scan display.';}
-  else if(state.includes('fault') || state.includes('stop:') || state.includes('recovery')){issue=j.state+'. '+diag;advice='Read the state and diagnostic above. Do not keep re-enabling autonomy to force motion; inspect clearance, wheels and power first.';}
+  else if(state.includes('fault') || state.includes('stop:') || state.includes('recovery')){issue=j.state+'. '+diag;advice='Read the original fault and diagnostic above. Do not keep re-enabling autonomy to force motion; inspect the reported clearance, sensor freshness, motor polarity and power first.';}
   else if(!j.sensors){issue='No sensor snapshot received.';advice='Wait for the sensor snapshot; check serial output and sensor initialization.';}
   else {good=true; issue='LIVE: '+(j.state||'State unavailable')+'. '+diag; advice='If commanded speeds are nonzero but the rover remains physically still, this dashboard cannot prove wheel motion without encoders. Check motor battery, motor/driver and wheel binding.';}
   $('diagIssue').textContent=issue;$('diagIssue').className='issue'+(good?' okIssue':'');$('diagAdvice').textContent=advice;

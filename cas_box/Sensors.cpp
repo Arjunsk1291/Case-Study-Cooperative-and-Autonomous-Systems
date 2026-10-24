@@ -25,7 +25,17 @@ void Sensors::begin(int lidarOffsetDeg) {
 void Sensors::update() {
   _lidar.update();  // drain both UARTs every pass
   _gps.poll();
-  if (_imuReady) _imu.update(); else _startImuIfPresent();
+  if (_imuReady) {
+    _imu.update();
+    // Keep turn-feedback yaw as fresh as the IMU's 100 ms update cadence. The web snapshot
+    // remains 250 ms, but the motor controller must not wait for the UI snapshot to see yaw.
+    _yaw = _imu.yawDeg();
+    _pitch = _imu.pitchDeg();
+    _roll = _imu.rollDeg();
+    _imu.calibration(_cal[0], _cal[1], _cal[2], _cal[3]);
+  } else {
+    _startImuIfPresent();
+  }
 
   const uint32_t now = millis();
   if (now - _lastSnapMs < kSnapshotMs) return;
@@ -43,12 +53,6 @@ void Sensors::update() {
   }
   _snapshotLidar();
   _snapshotGps();
-  if (_imuReady) {
-    _yaw = _imu.yawDeg();
-    _pitch = _imu.pitchDeg();
-    _roll = _imu.rollDeg();
-    _imu.calibration(_cal[0], _cal[1], _cal[2], _cal[3]);
-  }
 }
 
 // The IMU start blocks ~3.5 s once (north alignment); RoverLink's deadman stops the rover meanwhile.

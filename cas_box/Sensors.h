@@ -30,6 +30,9 @@ public:
   uint16_t lidarCm(uint8_t i) const { return i < kLidarPoints ? _lidarCm[i] : 0; }
   bool lidarOk() const { return _lidarOk; }
   float lidarCrcErrorPct() const { return _lidarCrcPct; }
+  bool imuReady() const { return _imuReady; }
+  float yawDeg() const { return _yaw; }
+  uint8_t gyroCalibration() const { return _cal[1]; }
 
 private:
   void _snapshotLidar();

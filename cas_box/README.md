@@ -146,38 +146,38 @@ Recommended collection protocol:
 6. This log is not a map and does not estimate x/y. With no wheel encoders, odometry will drift. Fully onboard autonomy needs a localization approach such as LiDAR scan matching/SLAM, enough RAM/CPU, a verified map frame, and safety-tested low-level control. Ultrasonic/IMU snapshots alone are not sufficient to infer reliable global waypoints.
 
 
-## Experimental surface-following controller (added 2026-10-23)
+## Experimental scan-and-wander controller (B3 / R07, 2026-10-23)
 
-- New `Navigation.h` implements a conservative LiDAR-sector surface follower.
-- Default side is RIGHT. It may switch to LEFT only after the selected surface has been lost for 1.2 s, an opposite-side surface is observed, front clearance is at least 85 cm, side clearance is at least 55 cm, and a 3 s switch cooldown has elapsed.
-- Uses the 90 LiDAR bins (bin 0 = front, clockwise, 4 degrees/bin), and only uses the front ultrasonic sensor when the latest reading is valid and <=600 ms old.
-- Stops if LiDAR is unavailable, CRC errors exceed 5%, front scan coverage is too sparse, front clearance is below 32 cm, or a stable surface is not available.
-- Autonomous wheel command is capped at 0.12 per side in the existing -0.5..0.5 RoverLink command range. This is an experimental low-speed controller, not a validated navigation solution.
-- Dashboard includes `Enable autonomy (OFF)` and `Disable autonomy / STOP`. Autonomy is OFF at boot. The browser sends a heartbeat; if it is absent for 600 ms, commands are zeroed. The manual drive pad is not allowed to override active autonomy; its STOP button disables autonomy.
-- `FOLLOW_PILLAR` is a provisional label based on sparse nearby sector returns; the controller currently follows local surface distance and does not yet perform robust circle fitting or explicit pillar-track association.
+- `Navigation.h` evaluates eight candidate headings from the 90-bin LiDAR scan (bin 0 = forward; bins increase clockwise; 4 degrees/bin).
+- If the forward sector is sufficiently clear, it drives a short bounded leg and rescans. If blocked, it selects a clear sector, checks the immediate 45-degree pivot sweep, executes one measured 45-degree turn step, stops/settles, and rescans.
+- The pivot uses the maximum configured command (0.50 on the RoverLink -0.5..0.5 scale) until near the target angle, then tapers the command to limit overshoot. BNO055 yaw feedback—not a fixed-duration guess—determines when to stop. A timeout and feedback-mismatch stop remain active.
+- Fresh front and angled-front ultrasonic readings participate in the near-field stop check. Side and rear readings can veto turns when valid and fresh. Invalid or missing LiDAR bins are treated as unknown, not free.
+- The controller requires a working IMU with gyro calibration >= 2 before it will turn. If that condition is not met, it stops rather than performing a blind high-command pivot.
+- This is **local reactive exploration**, not a destination planner. It does not recognize the washroom door semantically, maintain a persistent map, or estimate x/y. A separate mapping/localization and waypoint layer is needed for repeatable bed-to-washroom navigation.
+- The dashboard heartbeat, RoverLink deadman and manual STOP remain active. Autonomy is OFF at boot.
 
 ### Mandatory test procedure
 
-1. Compile in Arduino IDE first; this source has not been compiled with the target ESP32 toolchain or tested on hardware.
-2. With the rover raised so wheels cannot touch the ground, upload and confirm dashboard/manual stop behaviour. Confirm autonomy is OFF after reboot.
-3. Put rover on floor in a wide, empty area, with an operator at the stop control. Enable autonomy only for a very short low-speed trial. Do not test near people, stairs, traffic, fragile objects or outdoors yet.
-4. If it stops with `surface lost`, that is intentional fail-safe behaviour; disable autonomy and collect labelled sensor logs rather than raising speed.
-5. Validate the physical LiDAR bin orientation and actual stopping distance before changing thresholds.
+1. Compile in Arduino IDE with the target ESP32 core and installed libraries before flashing. The Navigation header was syntax-checked against a lightweight C++ stub, but the full firmware has not been compiled with the exact Arduino toolchain.
+2. With the rover raised so wheels cannot touch the ground, verify manual forward/left/right motor polarity. Confirm that left pivot produces increasing IMU yaw and right pivot produces decreasing yaw.
+3. With motors disabled, place an obstacle at known front/left/right/rear positions and confirm the 90-bin LiDAR direction mapping. Confirm the angled-front ultrasonic physical orientation too.
+4. Test one 45-degree pivot with the wheels lifted and compare measured yaw change. If the sign is wrong, stop and correct motor polarity / yaw convention before floor tests.
+5. In a taped-off, empty, level area, run one short supervised wander trial with an operator holding the STOP control. Keep away from people, pets, stairs, glass, fragile items and the luggage shown in the room photos.
+6. Export diagnostics after each run. Do not attempt unsupervised bed-to-washroom operation until turning, stopping distance and obstacle avoidance are validated.
 
-The thresholds are conservative starting values and must be tuned only after replaying logs and conducting controlled tests. No encoder odometry, global map, GPS positioning, or guaranteed route completion is implemented.
+The 0.50 pivot command is the maximum configured command, not a guaranteed angular velocity. Battery voltage, floor friction, payload, motor controller limits and wheel geometry affect the actual turn. No wheel encoders or independent physical-motion feedback are available.
 
 
-## Experimental diagnostic surface-following build (B3 / R07)
+## Diagnostics and current navigation revision
 
-This revision raises the nominal straight command from 0.10 to 0.22 (normalized RoverLink range -0.5..0.5), uses 0.18 / 0.15 near obstacles, and keeps pivot commands at 0.50. These are starting values, not calibrated speeds. Test on a clear, level floor with the rover restrained/space clear and an operator at STOP.
+The dashboard includes a troubleshooting panel and **Download diagnostic JSON**. The export includes the latest named firmware values, the complete 90-bin LiDAR array, ultrasonic raw/filtered/valid/age/timeout arrays, IMU/GPS values, browser timestamps, autonomy state, loop timing, and optional operator notes. Export immediately after a supervised test while the rover is in the state being investigated.
 
-The dashboard now has a live troubleshooting panel showing rover IP/link, commanded wheel values, adaptive speed, recovery count, LiDAR status, front clearance, and a diagnostic hint. It is intended to separate “the box is not connected / not commanding motion” from “the box is commanding motion but physical motion is not confirmed”.
-
-The no-motion detector compares a sparse LiDAR scene signature while straight motion is commanded. Since this build has no wheel encoders, unchanged scene geometry is only a *suspected* stall: a long uniform wall or a stationary/poor scan can cause false positives. It performs at most two bounded stop/pivot/recheck recovery attempts and then faults to stop. It must not be treated as proof of wheel motion.
+The current experimental controller is **scan-and-wander**, not surface-following. It uses short bounded motion legs, all-around LiDAR sector selection, IMU-feedback 45-degree pivot steps and a stop/settle/rescan cycle. The firmware is not safety-certified and has not been compiled against the exact target Arduino toolchain or tested on the physical rover.
 
 Safety notes:
 - Autonomy starts OFF. Keep it OFF while verifying compilation and manual drive.
-- Do not run near stairs, people, traffic, glass, or outdoor drop-offs.
+- Do not run near stairs, people, pets, glass, traffic, fragile objects or outdoor drop-offs.
 - The rover firmware is unchanged. This package changes only the sensor-box ESP32.
-- If the dashboard shows nonzero commands but the wheels do not move, inspect rover power/battery, motor/driver, wheel binding, rover link/IP and the rover's own firmware. Do not keep increasing speed blindly.
+- If commanded speeds are nonzero but the wheels do not move, inspect rover power/battery, motor/driver, wheel binding, rover link/IP and the rover's own firmware. Do not keep increasing speed blindly.
+- No wheel encoders means the box cannot verify physical movement or accurately measure distance travelled. A bounded timed leg is only a short motion command, not an odometry estimate.
 - This revision has not been compiled with the exact Arduino ESP32 toolchain or tested on hardware. Verify in Arduino IDE before uploading.

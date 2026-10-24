@@ -64,7 +64,7 @@ WebHMI hmi;           // web server + page
 RoverLink rover;      // connection to the rover
 Sensors sensors;      // all box sensors
 DisplayManager disp;  // small OLED on the box
-Navigation navigation;  // conservative experimental surface-following controller
+Navigation navigation;  // experimental scan-and-wander controller
 bool oledReady = false;
 char boxSsid[16], boxPassword[16];
 
