@@ -130,6 +130,7 @@ async function setAuto(on){
   $('autoBtn').textContent=autoOn?'Autonomy ON':'Enable autonomy (OFF)';
   $('autoStatus').textContent=autoOn?'AUTONOMY ON · scan-and-wander · bounded legs':'Autonomy OFF · manual control available';
   if(autoOn)drvStop();
+  if(typeof invUi==='function')invUi();
 }
 $('autoBtn').onclick=()=>setAuto(!autoOn);
 $('autoStop').onclick=()=>setAuto(false);
@@ -412,6 +413,10 @@ async function poll(){
     if(autoOn)fetch('/autonomy?hb=1',{cache:'no-store'}).catch(()=>{});
     $('state').textContent=j.state||'-';
     latestSnapshot={...j,receivedAt:Date.now()};
+    // Refresh guided investigation button availability whenever a live snapshot arrives.
+    // Previously invUi() ran only once at page load (before latestSnapshot existed), so
+    // invStart remained disabled forever even though live sensor data was updating.
+    invUi();
     renderSensors(j.sensors);renderDiagnostics(j);
     if(investigationActive && j.sensors){ invOnSnapshot(j); $('invStatus').textContent=(invPhase==='travel'?'Travel logging':(invPhase.indexOf('captur')===0?'Capture logging':'Recording'))+' · '+investigationSamples+' samples'; }
     if(logging&&j.sensors){
@@ -422,7 +427,7 @@ async function poll(){
       $('valTable').innerHTML=(j.values||[]).map(v=>`<tr><td class='k'>${esc(v.name)}</td><td>${esc(v.value)}</td></tr>`).join('');
       const c=j.cycle||{};$('cycle').textContent=`${c.min} / ${c.avg} / ${c.max} ms`;
     }
-  }catch(e){$('conn').textContent='Offline';}
+  }catch(e){$('conn').textContent='Offline';invUi();}
 }
 invUi();setInterval(poll,250);poll();
 </script></body></html>)rawpage";
