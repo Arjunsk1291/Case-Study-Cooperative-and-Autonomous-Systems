@@ -61,6 +61,22 @@ canvas{display:block;margin:0 auto;max-width:100%;}
   <span></span><button data-d='b'>&#9660;</button><span></span>
  </div>
  <div class='label'>Speed <span id='spdVal'></span></div><input type='range' id='spd' min='0.05' step='0.05'></div>
+<div class='card'><div class='sectionTitle'>Investigation mode — landmark survey</div>
+ <div class='label'>Use MANUAL drive only. Record START, manually drive to each labelled landmark, capture a short stationary scan, and record each transition. This exports evidence for offline analysis; it does not calculate a validated SLAM map or guarantee autonomous return.</div>
+ <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'>
+  <button id='invStart' class='btnTiny'>Start investigation</button>
+  <button id='invCapture' class='btnTiny' disabled>Capture landmark scan</button>
+  <button id='invTransition' class='btnTiny' disabled>Mark transition</button>
+  <button id='invEnd' class='btnTiny' disabled>Record END</button>
+  <button id='invStop' class='btnTiny stop' disabled>Finish / stop logging</button>
+  <button id='invDownload' class='btnTiny' disabled>Download investigation JSON</button>
+ </div>
+ <div style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px'>
+  <label for='invLabel' class='label'>Landmark / transition label</label><input id='invLabel' value='START' maxlength='32' style='min-width:100px;flex:1;padding:9px;border-radius:8px;background:#0b0f17;color:#e7edf5;border:1px solid rgba(255,255,255,.15)'>
+  <span id='invStatus' class='label'>Investigation idle</span>
+ </div>
+ <div class='label' style='margin-top:8px'>Capture at least 5–10 seconds while stationary at each landmark. Keep autonomy OFF. The file includes full LiDAR arrays and sensor ages; long investigations may produce large JSON files.</div>
+</div>
 <div class='card'><div class='sectionTitle'>Indoor scan / route data logger</div>
  <div class='label'>Records sensor snapshots in this browser at the dashboard update rate. Mark physical locations such as A, corridor turn, and B. Download the CSV before closing or refreshing this page.</div>
  <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'>
@@ -241,6 +257,58 @@ $('logDownload').onclick=()=>{
   a.href=url;a.download='CAS_B3_R07_indoor_sensors_'+new Date().toISOString().replace(/[:.]/g,'-')+'.csv';
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
+// Investigation logger: browser-side capture of complete snapshots, landmark scan markers and manual transitions.
+let investigationActive=false, investigationStartIso=null, investigationEvents=[], investigationSamples=0, invLastCaptureMs=0;
+function invUi(){
+  $('invStart').disabled=investigationActive;
+  $('invCapture').disabled=!investigationActive||!latestSnapshot||!latestSnapshot.sensors;
+  $('invTransition').disabled=!investigationActive||!latestSnapshot||!latestSnapshot.sensors;
+  $('invEnd').disabled=!investigationActive||!latestSnapshot||!latestSnapshot.sensors;
+  $('invStop').disabled=!investigationActive;
+  $('invDownload').disabled=investigationEvents.length===0;
+}
+function invEvent(type,label,extra={}){
+  if(!latestSnapshot||!latestSnapshot.sensors)return false;
+  investigationEvents.push({type,label:label||'',captured_at:new Date().toISOString(),elapsed_ms:Math.max(0,performance.now()-invLastCaptureMs),
+    dashboard_state:latestSnapshot.state||null,values:Object.fromEntries((latestSnapshot.values||[]).map(v=>[v.name,v.value])),
+    cycle:latestSnapshot.cycle||null,sensors:latestSnapshot.sensors, ...extra});
+  investigationSamples++;
+  $('invStatus').textContent=type+' · '+(label||'unlabelled')+' · '+investigationSamples+' events';
+  invUi();return true;
+}
+$('invStart').onclick=()=>{
+  if(!latestSnapshot||!latestSnapshot.sensors){$('invStatus').textContent='Waiting for live sensor data';return;}
+  if(autoOn){$('invStatus').textContent='Disable autonomy first; investigation requires manual/supervised movement.';return;}
+  investigationEvents=[];investigationSamples=0;investigationStartIso=new Date().toISOString();invLastCaptureMs=performance.now();investigationActive=true;
+  invEvent('INVESTIGATION_START','START',{robot:{box_id:7,rover_id:'R07',wheel_encoders:false},firmware_mode:'investigation_logger_only'});
+  $('invStatus').textContent='Recording · manually drive to each landmark';invUi();
+};
+$('invCapture').onclick=()=>{
+  if(!investigationActive)return;
+  const label=$('invLabel').value.trim()||('LANDMARK_'+investigationSamples);
+  invEvent('LANDMARK_SCAN',label,{operator_instruction:'Stationary scan requested; verify rover is stopped before capture.'});
+};
+$('invTransition').onclick=()=>{
+  if(!investigationActive)return;
+  const label=$('invLabel').value.trim()||'UNLABELLED_TRANSITION';
+  invEvent('ROUTE_TRANSITION',label,{operator_instruction:'Marking point on manually driven route; command data is not odometry.'});
+};
+$('invEnd').onclick=()=>{
+  if(!investigationActive)return;
+  invEvent('END','END',{operator_instruction:'Final landmark recorded; arrival is operator-labelled, not automatically verified.'});
+};
+$('invStop').onclick=()=>{if(!investigationActive)return;invEvent('INVESTIGATION_STOP','STOP');investigationActive=false;$('invStatus').textContent='Stopped · '+investigationSamples+' events';invUi();};
+$('invDownload').onclick=()=>{
+  if(!investigationEvents.length)return;
+  const out={schema_version:'CAS-B3-R07-investigation-1.0',created_at:new Date().toISOString(),started_at:investigationStartIso,
+    robot:{box_id:7,rover_id:'R07',wheel_encoders:false,lidar_bins:90,lidar_bin_angle_deg:4},
+    purpose:'Offline analysis dataset only; not a metric map or validated autonomous route.',
+    notes:$('operatorNotes').value.trim()||null,event_count:investigationEvents.length,events:investigationEvents,
+    caveats:['Each event contains a browser snapshot, not hardware-synchronized sensor timestamps.','IMU yaw is not absolute indoor position.','No wheel encoders: commands and elapsed time do not provide reliable distance.','Landmark labels are supplied by the operator; recognition is not implemented.','LiDAR bin orientation must be physically verified before mapping.']};
+  const blob=new Blob([JSON.stringify(out)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='CAS_B3_R07_investigation_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+
 // Download a single self-contained JSON diagnostic: exact dashboard snapshot, raw sensor arrays,
 // UI/autonomy state, all named values, timestamps and operator observations.
 $('diagDownload').onclick=()=>{
@@ -294,6 +362,14 @@ async function poll(){
     $('state').textContent=j.state||'-';
     latestSnapshot={...j,receivedAt:Date.now()};
     renderSensors(j.sensors);renderDiagnostics(j);
+    if(investigationActive && j.sensors && performance.now()-invLastCaptureMs>=1000){
+      invLastCaptureMs=performance.now();
+      // Continuous route samples preserve the sensor stream between operator-labelled landmarks.
+      investigationEvents.push({type:'ROUTE_SAMPLE',label:'',captured_at:new Date().toISOString(),dashboard_state:j.state||null,
+        values:Object.fromEntries((j.values||[]).map(v=>[v.name,v.value])),cycle:j.cycle||null,sensors:j.sensors});
+      investigationSamples++;invUi();
+      $('invStatus').textContent='Recording · '+investigationSamples+' events · '+Math.round((performance.now()-invLastCaptureMs)/1000)+'s since sample';
+    }
     if(logging&&j.sensors){
       logRows.push(rowFor('SAMPLE','',j.sensors).map(csvCell).join(','));
       logSampleCount++;updateLogUi();
@@ -304,7 +380,7 @@ async function poll(){
     }
   }catch(e){$('conn').textContent='Offline';}
 }
-setInterval(poll,250);poll();
+invUi();setInterval(poll,250);poll();
 </script></body></html>)rawpage";
 
 // Appends s to out as JSON string content (quotes and backslashes escaped, control chars dropped).
