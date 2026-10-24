@@ -101,35 +101,21 @@ public:
     }
 
     if (_phase == PH_DRIVE_LEG) {
-      // Re-check front and angled-front every controller cycle. Never continue a leg on a close return.
-      if (nearFront < kAvoidDistanceCm || !frontHasRoom(front)) {
-        _phase = PH_SCAN;
-        _state = "WANDER: obstacle detected; rescanning";
-        _diagnostic = String("Forward path no longer clear; closest reading=") + String(nearFront) + " cm.";
-        finish(left, right, status); return;
-      }
-      if (now - _driveStartedMs >= kDriveLegMs) {
-        _phase = PH_SCAN;
-        _state = "WANDER: leg complete; rescan";
-        _diagnostic = "Short open-loop leg complete. No encoders are fitted, so this is time-bounded motion, not a measured distance.";
-        finish(left, right, status); return;
-      }
-      left = right = kForwardSpeed;
-      _state = "WANDER: moving through open sector";
-      _diagnostic = String("Forward sector minimum=") + String(front.minCm) + " cm; next full scan in bounded leg.";
+      // Fail-safe: never continue a legacy wander drive leg. The controller has no
+      // validated waypoint target, so stop and return to scan/recovery.
+      _phase = PH_SCAN;
+      _state = "STOP: legacy wander leg cancelled";
+      _diagnostic = "Legacy scan-and-wander drive leg cancelled: no validated washroom waypoint target. Motors held at zero.";
       finish(left, right, status); return;
     }
 
-    // SAFETY PATCH: this firmware has no goal/waypoint planner. Do not turn toward an
-    // arbitrary open sector: that is the scan-and-wander behavior that sends R07 into
-    // unmapped areas. Until route-following is implemented and validated, keep the rover
-    // stopped when forward motion is not safe. A sparse LiDAR sector above is auto-retried.
-    if (!forwardClear) {
-      _phase = PH_SCAN;
-      _state = "STOP: route target unavailable";
-      _diagnostic = "No validated washroom waypoint planner is active. Unknown/blocked forward space: motors zero; automatic rescan continues. Do not wander into an unrecorded sector.";
-      finish(left, right, status); return;
-    }
+    // SAFETY PATCH: no validated waypoint planner exists in this firmware.
+    // A clear sector is not a destination. Keep motors at zero and continue rescanning;
+    // never turn or drive into an arbitrary open sector.
+    _phase = PH_SCAN;
+    _state = "STOP: waypoint planner required";
+    _diagnostic = "No validated washroom waypoint planner is active. Motors remain zero; sensor recovery may continue, but autonomous travel is disabled.";
+    finish(left, right, status); return;
 
     // PH_SCAN: evaluate 8 candidate headings at 45-degree intervals over the 360-degree scan.
     // Bin 0 is assumed forward; bins increase clockwise. Zero LiDAR bins are unknown, not free.
