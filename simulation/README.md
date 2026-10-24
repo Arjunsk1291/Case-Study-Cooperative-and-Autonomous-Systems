@@ -1,38 +1,53 @@
-# R07 digital twin and indoor map
+# R07 simulation workspace — TH Deggendorf Block B → Block H
 
-This branch is for simulation only; it does not modify the firmware on `main`.
+This is an isolated simulation branch; it does not change the firmware on `main`.
 
-## What is known from the box firmware
-- WAVE ROVER is commanded over Wi-Fi using normalized left/right drive values in [-0.5, 0.5].
-- CAS Box 7 is a sensor-box controller, not the motor controller.
-- LiDAR: 90 bins at 4 degrees per bin in logged data. `LIDAR_OFFSET_DEG=90` is applied in the box code; verify the simulated coordinate convention against this offset.
-- Five ultrasound ranges ordered front, left, right, back, front angled.
-- BNO055 yaw; convention in the firmware README says positive yaw is left.
-- No wheel encoders. Simulated wheel odometry must not be represented as measured hardware odometry.
-- Rover and box networks remain separate. Simulation uses a ROS 2/Gazebo model and can be bridged to the same high-level controller later.
+## University terrain and route
+The outdoor terrain is based on the official TH Deggendorf campus block diagram and building index:
+- [Official THD campus map](https://www.th-deg.de/Hochschule/anfahrt)
+- [Map Deggendorf and building index (PDF)](https://www.th-deg.de/Fakult%C3%A4ten/agw/Guide-LSI.pdf)
 
-## Map status
-The investigation JSON is a set of stationary 90-bin scan signatures sampled at browser polling rate, not a 2-D occupancy map or SLAM trajectory. It constrains relative landmarks (pillar, turn after pillar, door approach, near entrance, final scan inside the washroom per the operator) but not unique metric x/y coordinates. The initial world included here is an editable **approximate test terrain**: do not call it a surveyed reconstruction.
+The public drawing labels the buildings and their relative positions, but it is not a metric survey with exact coordinates, footprints, entrance positions or pedestrian path centerlines. The terrain `terrain/dit_deggendorf_b_to_h.json` therefore has status `SCHEMATIC_APPROXIMATION_NOT_SURVEYED`. It is useful for path-planner tests, not for claiming precise campus navigation. The Block B → H approach is only a candidate until checked against actual walkways and entrances on site.
 
-## Workspace
-- `ros2_ws/src/r07_description`: robot dimensions as explicit parameters; URDF with differential-drive base, dummy CAS Box, LiDAR and five ultrasound sensor placements.
-- `ros2_ws/src/r07_simulation`: Gazebo world and launch file.
-- `terrain/approximate_floorplan.yaml`: editable walls, door, pillar, start and waypoints.
-- `tools/scan_to_polar_map.py`: converts one 90-bin scan to a polar diagnostic CSV/plot; does not infer wall coordinates.
+## Known robot geometry and simulated hardware
+- Known rover planform from supplied project context: 0.30 m long × 0.20 m total width.
+- Box enclosure size, wheel track/radius, caster layout and several sensor mounting angles are editable estimates; measure these to improve geometric fidelity.
+- Five ultrasonic sensors are represented in firmware order: front, left, right, back, front angled.
+- LiDAR is modeled as 90 bins at 4° spacing and up to 3.5 m.
+- BNO055 yaw is simulated. The physical rover has no wheel encoders; any Gazebo odometry topic is simulator-only.
 
-## Run (Ubuntu with ROS 2 + Gazebo Sim)
-Install a matching ROS 2 distribution and Gazebo Sim integration for it; versions are not guessed by this package.
-1. Copy or clone this repository branch.
-2. Source ROS 2 and create a workspace:
-   ```bash
-   cd simulation/ros2_ws
-   rosdep install --from-paths src --ignore-src -r -y
-   colcon build --symlink-install
-   source install/setup.bash
-   ros2 launch r07_simulation r07_world.launch.py
-   ```
-3. Tune room, corridor and door dimensions in `terrain/approximate_floorplan.yaml` and the world SDF. Dimensions marked as estimates are placeholders until measured.
-4. Test stop/finish behavior in simulation. Do not transfer a simulated success directly to physical hardware without supervised validation.
+## Start now: standalone 2D simulator
+```bash
+cd simulation/tools
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python3 r07_campus_sim.py
+```
+Controls: **A** run route B→H, **P** pause, **Space** stop, **R** reset, **WASD/arrows** manual drive, **+/- or mouse wheel** zoom, **Esc** quit. The route planner inflates buildings by the rover's circumscribed radius plus a margin. On reaching the H approach point, the simulator latches `FINISHED` and holds both commands at zero.
 
-## Critical modelling limitation
-The recorded scans have no reliable robot x/y pose, no encoders and no laser scan-matching trajectory. We must manually parameterize an approximate terrain first and later calibrate it from measurements or use proper SLAM data. The final logged scan is treated as the intended inside-washroom finish **reference by operator confirmation**, even though the original label is `entrance`.
+Run a headless planner check:
+```bash
+python3 r07_campus_sim.py --self-test
+```
+
+## ROS 2 / Gazebo Classic 3D model
+`ros2_ws/src/r07_description` contains a URDF/Xacro model with chassis, separate CAS Box enclosure, differential-drive wheels, LiDAR, five ultrasound rays and IMU sensor. `ros2_ws/src/r07_simulation` contains an outdoor campus world with schematic building prisms. Building heights are placeholders.
+
+```bash
+cd simulation/ros2_ws
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch r07_simulation r07_world.launch.py
+```
+This optional launch targets ROS 2 + Gazebo Classic `gazebo_ros_pkgs`. ROS/Gazebo compatibility depends on your Ubuntu/ROS distribution. If unavailable, use the standalone 2D simulator first.
+
+## LiDAR signature plotting
+```bash
+python3 simulation/tools/scan_to_polar_map.py --label END_SCAN_entrance
+```
+This creates a polar plot and CSV from the final inside-washroom signature as confirmed by the operator. A single-pose scan is not a map and does not estimate x/y. The indoor washroom signature and outdoor Block B→H campus terrain are separate simulation assets.
+
+## Before using the route on real hardware
+Measure the real walkable path, entrance coordinates, building offsets and route width; verify ramps/steps/roads/access restrictions. Confirm R07 sensor orientation, mounting heights, wheel track/radius, and box enclosure dimensions. Simulation success alone does not validate hardware safety or navigation performance.
