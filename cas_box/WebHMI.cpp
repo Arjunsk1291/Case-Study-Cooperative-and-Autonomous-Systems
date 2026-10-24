@@ -68,12 +68,14 @@ canvas{display:block;margin:0 auto;max-width:100%;}
   <button id='logMark' class='btnTiny' disabled>Mark waypoint</button>
   <button id='logStop' class='btnTiny' disabled>Stop</button>
   <button id='logDownload' class='btnTiny' disabled>Download CSV</button>
+  <button id='diagDownload' class='btnTiny'>Download diagnostic JSON</button>
  </div>
  <div style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px'>
   <label for='wpLabel' class='label'>Waypoint label</label><input id='wpLabel' value='A' maxlength='24' style='min-width:90px;flex:1;padding:9px;border-radius:8px;background:#0b0f17;color:#e7edf5;border:1px solid rgba(255,255,255,.15)'>
   <span id='logStatus' class='label'>Not recording</span>
  </div>
  <div class='label' style='margin-top:8px'>Log is saved in browser memory until downloaded. This is sensor logging, not an indoor SLAM/map-coordinate solver.</div>
+ <label class='label' for='operatorNotes' style='display:block;margin-top:10px'>Operator notes (optional; included in diagnostic JSON)</label><textarea id='operatorNotes' rows='3' style='box-sizing:border-box;width:100%;padding:9px;border-radius:8px;background:#0b0f17;color:#e7edf5;border:1px solid rgba(255,255,255,.15)' placeholder='What did the rover do physically? Where was the obstacle?'></textarea>
 </div>
 <div class='card'><div class='sectionTitle'>Surroundings (LiDAR top view, front = up, rings 1 m)</div>
  <canvas id='envCv' width='280' height='280'></canvas><div class='label' id='lidarInfo'>-</div>
@@ -237,6 +239,28 @@ $('logDownload').onclick=()=>{
   const blob=new Blob(['\ufeff'+logRows.join('\r\n')],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='CAS_B3_R07_indoor_sensors_'+new Date().toISOString().replace(/[:.]/g,'-')+'.csv';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+// Download a single self-contained JSON diagnostic: exact dashboard snapshot, raw sensor arrays,
+// UI/autonomy state, all named values, timestamps and operator observations.
+$('diagDownload').onclick=()=>{
+  if(!latestSnapshot){$('diagIssue').textContent='No live snapshot yet; wait for the dashboard to come online.';return;}
+  const values={};(latestSnapshot.values||[]).forEach(v=>{values[v.name]=v.value;});
+  const out={schema_version:'CAS-B3-R07-diagnostic-1.0',exported_at:new Date().toISOString(),
+    source:'CAS Box dashboard diagnostic export',robot:{box_id:7,rover_id:'R07',wheel_encoders:false},
+    browser:{user_agent:navigator.userAgent,online:navigator.onLine,autonomy_enabled:!!autoOn,
+      snapshot_received_at:new Date(latestSnapshot.receivedAt||Date.now()).toISOString(),
+      snapshot_age_ms:Math.max(0,Date.now()-(latestSnapshot.receivedAt||Date.now())),
+      recording:{active:logging,sample_count:logSampleCount}},
+    dashboard:{state:latestSnapshot.state||null,values:values,cycle:latestSnapshot.cycle||null,
+      sensors:latestSnapshot.sensors||null},
+    operator_notes:$('operatorNotes').value.trim()||null,
+    interpretation_notes:['LiDAR value 0 means no valid return in that bin.','Ultrasonic 300 cm may mean no echo/out of range, not confirmed free space.',
+      'Snapshot values are one instant; compare exported_at and sensor ages before interpreting.',
+      'No wheel encoders: commanded motion does not prove physical motion.']};
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='CAS_B3_R07_diagnostic_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
 

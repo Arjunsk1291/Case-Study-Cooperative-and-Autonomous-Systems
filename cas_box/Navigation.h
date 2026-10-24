@@ -1,6 +1,7 @@
 #pragma once
-// Experimental local surface-following controller. NOT a certified safety controller.
-// 90 LiDAR bins, index 0 = front, clockwise, 4 degrees/bin.
+// Conservative reactive navigation prototype for CAS Box B3 / Rover R07.
+// Based on a VFH-style free-sector choice and differential surface-following.
+// NOT certified. Validate LiDAR orientation and motor turn direction at low speed first.
 #include <Arduino.h>
 #include "Sensors.h"
 
@@ -9,260 +10,199 @@ public:
   enum Side : uint8_t { FOLLOW_RIGHT = 0, FOLLOW_LEFT = 1 };
 
   void reset() {
-    _side = FOLLOW_RIGHT; _lostSinceMs = 0; _lastSwitchMs = 0;
-    _phase = PH_NORMAL; _phaseStartedMs = 0; _lastSceneMs = millis();
-    _lastSignatureAtMs = 0; _signatureReady = false; _stallSinceMs = 0;
-    _recoveryCount = 0; _adaptiveSpeed = kBaseSpeed; _lastCommandL = _lastCommandR = 0;
-    _state = "STOP"; _diagnostic = "Waiting for valid sensor snapshot";
+    _side = FOLLOW_RIGHT; _phase = PH_DRIVE; _phaseStartedMs = millis();
+    _pendingTurn = 0; _turnCount = 0; _faultLatched = false; _lastCommandL = _lastCommandR = 0;
+    _state = "AUTO WAIT"; _diagnostic = "Waiting for valid sensor data";
   }
-
   Side side() const { return _side; }
   const char* sideName() const { return _side == FOLLOW_RIGHT ? "RIGHT" : "LEFT"; }
   float commandLeft() const { return _lastCommandL; }
   float commandRight() const { return _lastCommandR; }
-  float adaptiveSpeed() const { return _adaptiveSpeed; }
-  uint8_t recoveryCount() const { return _recoveryCount; }
+  float adaptiveSpeed() const { return kCruiseSpeed; }
+  uint8_t recoveryCount() const { return _turnCount; }
   const String& diagnostic() const { return _diagnostic; }
 
-  void update(const Sensors& sensors, float& left, float& right, String& status) {
-    left = right = 0;
-    _lastCommandL = _lastCommandR = 0;
+  void update(const Sensors& s, float& left, float& right, String& status) {
+    left = right = 0; _lastCommandL = _lastCommandR = 0;
     const uint32_t now = millis();
-
-    if (!sensors.lidarOk() || sensors.lidarCrcErrorPct() > 5.0f) {
-      _phase = PH_FAULT_STOP; _state = "FAULT: LiDAR unavailable / CRC high - STOP";
-      _diagnostic = "Check LiDAR power, UART wiring and packet/checksum status";
-      finish(left, right, status); return;
+    if (_faultLatched) { left = right = 0; _state = "FAULT LATCHED: disable/re-enable autonomy"; _diagnostic = "Fault remains latched until autonomy is disabled and enabled again."; finish(left, right, status); return; }
+    if (!s.lidarOk() || s.lidarCrcErrorPct() > kMaxCrcPct) {
+      fault("FAULT STOP: LiDAR unavailable / CRC high", "Disable autonomy; check LiDAR power, UART, checksum and packet rate.", left, right, status); return;
     }
 
-    const Sector front = sector(sensors, 86, 4);
-    const Sector rightSide = sector(sensors, 13, 31);
-    const Sector leftSide = sector(sensors, 59, 77);
-    if (front.count < 2) {
-      _phase = PH_FAULT_STOP; _state = "FAULT: front LiDAR coverage uncertain - STOP";
-      _diagnostic = "Front scan has too few valid returns; inspect LiDAR orientation/coverage";
-      finish(left, right, status); return;
+    const Sector front = sector(s, 86, 4);
+    const Sector rightSide = sector(s, 13, 31);
+    const Sector leftSide = sector(s, 59, 77);
+    if (front.count < kMinFrontReturns) {
+      fault("FAULT STOP: uncertain front scan", "Too few valid front returns. Verify LiDAR orientation and scan coverage.", left, right, status); return;
     }
 
     uint16_t frontMin = front.minCm;
-    if (sensors.usValid(0) && sensors.usAgeMs(0) <= 600) {
-      int u = sensors.usCm(0); if (u > 0 && u < frontMin) frontMin = (uint16_t)u;
+    // Ultrasonic is used only when its sample is fresh and valid. 300 cm is treated as no echo.
+    if (s.usValid(0) && s.usAgeMs(0) <= kUsMaxAgeMs) {
+      const int u = s.usCm(0);
+      if (u > 0 && u < Sensors::kUsMaxCm && u < frontMin) frontMin = (uint16_t)u;
     }
 
-    // Never auto-recover by turning into a close obstacle.
-    if (frontMin > 0 && frontMin < kEmergencyStopCm) {
-      _phase = PH_FAULT_STOP; _state = "STOP: obstacle inside emergency clearance";
-      _diagnostic = "Front clearance too small. Remove obstacle and re-enable autonomy.";
+    // A close obstacle is a latched stop: do not rotate in place when the footprint clearance
+    // is already compromised. Operator must clear the path and re-enable autonomy.
+    if (frontMin < kEmergencyStopCm) {
+      fault("STOP: obstacle inside emergency clearance", "Front clearance below 32 cm. Disable autonomy, clear the path, then re-enable.", left, right, status); return;
+    }
+
+    if (_phase == PH_STOP_BEFORE_TURN) {
+      if (now - _phaseStartedMs < kStopBeforeTurnMs) {
+        _state = "AVOID: stopped before pivot"; _diagnostic = "Brake/settle interval before obstacle-avoidance pivot.";
+        finish(left, right, status); return;
+      }
+      const Sector& chosen = _pendingTurn < 0 ? leftSide : rightSide;
+      if (!turnSideClear(chosen, s, _pendingTurn)) {
+        _phase = PH_DRIVE; _pendingTurn = 0;
+        _state = "STOP: turn clearance not confirmed";
+        _diagnostic = "No verified side clearance for a pivot. Reposition manually; unknown space is not free space.";
+        finish(left, right, status); return;
+      }
+      _phase = PH_PIVOT; _phaseStartedMs = now;
+    }
+    if (_phase == PH_PIVOT) {
+      if (now - _phaseStartedMs < kPivotPulseMs) {
+        // For conventional differential drive: left turn = left reverse/right forward.
+        left = _pendingTurn < 0 ? -kPivotSpeed : kPivotSpeed;
+        right = -left;
+        _state = _pendingTurn < 0 ? "AVOID: pivot left" : "AVOID: pivot right";
+        _diagnostic = "Short bounded pivot; angle is time-based and not guaranteed without encoders.";
+        finish(left, right, status); return;
+      }
+      _turnCount++;
+      _phase = PH_SETTLE; _phaseStartedMs = now;
+    }
+    if (_phase == PH_SETTLE) {
+      if (now - _phaseStartedMs < kSettleMs) {
+        _state = "AVOID: settle and rescan"; _diagnostic = "Stopped after pivot; waiting for the next sensor snapshot.";
+        finish(left, right, status); return;
+      }
+      _phase = PH_DRIVE; _pendingTurn = 0;
+    }
+
+    // Obstacle avoidance takes priority over wall/surface following.
+    if (frontMin < kAvoidFrontCm) {
+      const int8_t turn = chooseTurn(leftSide, rightSide, s);
+      if (!turn) {
+        _state = "STOP: no safe avoidance sector";
+        _diagnostic = "Obstacle ahead and neither side has confirmed clearance; manual intervention required.";
+        finish(left, right, status); return;
+      }
+      _pendingTurn = turn; _phase = PH_STOP_BEFORE_TURN; _phaseStartedMs = now;
+      _state = "AVOID: obstacle detected; stop";
+      _diagnostic = String("Front clearance ") + String(frontMin) + " cm; selected " + (turn < 0 ? "left" : "right") + " only after side-sector check.";
       finish(left, right, status); return;
     }
 
-    // Bounded stop-turn-settle self-correction. It is triggered only by suspected lack of
-    // scene motion while a forward command was being issued; no encoder means this is an inference.
-    if (_phase == PH_RECOVERY_STOP) {
-      if (now - _phaseStartedMs < kRecoveryStopMs) {
-        _state = "RECOVERY: stopped before corrective pivot";
-        _diagnostic = "Suspected no progress; pause before a short full-speed pivot";
-        finish(left, right, status); return;
+    const Sector& follow = _side == FOLLOW_RIGHT ? rightSide : leftSide;
+    const Sector& opposite = _side == FOLLOW_RIGHT ? leftSide : rightSide;
+    if (!isSurface(follow)) {
+      // Only switch if the opposite surface is detected and the front plus opposite side are clear.
+      if (isSurface(opposite) && frontMin >= kSwitchFrontClearCm && opposite.minCm >= kSwitchSideClearCm) {
+        _side = _side == FOLLOW_RIGHT ? FOLLOW_LEFT : FOLLOW_RIGHT;
+        _state = "SURFACE: switched following side";
+        _diagnostic = String("Original surface lost; opposite surface detected. Following ") + sideName() + ".";
+      } else {
+        _state = "STOP: surface not confidently detected";
+        _diagnostic = "No reliable continuous surface. This controller is surface-following, not waypoint navigation; move to a wall/furniture edge or use manual control.";
       }
-      const bool clearanceUnsafe = _recoveryIsCorrection
-          ? (frontMin < kRecoveryFrontClearCm || rightSide.minCm < kRecoverySideClearCm ||
-             leftSide.minCm < kRecoverySideClearCm)
-          : (frontMin < kTurnFrontClearCm);
-      if (clearanceUnsafe) {
-        _phase = PH_FAULT_STOP; _state = "FAULT: turn lacks verified clearance";
-        _diagnostic = "No safe pivot clearance confirmed. Manual inspection required.";
-        finish(left, right, status); return;
-      }
-      _phase = PH_RECOVERY_PIVOT; _phaseStartedMs = now;
-    }
-    if (_phase == PH_RECOVERY_PIVOT) {
-      if (now - _phaseStartedMs < kRecoveryPivotMs) {
-        left = (_pendingTurn < 0) ? -kPivotSpeed : kPivotSpeed; right = -left;
-        _state = (_pendingTurn < 0) ? "TURN: short left pivot" : "TURN: short right pivot";
-        _diagnostic = "Bounded self-correction pulse; turn angle is not guaranteed";
-        finish(left, right, status); return;
-      }
-      _phase = PH_RECOVERY_SETTLE; _phaseStartedMs = now; _pendingTurn = 0;
-    }
-    if (_phase == PH_RECOVERY_SETTLE) {
-      if (now - _phaseStartedMs < kRecoverySettleMs) {
-        _state = "RECOVERY: stopped; rechecking scan";
-        _diagnostic = "Waiting for fresh LiDAR scene before resuming";
-        finish(left, right, status); return;
-      }
-      _phase = PH_NORMAL; _stallSinceMs = 0;
-      _lastSceneMs = now; _lastSignatureAtMs = 0; _signatureReady = false;
-      if (_recoveryIsCorrection) {
-        _adaptiveSpeed = min(kMaxAdaptiveSpeed, _adaptiveSpeed + kRecoverySpeedBoost);
-        _recoveryIsCorrection = false;
-      }
-    }
-    if (_phase == PH_FAULT_STOP) {
-      _state = "FAULT STOP — disable autonomy and inspect";
       finish(left, right, status); return;
     }
 
-    updateSceneMotion(sensors, now);
-
-    const Sector selected = (_side == FOLLOW_RIGHT) ? rightSide : leftSide;
-    const Sector opposite = (_side == FOLLOW_RIGHT) ? leftSide : rightSide;
-    const bool selectedWall = isSurface(selected);
-    const bool oppositeWall = isSurface(opposite);
-
-    if (!selectedWall) {
-      if (_lostSinceMs == 0) _lostSinceMs = now;
-      const bool safeToSwitch = oppositeWall && frontMin >= kSwitchFrontClearCm &&
-          opposite.minCm >= kSwitchSideClearCm && now - _lastSwitchMs >= kSwitchCooldownMs;
-      if (safeToSwitch && now - _lostSinceMs >= kLostSurfaceSwitchDelayMs) {
-        _side = (_side == FOLLOW_RIGHT) ? FOLLOW_LEFT : FOLLOW_RIGHT;
-        _lastSwitchMs = now; _lostSinceMs = 0;
-        _state = "STOP: switched side; reacquiring surface";
-        _diagnostic = String("Switched to ") + sideName() + " only after checking clearance";
-        finish(left, right, status); return;
-      }
-      _state = "STOP: surface not confidently detected";
-      _diagnostic = "Move rover near a continuous wall/furniture surface or verify LiDAR angle mapping";
-      finish(left, right, status); return;
+    // Differential proportional steering instead of repeated stop/pivot pulses for small wall errors.
+    const float distance = follow.medianCm;
+    const float error = distance - kTargetClearanceCm;
+    float correction = 0.0f;
+    if (fabsf(error) > kWallDeadbandCm) {
+      correction = constrain(error * kWallGain, -kMaxWallCorrection, kMaxWallCorrection);
+      // right-side surface too close => steer left (right wheel faster); signs reverse for left side.
+      if (_side == FOLLOW_RIGHT) correction = -correction;
     }
-    _lostSinceMs = 0;
-
-    const Sector follow = (_side == FOLLOW_RIGHT) ? rightSide : leftSide;
-    const float distanceCm = (float)follow.medianCm;
-    const float error = distanceCm - kTargetClearanceCm;
-    int desiredTurn = 0;
-    if (error < -kTurnDeadbandCm) desiredTurn = (_side == FOLLOW_RIGHT) ? -1 : 1;
-    else if (error > kTurnDeadbandCm && frontMin >= kTurnFrontClearCm)
-      desiredTurn = (_side == FOLLOW_RIGHT) ? 1 : -1;
-
-    // Turn only after an explicit stop, at full pivot command. Then stop and re-evaluate.
-    if (desiredTurn != 0) {
-      left = right = 0;
-      _state = "STOP before pivot";
-      _diagnostic = String("Surface error ") + String(error, 0) + " cm; stop-turn-settle control";
-      // A short pivot starts on the next controller pass after the stop phase.
-      _pendingTurn = desiredTurn;
-      _phase = PH_RECOVERY_STOP;
-      _phaseStartedMs = now;
-      _recoveryIsCorrection = false;
-      finish(left, right, status); return;
-    }
-
-    // Detect a likely stall only during straight commanded movement. No encoders are present,
-    // so unchanged LiDAR geometry is a suspicion, not proof that wheels did not move.
-    if (_stallSinceMs == 0) _stallSinceMs = now;
-    if (now - _lastSceneMs >= kNoSceneChangeMs && now - _stallSinceMs >= kMinDriveBeforeStallMs) {
-      if (_recoveryCount >= kMaxRecoveries) {
-        _phase = PH_FAULT_STOP; _state = "FAULT: no scene progress after recovery attempts";
-        _diagnostic = "Stop and inspect wheels, motor power, rover Wi-Fi link and sensor geometry";
-        finish(left, right, status); return;
-      }
-      ++_recoveryCount;
-      _phase = PH_RECOVERY_STOP; _phaseStartedMs = now; _recoveryIsCorrection = true; _pendingTurn = 1;
-      _state = "RECOVERY: suspected no movement";
-      _diagnostic = "LiDAR scene unchanged while drive commanded; checking clearance before one bounded pivot";
-      finish(left, right, status); return;
-    }
-
-    float base = _adaptiveSpeed;
-    if (frontMin < kCautionFrontCm) base = min(base, kCautionSpeed);
-    else if (frontMin < kSlowFrontCm) base = min(base, kSlowSpeed);
-    left = right = base;
-    _state = String("MOVE FORWARD · FOLLOW ") + sideName();
-    _diagnostic = String("Front ") + String(frontMin) + " cm; surface " + String(follow.medianCm) +
-                  " cm; commanded speed " + String(base, 2);
+    float speed = kCruiseSpeed;
+    if (frontMin < kSlowFrontCm) speed = kSlowSpeed;
+    if (frontMin < kCautionFrontCm) speed = kCautionSpeed;
+    left = constrain(speed - correction, 0.0f, kCruiseSpeed);
+    right = constrain(speed + correction, 0.0f, kCruiseSpeed);
+    _state = String("MOVE: surface follow ") + sideName();
+    _diagnostic = String("Front=") + String(frontMin) + " cm; surface=" + String((int)distance) +
+      " cm; target=" + String(kTargetClearanceCm) + " cm; differential correction=" + String(correction, 3) +
+      ". Verify steering sign on blocks before floor test.";
     finish(left, right, status);
   }
 
 private:
   static constexpr uint16_t kEmergencyStopCm = 32;
-  static constexpr uint16_t kCautionFrontCm = 65;
-  static constexpr uint16_t kSlowFrontCm = 100;
-  static constexpr uint16_t kSwitchFrontClearCm = 100;
-  static constexpr uint16_t kSwitchSideClearCm = 55;
+  static constexpr uint16_t kAvoidFrontCm = 90;
+  static constexpr uint16_t kSlowFrontCm = 125;
+  static constexpr uint16_t kCautionFrontCm = 75;
+  static constexpr uint16_t kSwitchFrontClearCm = 110;
+  static constexpr uint16_t kSwitchSideClearCm = 60;
   static constexpr uint16_t kTargetClearanceCm = 55;
-  static constexpr uint16_t kTurnDeadbandCm = 15;
-  static constexpr uint16_t kTurnFrontClearCm = 95;
-  static constexpr uint16_t kRecoveryFrontClearCm = 110;
-  static constexpr uint16_t kRecoverySideClearCm = 45;
-  static constexpr uint32_t kLostSurfaceSwitchDelayMs = 1200;
-  static constexpr uint32_t kSwitchCooldownMs = 3000;
-  static constexpr uint32_t kRecoveryStopMs = 300;
-  static constexpr uint32_t kRecoveryPivotMs = 160;
-  static constexpr uint32_t kRecoverySettleMs = 350;
-  static constexpr uint32_t kNoSceneChangeMs = 3000;
-  static constexpr uint32_t kMinDriveBeforeStallMs = 2800;
-  static constexpr uint8_t kMaxRecoveries = 2;
-  static constexpr float kBaseSpeed = 0.22f;          // raised from 0.10: verify on clear floor
-  static constexpr float kSlowSpeed = 0.18f;
-  static constexpr float kCautionSpeed = 0.15f;
-  static constexpr float kMaxAdaptiveSpeed = 0.30f;   // bounded; never automatically jumps to full speed
-  static constexpr float kRecoverySpeedBoost = 0.04f;
-  static constexpr float kPivotSpeed = 0.50f;
+  static constexpr uint16_t kWallDeadbandCm = 12;
+  static constexpr uint16_t kTurnSideClearCm = 65;
+  static constexpr uint16_t kMinFrontReturns = 3;
+  static constexpr float kMaxCrcPct = 5.0f;
+  static constexpr uint32_t kUsMaxAgeMs = 600;
+  static constexpr uint32_t kStopBeforeTurnMs = 250;
+  static constexpr uint32_t kPivotPulseMs = 180;
+  static constexpr uint32_t kSettleMs = 350;
+  static constexpr float kCruiseSpeed = 0.16f;
+  static constexpr float kSlowSpeed = 0.12f;
+  static constexpr float kCautionSpeed = 0.08f;
+  static constexpr float kPivotSpeed = 0.28f;
+  static constexpr float kWallGain = 0.0020f;
+  static constexpr float kMaxWallCorrection = 0.045f;
 
   struct Sector { uint16_t minCm = 0, medianCm = 0; uint8_t count = 0; };
-  enum InternalPhase : uint8_t { PH_NORMAL = 0, PH_RECOVERY_STOP = 1, PH_RECOVERY_PIVOT = 2,
-                                 PH_RECOVERY_SETTLE = 3, PH_FAULT_STOP = 4 };
+  enum Phase : uint8_t { PH_DRIVE, PH_STOP_BEFORE_TURN, PH_PIVOT, PH_SETTLE };
   Side _side = FOLLOW_RIGHT;
-  InternalPhase _phase = PH_NORMAL;
-  uint32_t _lostSinceMs = 0, _lastSwitchMs = 0, _phaseStartedMs = 0;
-  uint32_t _lastSceneMs = 0, _lastSignatureAtMs = 0, _stallSinceMs = 0;
-  bool _signatureReady = false, _recoveryIsCorrection = false;
-  uint16_t _signature[18] = {};
-  uint8_t _recoveryCount = 0;
-  float _adaptiveSpeed = kBaseSpeed, _lastCommandL = 0, _lastCommandR = 0;
+  Phase _phase = PH_DRIVE;
+  uint32_t _phaseStartedMs = 0;
   int8_t _pendingTurn = 0;
-  String _state = "STOP", _diagnostic = "Initialising";
+  uint8_t _turnCount = 0;
+  bool _faultLatched = false;
+  float _lastCommandL = 0, _lastCommandR = 0;
+  String _state = "AUTO WAIT", _diagnostic = "Initialising";
 
-  void finish(float& left, float& right, String& status) {
-    _lastCommandL = left; _lastCommandR = right;
-    status = _state;
-    if (_pendingTurn && _phase == PH_RECOVERY_STOP && !_recoveryIsCorrection) {
-      // pending wall-follow correction pivots after the stop interval; handled on subsequent pass
-    }
+  void finish(float& l, float& r, String& status) {
+    _lastCommandL = l; _lastCommandR = r; status = _state;
   }
-
-  void updateSceneMotion(const Sensors& sensors, uint32_t now) {
-    if (now - _lastSignatureAtMs < 220) return;
-    _lastSignatureAtMs = now;
-    uint16_t current[18] = {};
-    for (uint8_t i = 0; i < 18; ++i) {
-      uint16_t d = sensors.lidarCm((uint8_t)(i * 5)); // 20-degree samples around full scan
-      current[i] = (d >= 10 && d <= 400) ? d : 0;
-    }
-    if (!_signatureReady) {
-      memcpy(_signature, current, sizeof(current));
-      _signatureReady = true; _lastSceneMs = now; return;
-    }
-    uint8_t changed = 0, compared = 0;
-    for (uint8_t i = 0; i < 18; ++i) {
-      if (_signature[i] && current[i]) {
-        ++compared;
-        if (abs((int)_signature[i] - (int)current[i]) >= 18) ++changed;
-      } else if (_signature[i] != current[i]) ++changed;
-    }
-    if (changed >= 3 || (compared >= 8 && changed >= 2)) _lastSceneMs = now;
-    memcpy(_signature, current, sizeof(current));
+  void fault(const char* state, const char* diag, float& l, float& r, String& status) {
+    _phase = PH_DRIVE; _pendingTurn = 0; _faultLatched = true; l = r = 0; _state = state; _diagnostic = diag; finish(l, r, status);
   }
-
-  static bool isSurface(const Sector& s) {
-    return s.count >= 4 && s.medianCm >= 20 && s.medianCm <= 160;
-  }
-
-  static Sector sector(const Sensors& sensors, int start, int end) {
-    Sector out; uint16_t vals[24]; uint8_t n = 0;
-    int i = start;
+  static bool isSurface(const Sector& s) { return s.count >= 4 && s.medianCm >= 20 && s.medianCm <= 160; }
+  static Sector sector(const Sensors& s, int start, int end) {
+    Sector out; uint16_t vals[24]; uint8_t n = 0; int i = start;
     for (int guard = 0; guard < 90; ++guard) {
-      uint16_t d = sensors.lidarCm((uint8_t)(i % 90));
-      if (d >= 10 && d <= 300 && n < 24) {
-        vals[n++] = d; if (out.minCm == 0 || d < out.minCm) out.minCm = d;
-      }
-      if (i == end) break;
-      i = (i + 1) % 90;
+      uint16_t d = s.lidarCm((uint8_t)(i % 90));
+      if (d >= 10 && d <= 300 && n < 24) { vals[n++] = d; if (!out.minCm || d < out.minCm) out.minCm = d; }
+      if (i == end) break; i = (i + 1) % 90;
     }
     out.count = n; if (!n) return out;
-    for (uint8_t a = 0; a < n; ++a)
-      for (uint8_t b = a + 1; b < n; ++b)
-        if (vals[b] < vals[a]) { uint16_t t = vals[a]; vals[a] = vals[b]; vals[b] = t; }
-    out.medianCm = vals[n / 2]; return out;
+    for (uint8_t a=0; a<n; ++a) for (uint8_t b=a+1; b<n; ++b) if (vals[b]<vals[a]) { uint16_t t=vals[a]; vals[a]=vals[b]; vals[b]=t; }
+    out.medianCm = vals[n/2]; return out;
+  }
+  static bool turnSideClear(const Sector& side, const Sensors& s, int8_t turn) {
+    // Require several real LiDAR returns and conservative minimum clearance; 0/no-return is unknown.
+    if (side.count < 5 || side.minCm < kTurnSideClearCm) return false;
+    const uint8_t usIndex = turn < 0 ? 1 : 2; // left / right ultrasonic
+    if (s.usValid(usIndex) && s.usAgeMs(usIndex) <= kUsMaxAgeMs) {
+      const int d = s.usCm(usIndex);
+      if (d > 0 && d < Sensors::kUsMaxCm && d < kTurnSideClearCm) return false;
+    }
+    return true;
+  }
+  static int8_t chooseTurn(const Sector& left, const Sector& right, const Sensors& s) {
+    const bool lc = turnSideClear(left, s, -1), rc = turnSideClear(right, s, 1);
+    if (!lc && !rc) return 0;
+    if (lc && !rc) return -1; if (rc && !lc) return 1;
+    // Prefer the side with larger minimum clearance, then median. Ties deterministically turn left.
+    if (right.minCm > left.minCm) return 1;
+    if (left.minCm > right.minCm) return -1;
+    return right.medianCm > left.medianCm ? 1 : -1;
   }
 };
