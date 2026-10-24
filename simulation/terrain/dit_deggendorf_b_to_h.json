@@ -45,7 +45,8 @@
       -35
     ],
     "ultrasonic_angles_status": "simulation defaults; measure actual sensor directions",
-    "wheel_encoders": false
+    "wheel_encoders": false,
+    "gps_module": "NEO-6M simulated in the Gazebo model; geodetic origin is approximate"
   },
   "bounds": {
     "xmin": -27,
@@ -234,5 +235,15 @@
     "The route from Block B to Block H is an initial candidate based on the published block diagram, not a verified pedestrian route. Access gates, steps, ramps, roads, landscaping and obstacles are not fully represented.",
     "The reported indoor LiDAR dataset is not the outdoor campus terrain. It provides indoor landmark signatures, not campus pose or metric coordinates.",
     "The simulator's Block H goal stops at an approximate external approach point. It should not automatically navigate inside a building without an indoor map and authorized route."
-  ]
+  ],
+  "georeference_approximate": {
+    "local_origin_xy": [
+      0,
+      0
+    ],
+    "latitude_deg": 48.82958,
+    "longitude_deg": 12.95471,
+    "source": "Mapcarta/OpenStreetMap-derived TH Deggendorf campus point",
+    "warning": "Approximate campus anchor only. The hand-traced local building geometry is not aligned or verified against surveyed footprints; do not use for real GPS waypoint navigation."
+  }
 }
