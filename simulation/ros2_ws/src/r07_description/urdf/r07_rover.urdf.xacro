@@ -1,0 +1,112 @@
+<?xml version="1.0"?>
+<robot name="r07_rover" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Simulation twin. Confirm all estimate-marked dimensions before using as a physical reference. -->
+  <xacro:property name="body_length" value="0.30"/>
+  <xacro:property name="body_width" value="0.20"/>
+  <xacro:property name="body_height" value="0.055"/>
+  <xacro:property name="wheel_radius" value="0.035"/>
+  <xacro:property name="wheel_track" value="0.17"/>
+  <xacro:property name="wheel_width" value="0.018"/>
+  <xacro:property name="box_length" value="0.12"/> <!-- placeholder: measure CAS Box -->
+  <xacro:property name="box_width" value="0.10"/>  <!-- placeholder: measure CAS Box -->
+  <xacro:property name="box_height" value="0.06"/> <!-- placeholder: measure CAS Box -->
+
+  <material name="rover_orange"><color rgba="0.83 0.45 0.12 1"/></material>
+  <material name="box_blue"><color rgba="0.12 0.36 0.75 1"/></material>
+  <material name="rubber"><color rgba="0.08 0.09 0.10 1"/></material>
+  <material name="sensor_black"><color rgba="0.04 0.05 0.06 1"/></material>
+
+  <link name="base_link">
+    <inertial><origin xyz="0 0 0.065"/><mass value="2.0"/><inertia ixx="0.010" ixy="0" ixz="0" iyy="0.018" iyz="0" izz="0.020"/></inertial>
+    <visual><origin xyz="0 0 0.063"/><geometry><box size="${body_length} ${body_width} ${body_height}"/></geometry><material name="rover_orange"/></visual>
+    <collision><origin xyz="0 0 0.063"/><geometry><box size="${body_length} ${body_width} ${body_height}"/></geometry></collision>
+  </link>
+
+  <xacro:macro name="drive_wheel" params="side y">
+    <link name="${side}_wheel">
+      <inertial><mass value="0.12"/><inertia ixx="0.00005" ixy="0" ixz="0" iyy="0.00008" iyz="0" izz="0.00005"/></inertial>
+      <visual><origin rpy="1.57079632679 0 0"/><geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry><material name="rubber"/></visual>
+      <collision><origin rpy="1.57079632679 0 0"/><geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry></collision>
+    </link>
+    <joint name="${side}_wheel_joint" type="continuous">
+      <parent link="base_link"/><child link="${side}_wheel"/>
+      <origin xyz="0 ${y} ${wheel_radius}" rpy="0 0 0"/><axis xyz="0 1 0"/>
+      <limit effort="4.0" velocity="20.0"/><dynamics damping="0.02" friction="0.01"/>
+    </joint>
+  </xacro:macro>
+  <xacro:drive_wheel side="left" y="${wheel_track/2}"/>
+  <xacro:drive_wheel side="right" y="-${wheel_track/2}"/>
+
+  <!-- Passive caster approximation; actual rover undercarriage must be measured. -->
+  <link name="front_caster"><inertial><mass value="0.025"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial><visual><geometry><sphere radius="0.018"/></geometry><material name="rubber"/></visual><collision><geometry><sphere radius="0.018"/></geometry></collision></link>
+  <joint name="front_caster_fixed" type="fixed"><parent link="base_link"/><child link="front_caster"/><origin xyz="0.105 0 0.018"/></joint>
+  <link name="rear_caster"><inertial><mass value="0.025"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial><visual><geometry><sphere radius="0.018"/></geometry><material name="rubber"/></visual><collision><geometry><sphere radius="0.018"/></geometry></collision></link>
+  <joint name="rear_caster_fixed" type="fixed"><parent link="base_link"/><child link="rear_caster"/><origin xyz="-0.105 0 0.018"/></joint>
+
+  <link name="cas_box_link">
+    <inertial><origin xyz="0 0 0.11"/><mass value="0.30"/><inertia ixx="0.0006" ixy="0" ixz="0" iyy="0.0006" iyz="0" izz="0.0006"/></inertial>
+    <visual><origin xyz="0 0 0.11"/><geometry><box size="${box_length} ${box_width} ${box_height}"/></geometry><material name="box_blue"/></visual>
+    <collision><origin xyz="0 0 0.11"/><geometry><box size="${box_length} ${box_width} ${box_height}"/></geometry></collision>
+  </link>
+  <joint name="cas_box_mount" type="fixed"><parent link="base_link"/><child link="cas_box_link"/><origin xyz="0 0 0"/></joint>
+
+  <link name="lidar_link"><visual><geometry><cylinder radius="0.025" length="0.012"/></geometry><material name="sensor_black"/></visual></link>
+  <joint name="lidar_mount" type="fixed"><parent link="base_link"/><child link="lidar_link"/><origin xyz="0 0 0.17"/></joint>
+  <link name="imu_link"/>
+  <joint name="imu_mount" type="fixed"><parent link="base_link"/><child link="imu_link"/><origin xyz="0 0 0.105"/></joint>
+
+  <xacro:macro name="ultrasonic" params="name x y yaw">
+    <link name="${name}_link"><visual><geometry><cylinder radius="0.012" length="0.012"/></geometry><material name="sensor_black"/></visual></link>
+    <joint name="${name}_mount" type="fixed"><parent link="base_link"/><child link="${name}_link"/><origin xyz="${x} ${y} 0.045" rpy="0 0 ${yaw}"/></joint>
+    <gazebo reference="${name}_link">
+      <sensor name="${name}_sim" type="ray">
+        <always_on>true</always_on><visualize>false</visualize><update_rate>10</update_rate>
+        <ray><scan><horizontal><samples>1</samples><resolution>1</resolution><min_angle>0</min_angle><max_angle>0</max_angle></horizontal></scan>
+          <range><min>0.02</min><max>2.50</max><resolution>0.01</resolution></range>
+          <noise><type>gaussian</type><mean>0.0</mean><stddev>0.005</stddev></noise>
+        </ray>
+        <plugin name="${name}_range_plugin" filename="libgazebo_ros_ray_sensor.so">
+          <ros><namespace>/r07</namespace><remapping>~/out:=${name}/range</remapping></ros>
+          <output_type>sensor_msgs/Range</output_type><frame_name>${name}_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+  <!-- Bearings are provisional. In particular front_angled is assumed 35 degrees to the right. -->
+  <xacro:ultrasonic name="us_front" x="0.15" y="0" yaw="0"/>
+  <xacro:ultrasonic name="us_left" x="0" y="0.10" yaw="1.57079632679"/>
+  <xacro:ultrasonic name="us_right" x="0" y="-0.10" yaw="-1.57079632679"/>
+  <xacro:ultrasonic name="us_back" x="-0.15" y="0" yaw="3.14159265359"/>
+  <xacro:ultrasonic name="us_front_angled" x="0.12" y="-0.065" yaw="-0.6108652382"/>
+
+  <gazebo reference="lidar_link">
+    <sensor name="ld20_sim" type="ray">
+      <always_on>true</always_on><visualize>true</visualize><update_rate>10</update_rate>
+      <ray><scan><horizontal><samples>90</samples><resolution>1</resolution><min_angle>0</min_angle><max_angle>6.28318530718</max_angle></horizontal></scan>
+        <range><min>0.10</min><max>3.50</max><resolution>0.01</resolution></range>
+        <noise><type>gaussian</type><mean>0.0</mean><stddev>0.008</stddev></noise>
+      </ray>
+      <plugin name="ld20_ros_plugin" filename="libgazebo_ros_ray_sensor.so">
+        <ros><namespace>/r07</namespace><remapping>~/out:=scan</remapping></ros>
+        <output_type>sensor_msgs/LaserScan</output_type><frame_name>lidar_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+  <gazebo reference="imu_link">
+    <sensor name="bno055_sim" type="imu"><always_on>true</always_on><update_rate>50</update_rate>
+      <imu><angular_velocity><x><noise type="gaussian"><mean>0</mean><stddev>0.002</stddev></noise></x><y><noise type="gaussian"><mean>0</mean><stddev>0.002</stddev></noise></y><z><noise type="gaussian"><mean>0</mean><stddev>0.003</stddev></noise></z></angular_velocity>
+      <linear_acceleration><x><noise type="gaussian"><mean>0</mean><stddev>0.02</stddev></noise></x><y><noise type="gaussian"><mean>0</mean><stddev>0.02</stddev></noise></y><z><noise type="gaussian"><mean>0</mean><stddev>0.02</stddev></noise></z></linear_acceleration></imu>
+      <plugin name="imu_ros_plugin" filename="libgazebo_ros_imu_sensor.so"><ros><namespace>/r07</namespace><remapping>~/out:=imu</remapping></ros><frame_name>imu_link</frame_name></plugin>
+    </sensor></gazebo>
+
+  <gazebo>
+    <plugin name="r07_diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <ros><namespace>/r07</namespace></ros>
+      <update_rate>50</update_rate><left_joint>left_wheel_joint</left_joint><right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>${wheel_track}</wheel_separation><wheel_diameter>0.07</wheel_diameter>
+      <command_topic>cmd_vel</command_topic><odometry_topic>odom_sim_only</odometry_topic>
+      <odometry_frame>odom</odometry_frame><robot_base_frame>base_link</robot_base_frame>
+      <publish_odom>true</publish_odom><publish_odom_tf>true</publish_odom_tf><publish_wheel_tf>true</publish_wheel_tf>
+    </plugin>
+  </gazebo>
+</robot>
