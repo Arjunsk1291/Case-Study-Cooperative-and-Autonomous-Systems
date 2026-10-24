@@ -106,3 +106,20 @@ right, back, front angled.
 
 **Team configuration:** `BOX_ID = 7` for Team B3 / Rover R07. This yields SSID `CAS-Box-07`,
 password `CASbox07`, web URL `http://192.168.17.1`, and Wi-Fi channel 1. Rover firmware is unchanged.
+
+
+## Indoor sensor logging (B3 / R07)
+
+The web dashboard includes a browser-side CSV logger. It records the current 90-bin LiDAR snapshot,
+ultrasonic raw/median/valid/age/timeout fields, IMU yaw/pitch/roll/calibration, GPS status and
+monotonic elapsed time at each dashboard poll (~4 Hz). Use Start recording, enter a waypoint label
+(e.g. A, TURN_1, B) and press Mark waypoint while physically at that landmark. Stop and Download CSV
+before refreshing/closing the page. Data is held in browser memory; it does not write to ESP32 flash
+or require an SD card. Keep initial sessions short (e.g. 1–3 minutes) and download after each run.
+
+Important: this logger captures sensor snapshots; it does not calculate indoor x/y coordinates or
+perform SLAM. Indoor waypoint positions need a defined origin and a localization method (e.g. LiDAR
+SLAM with odometry, or carefully measured manual waypoints). IMU yaw alone drifts and ultrasonic
+ranges alone do not uniquely determine position. For first runs, keep the box stationary at A, mark
+A, move to each known landmark, stop, mark it, and record the surroundings. Do not drive autonomously
+from these logs yet. Rover stop/deadman logic is unchanged.

@@ -41,6 +41,20 @@ canvas{display:block;margin:0 auto;max-width:100%;}
   <span></span><button data-d='b'>&#9660;</button><span></span>
  </div>
  <div class='label'>Speed <span id='spdVal'></span></div><input type='range' id='spd' min='0.05' step='0.05'></div>
+<div class='card'><div class='sectionTitle'>Indoor mapping data logger</div>
+ <div class='label'>Records sensor snapshots in this browser at the dashboard update rate. Mark physical locations such as A, corridor turn, and B. Download the CSV before closing or refreshing this page.</div>
+ <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'>
+  <button id='logStart' class='btnTiny'>Start recording</button>
+  <button id='logMark' class='btnTiny' disabled>Mark waypoint</button>
+  <button id='logStop' class='btnTiny' disabled>Stop</button>
+  <button id='logDownload' class='btnTiny' disabled>Download CSV</button>
+ </div>
+ <div style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px'>
+  <label for='wpLabel' class='label'>Waypoint label</label><input id='wpLabel' value='A' maxlength='24' style='min-width:90px;flex:1;padding:9px;border-radius:8px;background:#0b0f17;color:#e7edf5;border:1px solid rgba(255,255,255,.15)'>
+  <span id='logStatus' class='label'>Not recording</span>
+ </div>
+ <div class='label' style='margin-top:8px'>Log is saved in browser memory until downloaded. This is sensor logging, not an indoor SLAM/map-coordinate solver.</div>
+</div>
 <div class='card'><div class='sectionTitle'>Surroundings (LiDAR top view, front = up, rings 1 m)</div>
  <canvas id='envCv' width='280' height='280'></canvas><div class='label' id='lidarInfo'>-</div>
  <table class='table' id='usTable'></table></div>
@@ -135,13 +149,77 @@ function renderSensors(s){
   $('navTable').innerHTML=t;
 }
 
-// ---- poll the box 4 times per second
+// ---- browser-side sensor logger: CSV download; no SD card or ESP32 RAM buffer needed
+let logging=false, logRows=[], logStartMs=0, latestSnapshot=null, logSampleCount=0;
+const usNames=['front','left','right','back','front_angled'];
+function csvCell(v){
+  if(v===null||v===undefined)return '';
+  const s=String(v);
+  return /[",\\r\\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}
+const lidarHeaders=Array.from({length:90},(_,i)=>'lidar_cm_bin_'+i);
+const logHeaders=['record_type','elapsed_ms','wall_time_iso','waypoint_label','state',
+ 'us_front_raw_cm','us_front_median_cm','us_front_valid','us_front_age_ms','us_front_timeouts',
+ 'us_left_raw_cm','us_left_median_cm','us_left_valid','us_left_age_ms','us_left_timeouts',
+ 'us_right_raw_cm','us_right_median_cm','us_right_valid','us_right_age_ms','us_right_timeouts',
+ 'us_back_raw_cm','us_back_median_cm','us_back_valid','us_back_age_ms','us_back_timeouts',
+ 'us_front_angled_raw_cm','us_front_angled_median_cm','us_front_angled_valid','us_front_angled_age_ms','us_front_angled_timeouts',
+ 'imu_ok','imu_yaw_deg','imu_pitch_deg','imu_roll_deg','imu_cal_sys','imu_cal_gyro','imu_cal_accel','imu_cal_mag',
+ 'gps_fix','gps_satellites','gps_hdop','gps_lat','gps_lon','lidar_ok','lidar_packets_per_sec','lidar_crc_error_pct',...lidarHeaders];
+function rowFor(type,label,s){
+  const now=new Date(),us=s.us||[],raw=s.usRaw||[],filt=s.usFiltered||[],valid=s.usValid||[],age=s.usAgeMs||[],timeouts=s.usTimeouts||[];
+  const row=[type,Math.max(0,performance.now()-logStartMs).toFixed(0),now.toISOString(),label||'',latestSnapshot&&latestSnapshot.state||''];
+  for(let i=0;i<5;i++)row.push(raw[i]===undefined?'':raw[i],filt[i]===undefined?'':filt[i],valid[i]===true?1:0,age[i]===undefined?'':age[i],timeouts[i]===undefined?'':timeouts[i]);
+  const I=s.imu||{},cal=I.cal||[],G=s.gps||{},L=s.lidar||{};
+  row.push(I.ok?1:0,I.yaw??'',I.pitch??'',I.roll??'',cal[0]??'',cal[1]??'',cal[2]??'',cal[3]??'',
+    G.fix?1:0,G.sats??'',G.hdop??'',G.lat??'',G.lon??'',L.ok?1:0,L.pps??'',L.crc??'');
+  const d=L.d||[];for(let i=0;i<90;i++)row.push(d[i]===undefined?'':d[i]);
+  return row;
+}
+function updateLogUi(){
+  $('logStart').disabled=logging;
+  $('logMark').disabled=!logging||!latestSnapshot||!latestSnapshot.sensors;
+  $('logStop').disabled=!logging;
+  $('logDownload').disabled=logRows.length===0;
+  $('logStatus').textContent=logging?('Recording · '+logSampleCount+' samples'):(logRows.length?('Stopped · '+logSampleCount+' samples'):'Not recording');
+}
+$('logStart').onclick=()=>{
+  if(!latestSnapshot||!latestSnapshot.sensors){$('logStatus').textContent='Waiting for sensor data';return;}
+  logRows=[];logSampleCount=0;logStartMs=performance.now();logging=true;
+  logRows.push(logHeaders.map(csvCell).join(','));
+  logRows.push(rowFor('START','',latestSnapshot.sensors).map(csvCell).join(','));
+  updateLogUi();
+};
+$('logMark').onclick=()=>{
+  if(!logging||!latestSnapshot||!latestSnapshot.sensors)return;
+  const label=$('wpLabel').value.trim()||'UNLABELLED';
+  logRows.push(rowFor('WAYPOINT',label,latestSnapshot.sensors).map(csvCell).join(','));
+  $('logStatus').textContent='Marked '+label+' · '+logSampleCount+' samples';
+};
+$('logStop').onclick=()=>{
+  if(!logging)return;
+  if(latestSnapshot&&latestSnapshot.sensors)logRows.push(rowFor('STOP','',latestSnapshot.sensors).map(csvCell).join(','));
+  logging=false;updateLogUi();
+};
+$('logDownload').onclick=()=>{
+  if(!logRows.length)return;
+  const blob=new Blob(['\\ufeff'+logRows.join('\\r\\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='CAS_B3_R07_indoor_sensors_'+new Date().toISOString().replace(/[:.]/g,'-')+'.csv';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+// ---- poll the box 4 times per second; log the same snapshot displayed by the dashboard
 async function poll(){
   try{
     const j=await (await fetch('/values',{cache:'no-store'})).json();
     $('conn').textContent='Online';
     $('state').textContent=j.state||'-';
+    latestSnapshot={...j,receivedAt:Date.now()};
     renderSensors(j.sensors);
+    if(logging&&j.sensors){
+      logRows.push(rowFor('SAMPLE','',j.sensors).map(csvCell).join(','));
+      logSampleCount++;updateLogUi();
+    }
     if(dev){
       $('valTable').innerHTML=(j.values||[]).map(v=>`<tr><td class='k'>${esc(v.name)}</td><td>${esc(v.value)}</td></tr>`).join('');
       const c=j.cycle||{};$('cycle').textContent=`${c.min} / ${c.avg} / ${c.max} ms`;
