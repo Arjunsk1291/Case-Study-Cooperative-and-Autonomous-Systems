@@ -39,7 +39,16 @@ public:
 
     const Sector front = sector(s, 0, 3);
     if (front.count < kMinSectorReturns) {
-      latchFault("FAULT: front scan unknown", "Too few valid LiDAR returns in the forward sector. Verify scan orientation/coverage.", left, right, status); return;
+      // Recoverable sparse-sector condition: stop now, allow the LiDAR to rotate and
+      // collect another full view. Do NOT latch a fault that requires the operator
+      // to toggle autonomy. Unknown space remains blocked; no motion is commanded.
+      _phase = PH_SCAN;
+      _phaseStartedMs = now;
+      _state = "RECOVERY: sparse forward LiDAR; stopped and rescanning";
+      _diagnostic = String("Forward sector has ") + String(front.count) +
+        String(" usable returns; need ") + String(kMinSectorReturns) +
+        String(". Motors held at zero; retrying automatically. Check physical scan orientation if persistent.");
+      finish(left, right, status); return;
     }
 
     // Very close valid readings are a hard stop. At normal obstacle distances the controller
@@ -111,17 +120,27 @@ public:
       finish(left, right, status); return;
     }
 
+    // SAFETY PATCH: this firmware has no goal/waypoint planner. Do not turn toward an
+    // arbitrary open sector: that is the scan-and-wander behavior that sends R07 into
+    // unmapped areas. Until route-following is implemented and validated, keep the rover
+    // stopped when forward motion is not safe. A sparse LiDAR sector above is auto-retried.
+    if (!forwardClear) {
+      _phase = PH_SCAN;
+      _state = "STOP: route target unavailable";
+      _diagnostic = "No validated washroom waypoint planner is active. Unknown/blocked forward space: motors zero; automatic rescan continues. Do not wander into an unrecorded sector.";
+      finish(left, right, status); return;
+    }
+
     // PH_SCAN: evaluate 8 candidate headings at 45-degree intervals over the 360-degree scan.
     // Bin 0 is assumed forward; bins increase clockwise. Zero LiDAR bins are unknown, not free.
     const int centers[8] = {0, 11, 22, 34, 45, 56, 68, 79};
     int best = -1; float bestScore = -1e9f; Sector bestSector;
     const bool forwardClear = frontHasRoom(front) && nearFront >= kAvoidDistanceCm;
-    if (forwardClear) {
-      _phase = PH_DRIVE_LEG; _driveStartedMs = now;
-      _state = "WANDER: forward sector clear";
-      _diagnostic = String("Forward clearance=") + String(nearFront) + " cm; moving only for a short bounded leg before rescanning.";
-      left = right = kForwardSpeed; finish(left, right, status); return;
-    }
+    // A clear forward sector alone is not a destination. Without waypoint localization,
+    // this prototype must not propel itself just because the corridor is open.
+    _state = "STOP: waypoint planner required";
+    _diagnostic = "LiDAR view is available, but no validated washroom route target is active. Motors remain zero; add and validate waypoint matching before autonomous travel.";
+    finish(left, right, status); return;
 
     for (int c = 0; c < 8; ++c) {
       Sector cand = sector(s, centers[c], 3);
