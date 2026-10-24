@@ -49,6 +49,7 @@
 #include "RoverLink.h"
 #include "Sensors.h"
 #include "DisplayManager.h"
+#include "Navigation.h"
 
 // ---- YOUR KIT ------------------------------------------------------------------------------
 const int BOX_ID = 7;                      // Team B3 / Rover R07 kit number
@@ -63,6 +64,7 @@ WebHMI hmi;           // web server + page
 RoverLink rover;      // connection to the rover
 Sensors sensors;      // all box sensors
 DisplayManager disp;  // small OLED on the box
+Navigation navigation;  // conservative experimental surface-following controller
 bool oledReady = false;
 char boxSsid[16], boxPassword[16];
 
@@ -107,10 +109,30 @@ void loop() {
   // Manual driving from the phone. For your own (autonomous) behaviour, compute l and r
   // yourself from the sensors, e.g. sensors.usCm(0) = front ultrasonic in cm, and call
   // rover.setDrive(l, r) every loop pass (range -0.5..0.5 per side).
-  float l, r;
+  float l = 0, r = 0;
   uint32_t age;
-  hmi.getDrive(l, r, age);
-  if (age > PAD_TIMEOUT_MS) l = r = 0;  // key released, page closed or phone gone
+  static bool wasAuto = false;
+  const bool autoRequested = hmi.autonomyEnabled();
+  if (autoRequested) {
+    if (!wasAuto) navigation.reset();
+    wasAuto = true;
+    if (hmi.autonomyHeartbeatFresh()) {
+      String navStatus;
+      navigation.update(sensors, l, r, navStatus);
+      hmi.setStateText(navStatus);
+    } else {
+      l = r = 0;
+      hmi.setStateText("AUTO STOP: dashboard heartbeat lost - disable/re-enable autonomy");
+    }
+    hmi.showValue("nav.mode", "AUTONOMOUS");
+    hmi.showValue("nav.follow_side", navigation.sideName());
+  } else {
+    wasAuto = false;
+    hmi.getDrive(l, r, age);
+    if (age > PAD_TIMEOUT_MS) l = r = 0;  // key released, page closed or phone gone
+    hmi.showValue("nav.mode", "MANUAL");
+    hmi.showValue("nav.follow_side", navigation.sideName());
+  }
   rover.setDrive(l, r);
 
   // ---- web page and OLED -----------------------------------------------------------------------
@@ -122,7 +144,7 @@ void loop() {
   }
   if (now - lastUi >= 500) {  // status line + values in the "Dev" view
     lastUi = now;
-    hmi.setStateText(rover.statusText());
+    if (!hmi.autonomyEnabled()) hmi.setStateText(rover.statusText());
     hmi.showValue("rover.ip", rover.ip().toString());
     hmi.showValue("rover.voltage_V", rover.voltage());
     hmi.showValue("rover.rtt_ms", rover.rttMs());

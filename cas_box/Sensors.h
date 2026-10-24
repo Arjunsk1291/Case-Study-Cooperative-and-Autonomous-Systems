@@ -25,6 +25,11 @@ public:
   // Ultrasonic distance in cm, updated 4 times per second (kUsMaxCm = nothing in range).
   // i: 0 front, 1 left, 2 right, 3 back, 4 front angled
   int usCm(uint8_t i) const { return i < 5 ? _usCm[i] : kUsMaxCm; }
+  bool usValid(uint8_t i) const { return i < 5 ? _usValid[i] : false; }
+  uint32_t usAgeMs(uint8_t i) const { return i < 5 ? _usAgeMs[i] : UINT32_MAX; }
+  uint16_t lidarCm(uint8_t i) const { return i < kLidarPoints ? _lidarCm[i] : 0; }
+  bool lidarOk() const { return _lidarOk; }
+  float lidarCrcErrorPct() const { return _lidarCrcPct; }
 
 private:
   void _snapshotLidar();

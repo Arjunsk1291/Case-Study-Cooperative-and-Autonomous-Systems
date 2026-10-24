@@ -144,3 +144,24 @@ Recommended collection protocol:
 4. For wall identification, collect stationary scans facing parallel and perpendicular to a measured wall; note wall distance and orientation.
 5. Download after each short run. Do not refresh/close the page before downloading.
 6. This log is not a map and does not estimate x/y. With no wheel encoders, odometry will drift. Fully onboard autonomy needs a localization approach such as LiDAR scan matching/SLAM, enough RAM/CPU, a verified map frame, and safety-tested low-level control. Ultrasonic/IMU snapshots alone are not sufficient to infer reliable global waypoints.
+
+
+## Experimental surface-following controller (added 2026-10-23)
+
+- New `Navigation.h` implements a conservative LiDAR-sector surface follower.
+- Default side is RIGHT. It may switch to LEFT only after the selected surface has been lost for 1.2 s, an opposite-side surface is observed, front clearance is at least 85 cm, side clearance is at least 55 cm, and a 3 s switch cooldown has elapsed.
+- Uses the 90 LiDAR bins (bin 0 = front, clockwise, 4 degrees/bin), and only uses the front ultrasonic sensor when the latest reading is valid and <=600 ms old.
+- Stops if LiDAR is unavailable, CRC errors exceed 5%, front scan coverage is too sparse, front clearance is below 32 cm, or a stable surface is not available.
+- Autonomous wheel command is capped at 0.12 per side in the existing -0.5..0.5 RoverLink command range. This is an experimental low-speed controller, not a validated navigation solution.
+- Dashboard includes `Enable autonomy (OFF)` and `Disable autonomy / STOP`. Autonomy is OFF at boot. The browser sends a heartbeat; if it is absent for 600 ms, commands are zeroed. The manual drive pad is not allowed to override active autonomy; its STOP button disables autonomy.
+- `FOLLOW_PILLAR` is a provisional label based on sparse nearby sector returns; the controller currently follows local surface distance and does not yet perform robust circle fitting or explicit pillar-track association.
+
+### Mandatory test procedure
+
+1. Compile in Arduino IDE first; this source has not been compiled with the target ESP32 toolchain or tested on hardware.
+2. With the rover raised so wheels cannot touch the ground, upload and confirm dashboard/manual stop behaviour. Confirm autonomy is OFF after reboot.
+3. Put rover on floor in a wide, empty area, with an operator at the stop control. Enable autonomy only for a very short low-speed trial. Do not test near people, stairs, traffic, fragile objects or outdoors yet.
+4. If it stops with `surface lost`, that is intentional fail-safe behaviour; disable autonomy and collect labelled sensor logs rather than raising speed.
+5. Validate the physical LiDAR bin orientation and actual stopping distance before changing thresholds.
+
+The thresholds are conservative starting values and must be tuned only after replaying logs and conducting controlled tests. No encoder odometry, global map, GPS positioning, or guaranteed route completion is implemented.

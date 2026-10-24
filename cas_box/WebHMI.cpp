@@ -34,6 +34,7 @@ canvas{display:block;margin:0 auto;max-width:100%;}
 <div class='top'><div class='title'>%TITLE%</div><div class='pill' id='conn'>-</div>
  <button id='devBtn' class='btnTiny'>Dev</button></div>
 <div class='card'><div class='label'>State</div><div class='value' id='state'>-</div></div>
+<div class='card'><div class='sectionTitle'>Autonomous surface-following (experimental)</div><div class='label'>Low-speed prototype. Keep the rover in a clear test area with an operator ready to stop it. Autonomy stops if this page heartbeat is lost.</div><div style='display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'><button id='autoBtn' class='btnTiny'>Enable autonomy (OFF)</button><button id='autoStop' class='btnTiny stop'>Disable autonomy / STOP</button></div><div id='autoStatus' class='label' style='margin-top:8px'>Autonomy OFF · default right-side following</div></div>
 <div class='card hidden' id='driveCard'><div class='sectionTitle'>Drive (hold a key)</div>
  <div class='pad'>
   <span></span><button data-d='f'>&#9650;</button><span></span>
@@ -81,7 +82,18 @@ const PAGE_ID=Math.floor(Math.random()*4e9)+1;let seq=0;
 function drvSend(l,r){seq++;fetch('/drive?l='+l.toFixed(2)+'&r='+r.toFixed(2)+'&id='+PAGE_ID+'&n='+seq).catch(()=>{});}
 function drvClear(){clearInterval(drvTimer);drvTimer=null;drv=null;if(drvBtn){drvBtn.classList.remove('on');drvBtn=null;}}
 function drvStop(){drvClear();drvSend(0,0);}
+let autoOn=false;
+async function setAuto(on){
+  try{await fetch('/autonomy?on='+(on?'1':'0'),{cache:'no-store'});autoOn=on;}
+  catch(e){autoOn=false;}
+  $('autoBtn').textContent=autoOn?'Autonomy ON':'Enable autonomy (OFF)';
+  $('autoStatus').textContent=autoOn?'AUTONOMY ON · right-side following · low speed':'Autonomy OFF · manual control available';
+  if(autoOn)drvStop();
+}
+$('autoBtn').onclick=()=>setAuto(!autoOn);
+$('autoStop').onclick=()=>setAuto(false);
 function drvStart(b){
+  if(autoOn){if(b.dataset.d==='s')setAuto(false);return;}
   if(b.dataset.d==='s'){drvStop();return;}
   const s=parseFloat($('spd').value);
   const m={f:[s,s],b:[-s,-s],l:[-s,s],r:[s,-s]}[b.dataset.d];
@@ -213,6 +225,7 @@ async function poll(){
   try{
     const j=await (await fetch('/values',{cache:'no-store'})).json();
     $('conn').textContent='Online';
+    if(autoOn)fetch('/autonomy?hb=1',{cache:'no-store'}).catch(()=>{});
     $('state').textContent=j.state||'-';
     latestSnapshot={...j,receivedAt:Date.now()};
     renderSensors(j.sensors);
@@ -266,6 +279,27 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
   });
   _server->on("/values", HTTP_GET, [this](AsyncWebServerRequest* req) {
     req->send(200, "application/json", _buildJson());
+  });
+  _server->on("/autonomy", HTTP_GET, [this](AsyncWebServerRequest* req) {
+    if (req->hasParam("on")) {
+      const bool on = req->getParam("on")->value() == "1";
+      portENTER_CRITICAL(&_driveMux);
+      _autonomyEnabled = on;
+      _autonomyHeartbeatMs = on ? millis() : 0;
+      _driveL = _driveR = 0;
+      _driveMs = millis();
+      portEXIT_CRITICAL(&_driveMux);
+      req->send(200, "application/json", on ? "{\"autonomy\":true}" : "{\"autonomy\":false}");
+      return;
+    }
+    if (req->hasParam("hb")) {
+      portENTER_CRITICAL(&_driveMux);
+      if (_autonomyEnabled) _autonomyHeartbeatMs = millis();
+      portEXIT_CRITICAL(&_driveMux);
+      req->send(200, "application/json", "{\"ok\":true}");
+      return;
+    }
+    req->send(400, "application/json", "{\"ok\":false}");
   });
   _server->on("/drive", HTTP_GET, [this](AsyncWebServerRequest* req) {
     if (!req->hasParam("l") || !req->hasParam("r") || !req->hasParam("id") || !req->hasParam("n")) {
@@ -342,6 +376,21 @@ void WebHMI::getDrive(float& left, float& right, uint32_t& ageMs) const {
   const uint32_t ms = _driveMs;
   portEXIT_CRITICAL(&_driveMux);
   ageMs = ms ? millis() - ms : UINT32_MAX;  // millis() read after ms: never negative
+}
+
+bool WebHMI::autonomyEnabled() const {
+  portENTER_CRITICAL(&_driveMux);
+  const bool enabled = _autonomyEnabled;
+  portEXIT_CRITICAL(&_driveMux);
+  return enabled;
+}
+
+bool WebHMI::autonomyHeartbeatFresh(uint32_t maxAgeMs) const {
+  portENTER_CRITICAL(&_driveMux);
+  const bool enabled = _autonomyEnabled;
+  const uint32_t hb = _autonomyHeartbeatMs;
+  portEXIT_CRITICAL(&_driveMux);
+  return enabled && hb != 0 && (millis() - hb <= maxAgeMs);
 }
 
 // Loop time over 1 s windows: min / average / max time between two tick() calls.
