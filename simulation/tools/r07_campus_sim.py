@@ -267,7 +267,7 @@ def main():
     screen=pygame.display.set_mode((1200,820),pygame.RESIZABLE)
     clock=pygame.time.Clock()
     sim=R07Sim(cfg)
-    zoom=20.0; panx=650.; pany=420.
+    zoom=18.0; panx=650.; pany=410.
     font=pygame.font.SysFont("dejavusans",16)
     small=pygame.font.SysFont("dejavusans",13)
     running=True
@@ -333,6 +333,12 @@ def main():
         for y in range(math.ceil(cfg["bounds"]["ymin"]),math.floor(cfg["bounds"]["ymax"])+1,2):
             ax,ay=screen_xy(cfg["bounds"]["xmin"],y); bx,by=screen_xy(cfg["bounds"]["xmax"],y)
             pygame.draw.line(screen,(39,50,61),(ax,ay),(bx,by),1)
+        # Schematic paved route corridors from the terrain file; these are visible hints,
+        # not surveyed/pedestrian-access-verified walkways.
+        for corridor in cfg.get("paved_walkways",[]):
+            ax,ay=screen_xy(corridor["from"][0],corridor["from"][1])
+            bx,by=screen_xy(corridor["to"][0],corridor["to"][1])
+            pygame.draw.line(screen,(75,83,86),(ax,ay),(bx,by),max(2,int(corridor.get("width_m",1.5)*zoom)))
         # Walkable terrain and building footprints.
         for b in sim.buildings:
             draw_rect_world(b,(66,79,96))
