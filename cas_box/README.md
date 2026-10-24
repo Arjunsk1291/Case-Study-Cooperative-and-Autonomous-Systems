@@ -181,3 +181,21 @@ Safety notes:
 - If commanded speeds are nonzero but the wheels do not move, inspect rover power/battery, motor/driver, wheel binding, rover link/IP and the rover's own firmware. Do not keep increasing speed blindly.
 - No wheel encoders means the box cannot verify physical movement or accurately measure distance travelled. A bounded timed leg is only a short motion command, not an odometry estimate.
 - This revision has not been compiled with the exact Arduino ESP32 toolchain or tested on hardware. Verify in Arduino IDE before uploading.
+
+## Guided investigation mode (B3 / R07)
+
+The investigation panel uses a guided state sequence: start-location scan, travel logging,
+arrival scan for each waypoint, then a final destination scan and JSON export. Scan durations are
+selectable (10/15/20 seconds); the timer is visible only while that scan is active. During travel,
+the browser stores each received dashboard sensor frame at the dashboard poll rate (nominally
+4 Hz), including all 90 LiDAR bins, ultrasonic data and freshness, IMU, GPS, diagnostics values,
+cycle timing and snapshot-age metadata. The JSON includes explicit scan/travel/arrival event types.
+
+FreeRTOS remains in use for time-sensitive firmware work: the ultrasonic manager has its own task
+and RoverLink runs its network I/O task on core 0. The investigation history is intentionally kept in
+browser memory rather than adding a large, unbounded JSON buffer to ESP32 RAM. Keep autonomy OFF;
+travel is manually supervised. The logger does not automatically spin the rover. If safe, an operator
+may slowly rotate it during a scan with the drive pad, pausing first so stationary and changing-view
+frames are both captured. A LiDAR alone does not guarantee return-to-start: that requires validated
+scan matching/localization and a closed-loop controller, neither of which this data logger implements.
+Download the JSON before refreshing/closing the dashboard.
