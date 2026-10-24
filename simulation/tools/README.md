@@ -36,3 +36,5 @@ A polar scan plot is not a 2D occupancy map and does not recover the rover's x/y
 - [Map Deggendorf and building index (PDF)](https://www.th-deg.de/Fakult%C3%A4ten/agw/Guide-LSI.pdf)
 
 The Block B → H route is a starting hypothesis based on the campus diagram, not verified pedestrian routing. Before deployment, confirm actual entrances, accessible paths, ramps/steps, road crossings, access restrictions and dimensions on site.
+
+The simulator also displays an approximate GPS latitude/longitude derived from the local terrain origin. This is a demonstration coordinate transform only; it is not a surveyed georeference, and GPS should not be used to validate the candidate B-to-H route.
