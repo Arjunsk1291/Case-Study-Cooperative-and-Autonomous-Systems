@@ -363,6 +363,17 @@ def main():
             pts.append(screen_xy(wx,wy))
         pygame.draw.polygon(screen,(231,169,74),pts)
         pygame.draw.polygon(screen,(255,224,167),pts,2)
+        # CAS Box enclosure mounted on top of the known rover footprint.
+        # Box dimensions are placeholders until measured; render it in the same local frame.
+        bL=sim.rover.get("box_length_m",0.12)/2
+        bW=sim.rover.get("box_width_m",0.10)/2
+        bpts=[]
+        for fx,fy in [(bL,bW),(bL,-bW),(-bL,-bW),(-bL,bW)]:
+            wx=sim.x+fx*math.cos(sim.theta)-fy*math.sin(sim.theta)
+            wy=sim.y+fx*math.sin(sim.theta)+fy*math.cos(sim.theta)
+            bpts.append(screen_xy(wx,wy))
+        pygame.draw.polygon(screen,(80,157,235),bpts)
+        pygame.draw.polygon(screen,(218,238,255),bpts,1)
         rx,ry=screen_xy(sim.x,sim.y)
         hx,hy=screen_xy(sim.x+0.25*math.cos(sim.theta),sim.y+0.25*math.sin(sim.theta))
         pygame.draw.line(screen,(255,245,220),(rx,ry),(hx,hy),3)
