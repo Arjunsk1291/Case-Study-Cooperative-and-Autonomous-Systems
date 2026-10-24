@@ -123,3 +123,24 @@ SLAM with odometry, or carefully measured manual waypoints). IMU yaw alone drift
 ranges alone do not uniquely determine position. For first runs, keep the box stationary at A, mark
 A, move to each known landmark, stop, mark it, and record the surroundings. Do not drive autonomously
 from these logs yet. Rover stop/deadman logic is unchanged.
+
+
+## Navigation research logger — B3 / R07
+
+This revision expands browser-side CSV logs with:
+- explicit event types and labels (waypoint, rotation, wall, obstacle, start, goal, note)
+- operator-entered known facing reference and notes
+- raw ultrasonic distance, median distance, validity, last-good age and timeout count
+- IMU yaw/pitch/roll and per-axis calibration values
+- all 90 available LiDAR distance bins, plus basic descriptive features (valid-bin count, min/median range, adjacent jumps)
+- GPS status and timestamps
+
+CSV export uses real CRLF line endings. Data is captured from the dashboard's `/values` endpoint at approximately 4 Hz, not at the LiDAR's native scan rate. Browser logging therefore is suitable for stationary landmark snapshots and slow manual route observations, not high-rate SLAM or reliable trajectory reconstruction. The left/front/right LiDAR sector features are provisional bin groups only; confirm angular bin orientation before using them as physical sectors.
+
+Recommended collection protocol:
+1. Keep the rover motors disabled during sensor calibration runs.
+2. At each stationary location, wait 5–10 s, set a unique label (BED_A, CORNER_1, WASHROOM_B), select event type, select the independently known facing direction only if verified, enter notes, and click Mark waypoint.
+3. For compass validation, mark rotation tests at known 45°/90° increments while stationary between turns. Record whether the heading is expected magnetic or local reference; do not assume yaw is geographic north until calibrated.
+4. For wall identification, collect stationary scans facing parallel and perpendicular to a measured wall; note wall distance and orientation.
+5. Download after each short run. Do not refresh/close the page before downloading.
+6. This log is not a map and does not estimate x/y. With no wheel encoders, odometry will drift. Fully onboard autonomy needs a localization approach such as LiDAR scan matching/SLAM, enough RAM/CPU, a verified map frame, and safety-tested low-level control. Ultrasonic/IMU snapshots alone are not sufficient to infer reliable global waypoints.

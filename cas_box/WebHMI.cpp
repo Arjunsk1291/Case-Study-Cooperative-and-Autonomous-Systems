@@ -203,7 +203,7 @@ $('logStop').onclick=()=>{
 };
 $('logDownload').onclick=()=>{
   if(!logRows.length)return;
-  const blob=new Blob(['\\ufeff'+logRows.join('\\r\\n')],{type:'text/csv;charset=utf-8;'});
+  const blob=new Blob(['\ufeff'+logRows.join('\r\n')],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='CAS_B3_R07_indoor_sensors_'+new Date().toISOString().replace(/[:.]/g,'-')+'.csv';
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
