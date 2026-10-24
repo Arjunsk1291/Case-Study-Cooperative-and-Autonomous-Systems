@@ -175,8 +175,8 @@ public:
 
 private:
   static constexpr uint16_t kHardStopCm = 15;
-  static constexpr uint16_t kAvoidDistanceCm = 85;
-  static constexpr uint16_t kTurnClearanceCm = 60;
+  static constexpr uint16_t kAvoidDistanceCm = 42; // short-horizon clearance for the compact R07 chassis
+  static constexpr uint16_t kTurnClearanceCm = 32; // local swept-sector clearance; still require physical validation
   static constexpr uint16_t kMinSectorReturns = 4;
   static constexpr float kMaxCrcPct = 5.0f;
   static constexpr uint32_t kUsMaxAgeMs = 600;
@@ -246,10 +246,10 @@ private:
     if (side.count < kMinSectorReturns || side.minCm < kTurnClearanceCm) return false;
     if (freshUs(s, sideIndex)) {
       const int d = usableUs(s, sideIndex);
-      if (d < 38) return false;
+      if (d < 22) return false; // close side obstacle veto; footprint margin is handled by LiDAR sector clearance
     }
     // During rotation, rear-facing proximity is also relevant to the chassis sweep.
-    if (freshUs(s, 3) && usableUs(s, 3) < 25) return false;
+    if (freshUs(s, 3) && usableUs(s, 3) < 20) return false;
     return true;
   }
 };
