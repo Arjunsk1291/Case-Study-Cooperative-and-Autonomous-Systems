@@ -12,3 +12,7 @@ Not yet implemented/verified:
 - Arduino CLI compilation or physical rover validation.
 
 This is intentionally fail-safe: it will not drive the route until the localization and finish reference are valid. The rover has no wheel encoders; IMU yaw alone does not provide position or distance.
+
+
+## Endpoint clarification from operator
+The operator confirms the final `entrance` scan was captured from inside the washroom. Treat the final `END_SCAN_entrance` signature as the intended finish reference in future waypoint matcher implementation, while retaining its existing label in the raw dataset for traceability.

@@ -118,8 +118,8 @@ public:
     // never turn or drive into an arbitrary open sector.
     _phase = PH_SCAN;
     _state = "WAITING FOR LOCALIZATION";
-    _diagnostic = "No validated washroom pose/waypoint match is available. Motors remain zero; automatic sensor recovery continues, but route motion is inhibited."
-    and ffinish(left, right, status); return;
+    _diagnostic = "No validated washroom pose/waypoint match is available. Motors remain zero; automatic sensor recovery continues, but route motion is inhibited.";
+    finish(left, right, status); return;
 
     // PH_SCAN: evaluate 8 candidate headings at 45-degree intervals over the 360-degree scan.
     // Bin 0 is assumed forward; bins increase clockwise. Zero LiDAR bins are unknown, not free.
@@ -129,7 +129,7 @@ public:
     // A clear forward sector alone is not a destination. Without waypoint localization,
     // this prototype must not propel itself just because the corridor is open.
     _state = "WAITING FOR LOCALIZATION";
-    _diagnostic = "LiDAR view is available, but no validated washroom route target is active. Motors remain zero; add and validate waypoint matching before autonomous travel."
+    _diagnostic = "LiDAR view is available, but no validated washroom route target is active. Motors remain zero; add and validate waypoint matching before autonomous travel.";
     finish(left, right, status); return;
 
     for (int c = 0; c < 8; ++c) {
