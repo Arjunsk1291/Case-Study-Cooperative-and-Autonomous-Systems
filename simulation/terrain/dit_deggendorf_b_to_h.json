@@ -1,0 +1,172 @@
+{
+  "schema": "r07-campus-terrain-0.1",
+  "campus": "Technische Hochschule Deggendorf (main campus)",
+  "source": "Official THD campus diagram in https://www.th-deg.de/Fakult%C3%A4ten/agw/Guide-LSI.pdf, page 11 (Map Deggendorf)",
+  "status": "SCHEMATIC_APPROXIMATION_NOT_SURVEYED",
+  "units": "metres (approximate local coordinates; diagram is not scaled)",
+  "coordinate_frame": {
+    "x": "east/right on map",
+    "y": "north/up on map",
+    "origin": "arbitrary campus-local origin"
+  },
+  "model": {
+    "rover_length_m": 0.3,
+    "rover_total_width_m": 0.2,
+    "base_height_m": 0.055,
+    "wheel_track_m": 0.17,
+    "wheel_radius_m": 0.035,
+    "box_length_m": 0.12,
+    "box_width_m": 0.1,
+    "box_height_m": 0.06,
+    "box_dimensions_status": "PLACEHOLDER: measure actual CAS Box enclosure",
+    "lidar_height_m": 0.17,
+    "lidar_bins": 90,
+    "lidar_bin_deg": 4,
+    "lidar_max_range_m": 3.5,
+    "ultrasonic_order": [
+      "front",
+      "left",
+      "right",
+      "back",
+      "front_angled"
+    ],
+    "wheel_encoders": false
+  },
+  "bounds": {
+    "xmin": -24,
+    "xmax": 20,
+    "ymin": -22,
+    "ymax": 21
+  },
+  "buildings": [
+    {
+      "name": "A",
+      "x": -20,
+      "y": 14,
+      "w": 8,
+      "h": 4
+    },
+    {
+      "name": "B",
+      "x": -11,
+      "y": 14,
+      "w": 9,
+      "h": 4
+    },
+    {
+      "name": "C",
+      "x": -1,
+      "y": 14,
+      "w": 14,
+      "h": 4
+    },
+    {
+      "name": "F",
+      "x": -20,
+      "y": 6,
+      "w": 5,
+      "h": 5
+    },
+    {
+      "name": "G",
+      "x": 8,
+      "y": 6,
+      "w": 5,
+      "h": 5
+    },
+    {
+      "name": "D",
+      "x": -18,
+      "y": -1,
+      "w": 17,
+      "h": 4
+    },
+    {
+      "name": "E",
+      "x": 2,
+      "y": -1,
+      "w": 13,
+      "h": 4
+    },
+    {
+      "name": "H",
+      "x": -10,
+      "y": -10,
+      "w": 5,
+      "h": 5
+    },
+    {
+      "name": "I",
+      "x": -1,
+      "y": -10,
+      "w": 8,
+      "h": 5
+    },
+    {
+      "name": "J",
+      "x": -20,
+      "y": -19,
+      "w": 8,
+      "h": 5
+    },
+    {
+      "name": "K",
+      "x": -9,
+      "y": -19,
+      "w": 4,
+      "h": 5
+    },
+    {
+      "name": "L",
+      "x": 5,
+      "y": -19,
+      "w": 9,
+      "h": 5
+    }
+  ],
+  "route": [
+    {
+      "name": "B_EXIT",
+      "x": -6.5,
+      "y": 13.2
+    },
+    {
+      "name": "CENTRAL_WALKWAY",
+      "x": 0.5,
+      "y": 5
+    },
+    {
+      "name": "D_E_PASSAGE",
+      "x": 0.5,
+      "y": -2
+    },
+    {
+      "name": "WEST_APPROACH",
+      "x": -11.3,
+      "y": -2
+    },
+    {
+      "name": "BLOCK_H_ARRIVAL_APPROACH",
+      "x": -10.8,
+      "y": -7.5
+    }
+  ],
+  "start": {
+    "x": -6.5,
+    "y": 13.2,
+    "heading_deg": -90,
+    "description": "Approximate south-side exit/approach at Block B; verify entry side on site"
+  },
+  "goal": {
+    "x": -10.8,
+    "y": -7.5,
+    "heading_deg": 0,
+    "description": "Approximate approach to west side of Block H; stops outside the footprint, not inside a room"
+  },
+  "notes": [
+    "Building positions and dimensions were manually approximated from the official campus schematic. The source diagram has no usable scale, exact coordinates or pedestrian path centerlines.",
+    "This terrain is suitable for controller development and obstacle/path planning only, not for metric navigation claims or operational campus deployment.",
+    "Route from B to H is topologically plausible from the schematic but must be surveyed/confirmed on site before hardware use.",
+    "The final inside-washroom lidar signature belongs to a separate indoor R07 trial and is not the campus Block H goal."
+  ]
+}
