@@ -1,5 +1,7 @@
 #pragma once
-// CAS Box B3 / R07: scan-and-wander reactive navigation prototype.
+// CAS Box B3 / R07: fail-safe waypoint navigation scaffold.
+ // Route motion is intentionally inhibited until landmark localization and a confirmed
+ // WASHROOM_FINISH reference are available. Never substitute open-sector wandering.
 // Uses all-around 90-bin LiDAR sector scoring, fresh ultrasonic safety vetoes,
 // short bounded drive legs, and IMU-feedback 45-degree pivot steps.
 // NOT safety-certified. Validate LiDAR orientation and motor polarity before floor tests.
@@ -15,10 +17,10 @@ public:
     _phase = PH_SCAN; _phaseStartedMs = millis(); _driveStartedMs = 0;
     _turnStartYaw = 0; _turnDir = 0; _lastTurnDir = 0; _turnCount = 0;
     _faultLatched = false; _lastCommandL = _lastCommandR = 0;
-    _state = "WANDER: scanning room"; _diagnostic = "Collecting a fresh 360-degree LiDAR sector view.";
+    _state = "WAITING FOR LOCALIZATION"; _diagnostic = "Waiting for a validated route landmark; arbitrary-sector wandering is disabled.";
   }
   Side side() const { return _side; }
-  const char* sideName() const { return "WANDER"; }
+  const char* sideName() const { return "ROUTE"; }
   float commandLeft() const { return _lastCommandL; }
   float commandRight() const { return _lastCommandR; }
   float adaptiveSpeed() const { return kForwardSpeed; }
@@ -29,12 +31,14 @@ public:
     left = right = 0; _lastCommandL = _lastCommandR = 0;
     const uint32_t now = millis();
     if (_faultLatched) {
-      _state = "FAULT LATCHED: disable/re-enable autonomy";
+      _state = "RECOVERING: fault held safe";
       _diagnostic = _faultReason;
       finish(left, right, status); return;
     }
     if (!s.lidarOk() || s.lidarCrcErrorPct() > kMaxCrcPct) {
-      latchFault("FAULT: LiDAR unavailable / CRC high", "No reliable all-around scan; check LiDAR power, UART, packet rate and checksum.", left, right, status); return;
+      _phase = PH_SCAN; _state = "RECOVERING: LiDAR unavailable";
+      _diagnostic = "Motors zero. Waiting for healthy fresh LiDAR packets; automatic retry enabled. If persistent, inspect power/UART/CRC.";
+      finish(left, right, status); return;
     }
 
     const Sector front = sector(s, 0, 3);
@@ -113,9 +117,9 @@ public:
     // A clear sector is not a destination. Keep motors at zero and continue rescanning;
     // never turn or drive into an arbitrary open sector.
     _phase = PH_SCAN;
-    _state = "STOP: waypoint planner required";
-    _diagnostic = "No validated washroom waypoint planner is active. Motors remain zero; sensor recovery may continue, but autonomous travel is disabled.";
-    finish(left, right, status); return;
+    _state = "WAITING FOR LOCALIZATION";
+    _diagnostic = "No validated washroom pose/waypoint match is available. Motors remain zero; automatic sensor recovery continues, but route motion is inhibited."
+    and ffinish(left, right, status); return;
 
     // PH_SCAN: evaluate 8 candidate headings at 45-degree intervals over the 360-degree scan.
     // Bin 0 is assumed forward; bins increase clockwise. Zero LiDAR bins are unknown, not free.
@@ -124,8 +128,8 @@ public:
     const bool forwardClear = frontHasRoom(front) && nearFront >= kAvoidDistanceCm;
     // A clear forward sector alone is not a destination. Without waypoint localization,
     // this prototype must not propel itself just because the corridor is open.
-    _state = "STOP: waypoint planner required";
-    _diagnostic = "LiDAR view is available, but no validated washroom route target is active. Motors remain zero; add and validate waypoint matching before autonomous travel.";
+    _state = "WAITING FOR LOCALIZATION";
+    _diagnostic = "LiDAR view is available, but no validated washroom route target is active. Motors remain zero; add and validate waypoint matching before autonomous travel."
     finish(left, right, status); return;
 
     for (int c = 0; c < 8; ++c) {
