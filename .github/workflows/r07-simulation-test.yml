@@ -22,7 +22,13 @@ jobs:
           python -m pip install -r simulation/tools/requirements.txt
       - name: Syntax check
         run: |
-          python -m py_compile simulation/tools/r07_campus_sim.py simulation/tools/scan_to_polar_map.py
+          python -m py_compile simulation/tools/r07_campus_sim.py simulation/tools/scan_to_polar_map.py simulation/ros2_ws/src/r07_simulation/launch/r07_world.launch.py
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          ET.parse("simulation/ros2_ws/src/r07_description/urdf/r07_rover.urdf.xacro")
+          ET.parse("simulation/ros2_ws/src/r07_simulation/worlds/dit_b_to_h.world")
+          print("URDF/Xacro and Gazebo world are well-formed XML")
+          PY
       - name: Route-planner self-test
         run: |
           python simulation/tools/r07_campus_sim.py --self-test
