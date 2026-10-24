@@ -126,6 +126,11 @@ void loop() {
     }
     hmi.showValue("nav.mode", "AUTONOMOUS");
     hmi.showValue("nav.follow_side", navigation.sideName());
+    hmi.showValue("nav.command_l", l);
+    hmi.showValue("nav.command_r", r);
+    hmi.showValue("nav.speed", navigation.adaptiveSpeed());
+    hmi.showValue("nav.recovery", (double)navigation.recoveryCount());
+    hmi.showValue("nav.diagnostic", navigation.diagnostic());
   } else {
     wasAuto = false;
     hmi.getDrive(l, r, age);

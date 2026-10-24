@@ -27,13 +27,32 @@ button{appearance:none;border:0;border-radius:14px;font-weight:650;cursor:pointe
 .pad button.on{outline:3px solid var(--acc);}
 input[type=range]{width:100%;}
 .table{width:100%;border-collapse:collapse;font-size:13px;}
-.table td{padding:8px 7px;border-bottom:1px solid rgba(255,255,255,.06);}.usStatus{font-size:11px;color:var(--muted)}.usGood{color:#55d69e}.usWarn{color:var(--warn)}.usBad{color:#ff7378}
+.table td{padding:8px 7px;border-bottom:1px solid rgba(255,255,255,.06);}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-top:10px}
+.tile{padding:10px;border-radius:12px;background:#0b111b;border:1px solid rgba(255,255,255,.08)}
+.tile .label{display:block;margin-bottom:5px}.tile .value{font-size:16px;overflow-wrap:anywhere}
+.issue{padding:10px;border-radius:10px;margin-top:7px;background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.2)}
+.okIssue{background:rgba(85,214,158,.08);border-color:rgba(85,214,158,.2)}
+.usStatus{font-size:11px;color:var(--muted)}.usGood{color:#55d69e}.usWarn{color:var(--warn)}.usBad{color:#ff7378}
 .k{color:var(--muted);}
 canvas{display:block;margin:0 auto;max-width:100%;}
 </style></head><body><div class='wrap'>
 <div class='top'><div class='title'>%TITLE%</div><div class='pill' id='conn'>-</div>
  <button id='devBtn' class='btnTiny'>Dev</button></div>
 <div class='card'><div class='label'>State</div><div class='value' id='state'>-</div></div>
+<div class='card'><div class='sectionTitle'>Live troubleshooting</div>
+ <div class='label'>Use this panel to tell whether the box is sensing, connected to the rover, commanding motion, or recovering from suspected no movement. Motion is inferred from LiDAR scene change because this rover has no wheel encoders.</div>
+ <div class='tiles'>
+  <div class='tile'><span class='label'>Rover link</span><span class='value' id='diagLink'>Checking…</span></div>
+  <div class='tile'><span class='label'>Drive command L / R</span><span class='value' id='diagCmd'>0.00 / 0.00</span></div>
+  <div class='tile'><span class='label'>Adaptive forward speed</span><span class='value' id='diagSpeed'>—</span></div>
+  <div class='tile'><span class='label'>Self-corrections</span><span class='value' id='diagRecoveries'>0</span></div>
+  <div class='tile'><span class='label'>LiDAR</span><span class='value' id='diagLidar'>Checking…</span></div>
+  <div class='tile'><span class='label'>Front clearance</span><span class='value' id='diagFront'>—</span></div>
+ </div>
+ <div id='diagIssue' class='issue'>Waiting for live diagnostics…</div>
+ <div class='label' id='diagAdvice' style='margin-top:8px'>If the rover does not move, first check rover link/IP, motor battery, wheel obstruction and whether the rover itself is powered.</div>
+</div>
 <div class='card'><div class='sectionTitle'>Autonomous surface-following (experimental)</div><div class='label'>Low-speed prototype. Keep the rover in a clear test area with an operator ready to stop it. Autonomy stops if this page heartbeat is lost.</div><div style='display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'><button id='autoBtn' class='btnTiny'>Enable autonomy (OFF)</button><button id='autoStop' class='btnTiny stop'>Disable autonomy / STOP</button></div><div id='autoStatus' class='label' style='margin-top:8px'>Autonomy OFF · default right-side following</div></div>
 <div class='card hidden' id='driveCard'><div class='sectionTitle'>Drive (hold a key)</div>
  <div class='pad'>
@@ -220,6 +239,28 @@ $('logDownload').onclick=()=>{
   a.href=url;a.download='CAS_B3_R07_indoor_sensors_'+new Date().toISOString().replace(/[:.]/g,'-')+'.csv';
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
+
+function renderDiagnostics(j){
+  const vals={};(j.values||[]).forEach(v=>vals[v.name]=v.value);
+  const connected=vals['rover.ip'] && vals['rover.ip']!=='0.0.0.0';
+  $('diagLink').textContent=connected?('Connected · '+vals['rover.ip']):'NOT CONNECTED';
+  $('diagCmd').textContent=(vals['nav.command_l']||'0.00')+' / '+(vals['nav.command_r']||'0.00');
+  $('diagSpeed').textContent=vals['nav.speed']?Number(vals['nav.speed']).toFixed(2):'—';
+  $('diagRecoveries').textContent=vals['nav.recovery']||'0';
+  const S=j.sensors||{},L=S.lidar||{},us=S.us||[];
+  $('diagLidar').textContent=L.ok?('OK · '+L.pps+' pkt/s · CRC '+L.crc+'%'):'NO DATA';
+  $('diagFront').textContent=(us[0]===undefined?'—':us[0]+' cm');
+  const state=(j.state||'').toLowerCase(),diag=vals['nav.diagnostic']||'';
+  let issue='No obvious sensor/link fault detected from current snapshot.';
+  let advice='Keep autonomy off until you have confirmed manual drive works and the rover is on a clear, level floor.';
+  let good=false;
+  if(!connected){issue='ROVER LINK MISSING: the box has not found the rover.';advice='Power the box first, then reboot/power the rover so it joins CAS-Box-07. Check rover battery and the rover station on the box Wi-Fi.';}
+  else if(!L.ok || Number(L.crc)>5){issue='LIDAR FAULT: scan data is unavailable or checksum errors are high.';advice='Disable autonomy. Check LiDAR power, UART wiring and the live scan display.';}
+  else if(state.includes('fault') || state.includes('stop:') || state.includes('recovery')){issue=j.state+'. '+diag;advice='Read the state and diagnostic above. Do not keep re-enabling autonomy to force motion; inspect clearance, wheels and power first.';}
+  else if(!j.sensors){issue='No sensor snapshot received.';advice='Wait for the sensor snapshot; check serial output and sensor initialization.';}
+  else {good=true; issue='LIVE: '+(j.state||'State unavailable')+'. '+diag; advice='If commanded speeds are nonzero but the rover remains physically still, this dashboard cannot prove wheel motion without encoders. Check motor battery, motor/driver and wheel binding.';}
+  $('diagIssue').textContent=issue;$('diagIssue').className='issue'+(good?' okIssue':'');$('diagAdvice').textContent=advice;
+}
 // ---- poll the box 4 times per second; log the same snapshot displayed by the dashboard
 async function poll(){
   try{
@@ -228,7 +269,7 @@ async function poll(){
     if(autoOn)fetch('/autonomy?hb=1',{cache:'no-store'}).catch(()=>{});
     $('state').textContent=j.state||'-';
     latestSnapshot={...j,receivedAt:Date.now()};
-    renderSensors(j.sensors);
+    renderSensors(j.sensors);renderDiagnostics(j);
     if(logging&&j.sensors){
       logRows.push(rowFor('SAMPLE','',j.sensors).map(csvCell).join(','));
       logSampleCount++;updateLogUi();

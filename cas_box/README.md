@@ -165,3 +165,19 @@ Recommended collection protocol:
 5. Validate the physical LiDAR bin orientation and actual stopping distance before changing thresholds.
 
 The thresholds are conservative starting values and must be tuned only after replaying logs and conducting controlled tests. No encoder odometry, global map, GPS positioning, or guaranteed route completion is implemented.
+
+
+## Experimental diagnostic surface-following build (B3 / R07)
+
+This revision raises the nominal straight command from 0.10 to 0.22 (normalized RoverLink range -0.5..0.5), uses 0.18 / 0.15 near obstacles, and keeps pivot commands at 0.50. These are starting values, not calibrated speeds. Test on a clear, level floor with the rover restrained/space clear and an operator at STOP.
+
+The dashboard now has a live troubleshooting panel showing rover IP/link, commanded wheel values, adaptive speed, recovery count, LiDAR status, front clearance, and a diagnostic hint. It is intended to separate “the box is not connected / not commanding motion” from “the box is commanding motion but physical motion is not confirmed”.
+
+The no-motion detector compares a sparse LiDAR scene signature while straight motion is commanded. Since this build has no wheel encoders, unchanged scene geometry is only a *suspected* stall: a long uniform wall or a stationary/poor scan can cause false positives. It performs at most two bounded stop/pivot/recheck recovery attempts and then faults to stop. It must not be treated as proof of wheel motion.
+
+Safety notes:
+- Autonomy starts OFF. Keep it OFF while verifying compilation and manual drive.
+- Do not run near stairs, people, traffic, glass, or outdoor drop-offs.
+- The rover firmware is unchanged. This package changes only the sensor-box ESP32.
+- If the dashboard shows nonzero commands but the wheels do not move, inspect rover power/battery, motor/driver, wheel binding, rover link/IP and the rover's own firmware. Do not keep increasing speed blindly.
+- This revision has not been compiled with the exact Arduino ESP32 toolchain or tested on hardware. Verify in Arduino IDE before uploading.
