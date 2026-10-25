@@ -1,0 +1,39 @@
+{
+  "schema": "r07-photo-terrain-overlay-1.0",
+  "status": "PHOTO_DERIVED_ESTIMATES_NOT_SURVEYED",
+  "source_files": [
+    "IMG_9705.jpeg",
+    "IMG_9706.mp4",
+    "c429a667-3052-449e-bfe9-98a236606c5c.jpeg",
+    "20471da7-e670-49c5-8b68-c8a8ac38ff20.jpeg",
+    "cb00e451-1543-4c89-9ff1-9793cf013182.jpeg"
+  ],
+  "visible_features": [
+    {"id":"cobblestone_lane","confidence":"high feature, dimensions estimated","simulation":"staggered small cobble units with small height variations; reduce speed"},
+    {"id":"transverse_raised_threshold","confidence":"visible feature; crossability uncertain","simulation":"raised side portions plus separate hypothesized lower centre crossing; verify height and opening onsite"},
+    {"id":"large_format_granite_slabs","confidence":"high feature, tile size estimated","simulation":"rectangular slab grid and surface-transition boundaries"},
+    {"id":"covered_colonnade","confidence":"high feature, exact map position estimated","simulation":"round concrete columns, canopy strip and pink facade cue"},
+    {"id":"tactile_guidance","confidence":"high feature","simulation":"four narrow parallel metal guide rails and dot-pattern warning pad"},
+    {"id":"ground_lights_and_utility_covers","confidence":"high feature, exact dimensions estimated","simulation":"low-profile circular flush fixtures/covers"},
+    {"id":"linear_drainage_grates","confidence":"high feature, dimensions estimated","simulation":"long edge drain and transverse crossing grates"},
+    {"id":"wet_patches","confidence":"high visible condition; friction unmeasured","simulation":"wet-zone mask and optional lower-speed/traction scenario"},
+    {"id":"timber_pavilion_P","confidence":"medium-high","simulation":"separate campus-store pavilion landmark beside the cobbled lane"},
+    {"id":"building_D_E_signs","confidence":"sign text visible; positions estimated","simulation":"D/E signboards as potential visual landmarks, not semantic recognition"},
+    {"id":"pedestrians","confidence":"people visible; trajectories are synthetic","simulation":"optional moving agents to test stop/yield behavior"}
+  ],
+  "navigation_policy": {
+    "cobblestone": "reduce speed and use conservative clearance",
+    "threshold": "do not assume it is traversable until height and wheel clearance are verified",
+    "stairs": "hard no-go for the small wheeled rover; prefer a verified ramp",
+    "water_and_open_channels": "no-go except at explicit bridges",
+    "wet_surfaces": "lower speed; friction coefficients are scenario parameters, not measured",
+    "unknown_space": "blocked until mapped",
+    "finish": "latch FINISHED and hold both drive commands at zero at the configured Block H approach"
+  },
+  "limitations": [
+    "The public campus plan and operator photos/video are not metric survey data. Coordinates, dimensions, grades, and route positions are estimates.",
+    "The lower centre threshold crossing is a simulation hypothesis; the photo only establishes a transverse raised edge.",
+    "Small tactile rails, warning studs, flush covers, and thin drain slots may not be reliably detected by the 17 cm-high LiDAR.",
+    "Do not use this layer for real-world autonomous navigation until route, ramp grade, threshold height, entrances, drainage and obstacles are verified onsite."
+  ]
+}
