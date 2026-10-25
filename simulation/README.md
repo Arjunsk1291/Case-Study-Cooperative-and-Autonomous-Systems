@@ -51,3 +51,12 @@ This creates a polar plot and CSV from the final inside-washroom signature as co
 
 ## Before using the route on real hardware
 Measure the real walkable path, entrance coordinates, building offsets and route width; verify ramps/steps/roads/access restrictions. Confirm R07 sensor orientation, mounting heights, wheel track/radius, and box enclosure dimensions. Simulation success alone does not validate hardware safety or navigation performance.
+
+
+## Photo-derived campus terrain details
+
+The photo-enrichment inventory is in [`terrain/photo_detail_overlay.json`](terrain/photo_detail_overlay.json). It records the features visible in the user-provided stills/video: small cobbles, a transverse raised curb/threshold, slab-paving transitions, a covered colonnade with columns, tactile guide rails and dot pads, circular flush ground covers, linear drainage grates, wet-surface zones, Campus Store pavilion cues, D/E signs and optional pedestrian stop/yield scenarios.
+
+**Important coordinate note:** the feature inventory is descriptive and does not provide a surveyed campus coordinate transform. The fully photo-enriched package generated in this conversation contains the detailed mesh and Gazebo SDF with representative model-local positions. The simpler branch terrain JSON uses a different, smaller coordinate frame; do not copy the photo detail coordinates into it without transforming/re-aligning them first.
+
+The curb's lower centre crossing is a simulation hypothesis. The images show a raised transverse edge, but not the exact height or proof of a lowered crossing. Dimensions, route alignment, wet-friction settings and ramp grades remain estimates and must be surveyed before considering real-world use.
