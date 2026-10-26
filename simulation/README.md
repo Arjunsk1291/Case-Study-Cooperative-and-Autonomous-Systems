@@ -60,3 +60,36 @@ The photo-enrichment inventory is in [`terrain/photo_detail_overlay.json`](terra
 **Important coordinate note:** the feature inventory is descriptive and does not provide a surveyed campus coordinate transform. The fully photo-enriched package generated in this conversation contains the detailed mesh and Gazebo SDF with representative model-local positions. The simpler branch terrain JSON uses a different, smaller coordinate frame; do not copy the photo detail coordinates into it without transforming/re-aligning them first.
 
 The curb's lower centre crossing is a simulation hypothesis. The images show a raised transverse edge, but not the exact height or proof of a lowered crossing. Dimensions, route alignment, wet-friction settings and ramp grades remain estimates and must be surveyed before considering real-world use.
+
+
+## Screenshots and video walkthrough
+
+The screenshot set and short route animation are generated from the detailed terrain JSON whenever the rendering script or terrain source is updated.
+
+**3D campus overview**
+
+![TH Deggendorf detailed 3D terrain](media/campus_3d_overview.png)
+
+**Top-down campus layout and B → H candidate route**
+
+![Top-down B to H route](media/campus_overview.png)
+
+**Photo-enriched corridor**
+
+![Campus Store lane and terrain detail](media/corridor_detail.png)
+
+**Animated route preview**
+
+![R07 Block B to Block H route simulation](media/route_walkthrough.gif)
+
+[Watch/download the MP4 walkthrough](media/route_walkthrough.mp4)
+
+To regenerate these files locally:
+
+```bash
+python3 -m pip install matplotlib
+sudo apt-get install ffmpeg
+python3 simulation/tools/generate_readme_media.py
+```
+
+The generated media includes route/terrain visualization, not a recording of live Gazebo physics or the physical robot. The coordinates, object dimensions, ramp grades, and finish location remain schematic estimates.
