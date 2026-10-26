@@ -161,7 +161,7 @@ def draw_plan(ax,cfg,extent=None,labels=True,progress=None,rover_xy=None,rover_h
 def make_3d(cfg,out):
     fig=plt.figure(figsize=(12,8),facecolor="#edf1f3"); ax=fig.add_subplot(111,projection="3d",facecolor="#edf1f3")
     bnd=cfg["bounds"]; z=-.15
-    ax.add_collection3d(Poly3DCollection([[(bnd["xmin"],bnd["ymin"],z),(bnd["xmax"],bnd["ymin"],z),(bnd["xmax"],bnd["ymax"],z),(bnd["xmin"],bnd["ymax"],z]],facecolors="#c4c9c2",edgecolors="#818a86",linewidths=.4))
+    ax.add_collection3d(Poly3DCollection([[(bnd["xmin"],bnd["ymin"],z),(bnd["xmax"],bnd["ymin"],z),(bnd["xmax"],bnd["ymax"],z),(bnd["xmin"],bnd["ymax"],z)]],facecolors="#c4c9c2",edgecolors="#818a86",linewidths=.4))
     for s in cfg.get("surface_zones",[]):
         x1,x2=s["x"]-s["w"]/2,s["x"]+s["w"]/2; y1,y2=s["y"]-s["d"]/2,s["y"]+s["d"]/2; z=s.get("z",0)
         ax.add_collection3d(Poly3DCollection([[(x1,y1,z),(x2,y1,z),(x2,y2,z),(x1,y2,z)]],facecolors=C.get(s["type"],"#bbb"),edgecolors="none",alpha=.8))
