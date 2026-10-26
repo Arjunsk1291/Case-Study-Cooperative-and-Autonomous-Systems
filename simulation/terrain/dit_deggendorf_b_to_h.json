@@ -1,0 +1,249 @@
+{
+  "schema": "r07-campus-terrain-0.2",
+  "campus": "Technische Hochschule Deggendorf (Deggendorf main campus)",
+  "source": {
+    "campus_map": "https://www.th-deg.de/Hochschule/anfahrt/3011/image-thumb__3011__auto_c0ea329288500d649417882abb206382/deg_gebaeudeplan%402x.jpg",
+    "building_index": "https://www.th-deg.de/Fakult%C3%A4ten/agw/Guide-LSI.pdf",
+    "basis": "Official campus block diagram and building index. The public diagram is schematic and does not provide a surveyed coordinate frame or metric building footprints."
+  },
+  "status": "SCHEMATIC_APPROXIMATION_NOT_SURVEYED",
+  "units": "metres for simulation only; coordinates/footprints below are estimated by tracing the published schematic, not survey measurements",
+  "coordinate_frame": {
+    "x": "right/east on diagram",
+    "y": "up/north on diagram",
+    "origin": "arbitrary campus-local"
+  },
+  "model": {
+    "rover_length_m": 0.3,
+    "rover_total_width_m": 0.2,
+    "base_height_m": 0.055,
+    "wheel_track_m": 0.17,
+    "wheel_radius_m": 0.035,
+    "wheel_track_status": "estimate: replace with measured wheel-center spacing",
+    "wheel_radius_status": "estimate: replace with measured loaded radius",
+    "box_length_m": 0.12,
+    "box_width_m": 0.1,
+    "box_height_m": 0.06,
+    "box_dimensions_status": "PLACEHOLDER: exact CAS Box enclosure dimensions not supplied",
+    "lidar_height_m": 0.17,
+    "lidar_bins": 90,
+    "lidar_bin_deg": 4,
+    "lidar_max_range_m": 3.5,
+    "lidar_angle_convention": "bin 0 forward; bins increase clockwise; confirm sensor offset from actual firmware settings",
+    "ultrasonic_order": [
+      "front",
+      "left",
+      "right",
+      "back",
+      "front_angled"
+    ],
+    "ultrasonic_angles_deg": [
+      0,
+      90,
+      -90,
+      180,
+      -35
+    ],
+    "ultrasonic_angles_status": "simulation defaults; measure actual sensor directions",
+    "wheel_encoders": false,
+    "gps_module": "NEO-6M simulated in the Gazebo model; geodetic origin is approximate"
+  },
+  "bounds": {
+    "xmin": -27,
+    "xmax": 14,
+    "ymin": -22,
+    "ymax": 21
+  },
+  "buildings": [
+    {
+      "name": "A",
+      "label": "Business Administration / Business Informatics",
+      "x": -20,
+      "y": 16,
+      "w": 7.5,
+      "h": 4
+    },
+    {
+      "name": "B",
+      "label": "Administration / Main Auditorium / International Office",
+      "x": -11,
+      "y": 16,
+      "w": 8,
+      "h": 4
+    },
+    {
+      "name": "C",
+      "label": "Mechanical Engineering / Mechatronics",
+      "x": -1,
+      "y": 16,
+      "w": 12,
+      "h": 4
+    },
+    {
+      "name": "F",
+      "label": "Cafeteria",
+      "x": -19,
+      "y": 7,
+      "w": 5,
+      "h": 5
+    },
+    {
+      "name": "G",
+      "label": "Library / Data Centre (official map index)",
+      "x": 6,
+      "y": 7,
+      "w": 5,
+      "h": 5
+    },
+    {
+      "name": "D",
+      "label": "Civil and Construction Engineering",
+      "x": -16,
+      "y": -1,
+      "w": 15,
+      "h": 4
+    },
+    {
+      "name": "E",
+      "label": "Electrical Engineering / Media Technology",
+      "x": 2,
+      "y": -1,
+      "w": 14,
+      "h": 4
+    },
+    {
+      "name": "H",
+      "label": "Staff administration offices (per published building index; verify current function)",
+      "x": -10,
+      "y": -8,
+      "w": 5,
+      "h": 4
+    },
+    {
+      "name": "I",
+      "label": "Lecture theatres",
+      "x": 0,
+      "y": -8,
+      "w": 7,
+      "h": 4
+    },
+    {
+      "name": "J",
+      "label": "Media Technology",
+      "x": -19,
+      "y": -17,
+      "w": 7,
+      "h": 5
+    },
+    {
+      "name": "K",
+      "label": "Business Informatics",
+      "x": -9,
+      "y": -17,
+      "w": 4,
+      "h": 5
+    },
+    {
+      "name": "L",
+      "label": "Mechanical Engineering / Applied Sciences",
+      "x": 4,
+      "y": -17,
+      "w": 9,
+      "h": 5
+    }
+  ],
+  "paved_walkways": [
+    {
+      "name": "B south exit to D/E corridor",
+      "from": [
+        -11,
+        13.3
+      ],
+      "to": [
+        -8.1,
+        0.8
+      ],
+      "width_m": 2
+    },
+    {
+      "name": "D east-side clearance corridor",
+      "from": [
+        -8.1,
+        0.8
+      ],
+      "to": [
+        -8.1,
+        -3.4
+      ],
+      "width_m": 1.4
+    },
+    {
+      "name": "South bypass to H approach",
+      "from": [
+        -8.1,
+        -3.4
+      ],
+      "to": [
+        -10,
+        -5.3
+      ],
+      "width_m": 1.6
+    }
+  ],
+  "route": [
+    {
+      "name": "B_EXIT",
+      "x": -11,
+      "y": 13.3,
+      "kind": "start"
+    },
+    {
+      "name": "D_E_CORRIDOR_NORTH",
+      "x": -8.1,
+      "y": 0.8,
+      "kind": "waypoint"
+    },
+    {
+      "name": "D_E_SOUTH_BYPASS",
+      "x": -8.1,
+      "y": -3.4,
+      "kind": "waypoint"
+    },
+    {
+      "name": "BLOCK_H_ARRIVAL_APPROACH",
+      "x": -10,
+      "y": -5.3,
+      "kind": "goal"
+    }
+  ],
+  "start": {
+    "x": -11,
+    "y": 13.3,
+    "heading_deg": -90,
+    "description": "Approximate south-side exit at Block B from diagram; verify actual building exit on site"
+  },
+  "goal": {
+    "x": -10,
+    "y": -5.3,
+    "heading_deg": -90,
+    "description": "Approximate outdoor approach point just north of Block H; the simulator stops outside the building footprint"
+  },
+  "mapping_notes": [
+    "The official THD campus diagram labels the buildings and shows their relative arrangement, but does not provide surveyed coordinates, metric scale, exact footprints or pedestrian path centerlines.",
+    "Building positions use centre x/y plus width/height. In simulation, the path planner inflates building footprints by the rover's circumscribed radius plus a safety margin.",
+    "Only rover chassis length 0.30 m and total width 0.20 m are treated as known. Wheel track/radius, box enclosure dimensions, sensor offsets, and ultrasonic bearings remain explicitly editable estimates.",
+    "The route from Block B to Block H is an initial candidate based on the published block diagram, not a verified pedestrian route. Access gates, steps, ramps, roads, landscaping and obstacles are not fully represented.",
+    "The reported indoor LiDAR dataset is not the outdoor campus terrain. It provides indoor landmark signatures, not campus pose or metric coordinates.",
+    "The simulator's Block H goal stops at an approximate external approach point. It should not automatically navigate inside a building without an indoor map and authorized route."
+  ],
+  "georeference_approximate": {
+    "local_origin_xy": [
+      0,
+      0
+    ],
+    "latitude_deg": 48.82958,
+    "longitude_deg": 12.95471,
+    "source": "Mapcarta/OpenStreetMap-derived TH Deggendorf campus point",
+    "warning": "Approximate campus anchor only. The hand-traced local building geometry is not aligned or verified against surveyed footprints; do not use for real GPS waypoint navigation."
+  }
+}
