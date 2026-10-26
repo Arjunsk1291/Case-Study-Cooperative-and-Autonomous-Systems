@@ -1,0 +1,49 @@
+name: Generate simulation README media
+
+on:
+  push:
+    branches:
+      - simulation/r07-gazebo-terrain
+    paths:
+      - "simulation/tools/generate_readme_media.py"
+      - "simulation/terrain/dit_deggendorf_b_to_h_detailed.json"
+      - ".github/workflows/generate-readme-media.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  render-media:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install matplotlib
+      - name: Render screenshots and route video
+        run: |
+          python simulation/tools/generate_readme_media.py
+          ls -lh simulation/media
+      - name: Commit generated media to this branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add simulation/media/campus_overview.png simulation/media/corridor_detail.png simulation/media/campus_3d_overview.png simulation/media/route_walkthrough.gif simulation/media/route_walkthrough.mp4
+          if git diff --cached --quiet; then
+            echo "Generated media is unchanged."
+          else
+            git commit -m "Add generated simulation README screenshots and walkthrough"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
