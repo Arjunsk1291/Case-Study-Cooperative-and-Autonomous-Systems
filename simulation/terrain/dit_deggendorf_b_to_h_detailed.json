@@ -1,1 +1,1245 @@
-{"schema":"thd-campus-r07-terrain-1.0","campus":"Technische Hochschule Deggendorf — main campus, Block B to Block H","status":"RESEARCHED_SCHEMATIC_3D_MODEL_NOT_SURVEYED","sources":[{"title":"THD Quiet­schie Guide 2025, campus layout","url":"https://www.th-deg.de/Studierende/Antraege-und-Organisatorisches/infos-fuer-erstsemester/Quietschieguide_SoSe25.pdf","use":"relative block arrangement, entrances/accessibility symbols, Pavilion P / Campus Store, trees and landscaped zones"},{"title":"THD 360 degree campus tour","url":"https://vr-easy.com/tour/thdeg/210705-campus/","use":"photographic viewpoints including forecourt, passages, terrace, large plaza, H building exterior and routes behind H"},{"title":"Bez + Kock — TH Deggendorf extension","url":"https://www.bez-kock.de/de/projekte/119/erweiterung-der-technischen-hochschule-deggendorf-2015/","use":"five staggered buildings, plazas and terraces descending toward the Danube; facade references"},{"title":"Lohrberg landscape architecture — FH Deggendorf","url":"https://www.lohrberg.de/portfolio-item/fh-deggendorf/","use":"two stepped plateaus, three north-south paths, terrace/courtyard structure"},{"title":"Hille + Müller landscape architecture — FH Deggendorf","url":"https://www.landschaftsarchitekten.net/fh-deggendorf-planung","use":"Bayerwald granite paving slabs, tree court, two water basins, timber deck, granite stair sculptures, drainage rills and bridges"},{"title":"Campus photographs — HL Lichttechnik","url":"https://www.hl-lichttechnik.eu/projekte/fh-deggendorf","use":"cobble path, pavers, ramps/handrails, cycle racks, lawn edges, courtyard furniture"},{"title":"Campus Store location","url":"https://www.deggendorf-pulsiert.de/einkaufen-geniessen/shopping-hotspots/","use":"Campus Store address at Dieter-Görlitz-Platz 1"}],"coordinate_model":{"units":"metres","origin":"schematic campus-local coordinate frame traced from the THD campus layout image","transform":"relative tracing only; coordinates were normalized to a plausible local simulation scale after tracing the official campus diagram, not georeferenced to pixels","approx_scale_m_per_image_pixel":null,"accuracy_warning":"The official public campus plan is an orientation diagram, not a survey or scaled cadastral drawing. All metric footprints, local coordinates, ramp positions/grades, steps, water features and route centreline are estimates. Use as a detailed simulation world, not a map suitable for real-world autonomous deployment."},"bounds":{"xmin":-92,"xmax":92,"ymin":-64,"ymax":76},"model":{"rover_length_m":0.3,"rover_total_width_m":0.2,"rover_height_m":0.055,"wheel_track_m":0.17,"wheel_radius_m":0.035,"wheel_track_and_radius_status":"estimate; measure actual rover","box_length_m":0.12,"box_width_m":0.1,"box_height_m":0.06,"box_dimensions_status":"placeholder; measure actual CAS Box enclosure","lidar_height_m":0.17,"lidar_bins":90,"lidar_bin_deg":4,"lidar_max_range_m":3.5,"wheel_encoders":false,"physical_surface_effects":{"granite_slabs":{"friction":"nominal dry stone; approximate","speed_factor":0.85},"cobblestone":{"friction":"rough/jointed; Gazebo model will include small height variation","speed_factor":0.45},"smooth_concrete":{"friction":"nominal dry concrete; approximate","speed_factor":0.8},"timber_deck":{"friction":"dry timber; approximate","speed_factor":0.65},"grass":{"friction":"uneven/off-route; discourage autonomous travel","speed_factor":0.3},"wet_or_icy":{"friction":"not simulated in current build; future disturbance scenario required","speed_factor":0.0}}},"height_levels":[{"name":"north_upper_terrace","z_m":0.6,"basis":"landscape project describes staged terraces; height is a simulation estimate"},{"name":"middle_courtyard","z_m":0.3,"basis":"estimated intermediate plateau"},{"name":"south_lower_terrace","z_m":0.0,"basis":"local terrain datum; not surveyed elevation"}],"buildings":[{"name":"A","label":"Business Administration / Business Informatics","x":-70.0,"y":51.75,"w":35.5,"d":10.5,"height":10.5,"base_z":0.6,"facade":"warm_pink","floors":3},{"name":"B","label":"Administration / International Office / Career Service","x":-27.25,"y":51.75,"w":35.75,"d":10.5,"height":11.0,"base_z":0.6,"facade":"warm_pink","floors":3,"entrances":[{"name":"B_south_east_exit","x":-14.0,"y":46.4,"accessible":true}]},{"name":"C","label":"Mechanical Engineering / Mechatronics / Copyshop","x":36.25,"y":51.75,"w":80.0,"d":10.5,"height":11.0,"base_z":0.6,"facade":"warm_pink","floors":3},{"name":"F","label":"Cafeteria / Mensa","x":-65.0,"y":31.75,"w":25.0,"d":16.25,"height":7.0,"base_z":0.3,"facade":"glass_grey","floors":2},{"name":"G","label":"Library / MINT","x":46.75,"y":31.75,"w":25.0,"d":16.0,"height":9.0,"base_z":0.3,"facade":"glass_grey","floors":3},{"name":"D","label":"Civil and Construction Engineering","x":-48.375,"y":12.125,"w":78.25,"d":10.25,"height":10.5,"base_z":0.3,"facade":"warm_pink","floors":3},{"name":"E","label":"Rohde & Schwarz Forum / Electrical Engineering and IT","x":36.125,"y":12.125,"w":79.75,"d":10.25,"height":10.5,"base_z":0.3,"facade":"warm_pink","floors":3},{"name":"H","label":"Kappenberger + Braun Forum / University Management","x":-40.25,"y":-10.0,"w":19.5,"d":17.75,"height":12.0,"base_z":0.0,"facade":"dark_forum","floors":3,"entrances":[{"name":"H_east_accessible_entrance","x":-30.0,"y":-10.0,"accessible":true}]},{"name":"I","label":"Günther Karl Forum / Lecture theatres","x":14.125,"y":-10.0,"w":35.75,"d":18.0,"height":11.5,"base_z":0.0,"facade":"dark_forum","floors":3},{"name":"J","label":"Micro Epsilon Forum / Media Technology","x":-69.875,"y":-28.0,"w":36.25,"d":16.5,"height":10.5,"base_z":0.0,"facade":"warm_pink","floors":3},{"name":"K","label":"Kermi Forum / Applied Computer Science / Cafeteria","x":-19.75,"y":-28.0,"w":18.5,"d":16.5,"height":10.0,"base_z":0.0,"facade":"dark_forum","floors":3},{"name":"L","label":"Zollner Elektronik AG Forum / Applied Natural Sciences","x":57.875,"y":-28.0,"w":34.75,"d":16.5,"height":10.5,"base_z":0.0,"facade":"warm_pink","floors":3}],"surface_zones":[{"name":"upper_granite_plaza","type":"granite_slabs","x":-7.0,"y":46.5,"w":76.0,"d":16.8,"z":0.6,"roughness":0.04,"speed_factor":0.9,"basis":"upper landing near B and north terrace; lower edge joins the B-to-middle ramp (estimated geometry)"},{"name":"B_to_courtyard_paving","type":"granite_slabs","x":-14.0,"y":44.6,"w":9.0,"d":3.0,"z":0.6,"roughness":0.04,"speed_factor":0.9,"basis":"small upper landing outside B; estimated footprint"},{"name":"west_cobble_walk","type":"cobblestone","x":-18.0,"y":31.0,"w":3.0,"d":16.0,"z":0.3,"roughness":0.22,"speed_factor":0.55,"basis":"cobblestone path visible in campus photography"},{"name":"central_ramp_apron","type":"smooth_concrete","x":-6.5,"y":9.6,"w":2.2,"d":5.4,"z":0.15,"roughness":0.02,"speed_factor":0.75,"basis":"transition surface at the middle-to-lower ramp; height is interpolated estimate"},{"name":"D_E_passage_pavers","type":"granite_slabs","x":-6.5,"y":18.0,"w":5.1,"d":11.4,"z":0.3,"roughness":0.05,"speed_factor":0.8,"basis":"upper landing / paved north-south passage between D and E; estimated boundaries"},{"name":"south_bypass_cobble","type":"cobblestone","x":-18.5,"y":4.0,"w":24.0,"d":2.8,"z":0.0,"roughness":0.22,"speed_factor":0.55},{"name":"H_east_approach_pavers","type":"granite_slabs","x":-28.8,"y":-8.5,"w":3.4,"d":14.0,"z":0.0,"roughness":0.04,"speed_factor":0.85,"basis":"flat approach strip outside east side of H; entrance accessibility is mapped but exact surface boundaries are not surveyed"},{"name":"H_front_courtyard","type":"granite_slabs","x":-40.0,"y":-22.0,"w":25.0,"d":5.8,"z":0.0,"roughness":0.04,"speed_factor":0.85},{"name":"mensa_timber_deck","type":"timber_deck","x":-54.0,"y":22.0,"w":5.5,"d":10.0,"z":0.3,"roughness":0.1,"speed_factor":0.65},{"name":"southern_green","type":"grass","x":0.0,"y":-50.0,"w":166.0,"d":8.0,"z":0.0,"roughness":0.25,"speed_factor":0.35},{"name":"P_pavilion_north_forecourt","type":"granite_slabs","x":10.0,"y":36.0,"w":15.0,"d":2.6,"z":0.3,"roughness":0.04,"speed_factor":0.85},{"name":"P_pavilion_west_sidewalk","type":"cobblestone","x":3.8,"y":31.5,"w":2.2,"d":10.8,"z":0.3,"roughness":0.22,"speed_factor":0.55,"basis":"cobble path beside the west face of Pavilion P, matching the photographic paving treatment; exact surface extent is approximate"},{"name":"P_pavilion_south_forecourt","type":"granite_slabs","x":10.0,"y":26.8,"w":15.0,"d":2.6,"z":0.3,"roughness":0.04,"speed_factor":0.85}],"ramps":[{"name":"B_to_middle_terrace_ramp","axis":"y","x":-11.0,"y_start":38.1,"length":5.4,"width":1.8,"z_start":0.3,"z_end":0.6,"max_slope_ratio":"1:18 (estimated)","accessible_route":true,"blocks_rover":false,"basis":"smooth continuous route through terrace level change; location/grade are inferred"},{"name":"middle_to_lower_ramp","axis":"y","x":-6.5,"y_start":6.9,"length":5.4,"width":1.8,"z_start":0.0,"z_end":0.3,"max_slope_ratio":"1:18 (estimated)","accessible_route":true,"blocks_rover":false},{"name":"H_east_accessible_ramp","axis":"y","x":-28.8,"y_start":-5.2,"length":7.2,"width":1.35,"z_start":0.0,"z_end":0.0,"max_slope_ratio":"level landing; grade unknown","accessible_route":true,"blocks_rover":false,"basis":"accessible approach inferred from plan's wheelchair/access marker; exact ramp geometry unverified"}],"stairs":[{"name":"campus_granite_step_sculpture","x":-25.0,"y":30.0,"width":7.0,"tread":0.38,"rise":0.14,"steps":5,"axis":"y","high_direction":"north","material":"granite","blocks_rover":true,"basis":"landscape architect documents granite stair sculptures; precise location/size are approximate","base_z":0.3},{"name":"H_forum_main_steps","x":-40.0,"y":-21.2,"width":10.5,"tread":0.42,"rise":0.15,"steps":4,"axis":"y","high_direction":"north","material":"granite_concrete","blocks_rover":true,"basis":"published K+B Forum photograph shows broad steps at building H; exact run and dimensions estimated"},{"name":"south_terrace_steps","x":18.0,"y":-43.0,"width":12.0,"tread":0.42,"rise":0.15,"steps":4,"axis":"y","high_direction":"north","material":"granite","blocks_rover":true,"basis":"terraced campus landscape stepping toward Danube; position/size approximate"}],"water_features":[{"name":"west_reflecting_basin","x":-35.0,"y":31.5,"w":6.0,"d":15.0,"water_depth":0.25,"rim_height":0.18,"blocks_rover":true,"basis":"landscape architect documents two water basins; exact plan position approximate"},{"name":"east_reflecting_basin","x":25.0,"y":31.5,"w":6.0,"d":15.0,"water_depth":0.25,"rim_height":0.18,"blocks_rover":true,"basis":"landscape architect documents two water basins; exact plan position approximate"}],"drainage_channels":[{"name":"rill_west","x1":-45.0,"y1":23.0,"x2":-45.0,"y2":-4.0,"width":0.14,"depth":0.12,"crossing":"small bridge at y=10","blocks_rover":true,"simulation_note":"represented as a narrow collision-marked channel strip in this approximation; actual cut-section/depth and bridge deck need survey"},{"name":"rill_centre_south","x1":5.0,"y1":22.0,"x2":5.0,"y2":-12.0,"width":0.14,"depth":0.12,"crossing":"bridge at y=1","blocks_rover":true,"simulation_note":"represented as a narrow collision-marked channel strip in this approximation; actual cut-section/depth and bridge deck need survey"},{"name":"rill_east","x1":39.0,"y1":20.0,"x2":39.0,"y2":-18.0,"width":0.14,"depth":0.12,"crossing":"bridge at y=-5","blocks_rover":true,"simulation_note":"represented as a narrow collision-marked channel strip in this approximation; actual cut-section/depth and bridge deck need survey"}],"bridges":[{"name":"west_rill_bridge","x":-45.0,"y":10.0,"w":1.8,"d":2.0,"z":0.3,"material":"stone"},{"name":"centre_rill_bridge","x":5.0,"y":1.0,"w":1.8,"d":2.0,"z":0.0,"material":"stone"},{"name":"east_rill_bridge","x":39.0,"y":-5.0,"w":1.8,"d":2.0,"z":0.0,"material":"stone"}],"trees":[{"name":"north_tree_row","x_start":-80.0,"x_end":72.0,"y":65.0,"spacing":6.0,"height":7.0,"crown_radius":1.5},{"name":"east_tree_row","x":80.0,"y_start":29.0,"y_end":-34.0,"spacing":6.0,"height":7.0,"crown_radius":1.6},{"name":"courtyard_tree_court","x_start":22.0,"x_end":46.0,"y_start":-18.0,"y_end":-14.0,"spacing_x":6.0,"spacing_y":4.0,"height":5.5,"crown_radius":1.35},{"name":"west_courtyard_trees","x_start":-58.0,"x_end":-50.0,"y_start":22.0,"y_end":28.0,"spacing_x":4.0,"spacing_y":3.0,"height":5.0,"crown_radius":1.2}],"furniture":[{"name":"campus_store_pavilion_P","type":"pavilion","x":10.0,"y":31.5,"w":9.0,"d":6.5,"height":4.6,"z":0.3,"material":"dark_forum","collision":true,"label":"P — Campus Store / meeting pavilion","entry_side":"west","basis":"THD campus map labels P as pavilion / meeting place / Campus Store; exact pavilion footprint and local elevation are approximate"},{"name":"raised_tree_planter","type":"planter","x":34.0,"y":-17.0,"w":27.0,"d":6.0,"height":0.35,"z":0.0,"material":"concrete","collision":true},{"name":"north_south_seat_wall","type":"bench","x":-55.0,"y":20.5,"w":4.0,"d":0.55,"height":0.48,"z":0.3,"material":"dark_stone","collision":true},{"name":"H_plaza_bench_1","type":"bench","x":-50.0,"y":-23.0,"w":2.0,"d":0.55,"height":0.48,"z":0.0,"material":"timber","collision":true},{"name":"H_plaza_bike_rack","type":"bike_rack","x":-31.5,"y":-3.5,"w":2.4,"d":0.35,"height":0.85,"z":0.0,"material":"black_metal","collision":true}],"bollard_rows":[{"name":"store_plaza_bollards","x_start":-2.0,"x_end":22.0,"y":23.0,"spacing":2.4,"height":0.75,"radius":0.07},{"name":"H_approach_bollards","x":-24.0,"y_start":-2.0,"y_end":-16.0,"spacing":3.5,"height":0.75,"radius":0.07}],"lamp_rows":[{"name":"courtyard_lighting","points":[[-20,39],[-20,30],[-20,21],[-20,12],[-20,3],[-20,-6],[-20,-15]],"height":4.2},{"name":"east_walkway_lighting","points":[[70,25],[70,12],[70,-1],[70,-14],[70,-27]],"height":4.2}],"route":[{"name":"B_SOUTH_EXIT","x":-14.0,"y":45.0,"z":0.6,"type":"start","surface":"granite_slabs"},{"name":"B_RAMP_UPPER_LANDING","x":-11.0,"y":43.5,"z":0.6,"type":"waypoint","surface":"granite_slabs"},{"name":"B_TO_MIDDLE_RAMP","x":-11.0,"y":40.8,"z":0.45,"type":"ramp","surface":"smooth_concrete"},{"name":"MIDDLE_RAMP_LANDING","x":-11.0,"y":38.1,"z":0.3,"type":"waypoint","surface":"granite_slabs"},{"name":"CAMPUS_STORE_NW_PASSAGE","x":-5.0,"y":37.0,"z":0.3,"type":"waypoint","surface":"granite_slabs"},{"name":"CAMPUS_STORE_WEST_APPROACH","x":4.0,"y":35.0,"z":0.3,"type":"waypoint","surface":"cobblestone"},{"name":"CAMPUS_STORE_WEST_FACE","x":4.0,"y":31.5,"z":0.3,"type":"landmark","surface":"cobblestone"},{"name":"CAMPUS_STORE_SOUTH_PASSAGE","x":4.0,"y":26.5,"z":0.3,"type":"waypoint","surface":"granite_slabs"},{"name":"D_E_PASSAGE_NORTH","x":-6.5,"y":22.0,"z":0.3,"type":"waypoint","surface":"granite_slabs"},{"name":"MIDDLE_TO_LOWER_RAMP_TOP","x":-6.5,"y":12.3,"z":0.3,"type":"waypoint","surface":"granite_slabs"},{"name":"MIDDLE_TO_LOWER_RAMP","x":-6.5,"y":9.6,"z":0.15,"type":"ramp","surface":"smooth_concrete"},{"name":"MIDDLE_TO_LOWER_RAMP_BOTTOM","x":-6.5,"y":6.9,"z":0.0,"type":"waypoint","surface":"granite_slabs"},{"name":"SOUTH_OF_BLOCK_D","x":-6.5,"y":4.0,"z":0.0,"type":"waypoint","surface":"cobblestone"},{"name":"H_EAST_APPROACH","x":-27.3,"y":4.0,"z":0.0,"type":"waypoint","surface":"granite_slabs"},{"name":"H_ACCESSIBLE_APPROACH","x":-28.8,"y":-6.0,"z":0.0,"type":"ramp","surface":"granite_slabs"},{"name":"BLOCK_H_FINISH","x":-28.8,"y":-10.0,"z":0.0,"type":"goal","surface":"granite_slabs"}],"assumptions_and_limits":["The current THD campus map identifies P as the pavilion/meeting place/Campus Store and H as the Kappenberger + Braun Forum / university management area. Earlier maps may label H differently; this model follows the 2025 guide.","Landscape-project sources support the existence of granite paving, stepped terraces, three north-south paths, tree courts, two water basins, granite stair sculptures, drainage channels and bridges. Their exact dimensions/locations are estimated from published diagrams and photographs.","The simulated rover footprint is 0.30 x 0.20 m. Wheel track/radius, box enclosure and sensor mounting locations remain estimates. Standard campus stairs are marked impassable to this small wheeled robot; ramps are preferred.","This is a route-planning/test world, not a safety-certified digital twin or a surveyed map. Do not use it to send a physical robot onto public campus pathways without on-site survey, route authorization, obstacle review and supervised validation.","The H east-side approach is a flat connector inferred from the accessibility map marker; the actual entry, ramp run and grades need verification in the official 360 tour or a site survey."],"route_policy":{"waypoint_order_required":true,"stairs":"hard no-go for a small wheeled rover; use documented accessible corridors/ramps only","water_features":"hard no-go including interior pool surface and basin rim","drainage_channels":"no-go except where an explicit bridge spans the channel","cobblestone":"traversable only at reduced speed; enable small height-bump collision in Gazebo","grass":"not preferred for route; use only as emergency replan zone if its roughness and slope are modelled","finish":"stop at BLOCK_H_FINISH, command both motors zero, latch FINISHED until reset","uncertain_obstacles":"treat unknown or unverified path as blocked in autonomous planning"},"feature_layers":{"building_massing":"A–L rectangular massing, approximate height and facade class; not cadastral footprints","pavilion_P":"Campus Store / meeting pavilion, called out separately from building blocks","surface_materials":"large-format granite slabs, cobblestone, concrete ramp, timber deck, grass","vertical_access":"two main level-change ramps, H level access connector, three stair features coded as no-go","water_drainage":"two water basins, three linear drainage channels, three bridge crossings","street_furniture":"trees/canopies, benches, planter/tree court, bike rack, bollards and lamps","route":"ordered B exit → ramp landing → P west passage → D/E passage → lower ramp → H accessible approach/finish"}}
+{
+  "schema": "thd-campus-r07-terrain-1.0",
+  "campus": "Technische Hochschule Deggendorf — main campus, Block B to Block H",
+  "status": "RESEARCHED_SCHEMATIC_3D_MODEL_NOT_SURVEYED",
+  "sources": [
+    {
+      "title": "THD Quiet­schie Guide 2025, campus layout",
+      "url": "https://www.th-deg.de/Studierende/Antraege-und-Organisatorisches/infos-fuer-erstsemester/Quietschieguide_SoSe25.pdf",
+      "use": "relative block arrangement, entrances/accessibility symbols, Pavilion P / Campus Store, trees and landscaped zones"
+    },
+    {
+      "title": "THD 360 degree campus tour",
+      "url": "https://vr-easy.com/tour/thdeg/210705-campus/",
+      "use": "photographic viewpoints including forecourt, passages, terrace, large plaza, H building exterior and routes behind H"
+    },
+    {
+      "title": "Bez + Kock — TH Deggendorf extension",
+      "url": "https://www.bez-kock.de/de/projekte/119/erweiterung-der-technischen-hochschule-deggendorf-2015/",
+      "use": "five staggered buildings, plazas and terraces descending toward the Danube; facade references"
+    },
+    {
+      "title": "Lohrberg landscape architecture — FH Deggendorf",
+      "url": "https://www.lohrberg.de/portfolio-item/fh-deggendorf/",
+      "use": "two stepped plateaus, three north-south paths, terrace/courtyard structure"
+    },
+    {
+      "title": "Hille + Müller landscape architecture — FH Deggendorf",
+      "url": "https://www.landschaftsarchitekten.net/fh-deggendorf-planung",
+      "use": "Bayerwald granite paving slabs, tree court, two water basins, timber deck, granite stair sculptures, drainage rills and bridges"
+    },
+    {
+      "title": "Campus photographs — HL Lichttechnik",
+      "url": "https://www.hl-lichttechnik.eu/projekte/fh-deggendorf",
+      "use": "cobble path, pavers, ramps/handrails, cycle racks, lawn edges, courtyard furniture"
+    },
+    {
+      "title": "Campus Store location",
+      "url": "https://www.deggendorf-pulsiert.de/einkaufen-geniessen/shopping-hotspots/",
+      "use": "Campus Store address at Dieter-Görlitz-Platz 1"
+    }
+  ],
+  "coordinate_model": {
+    "units": "metres",
+    "origin": "schematic campus-local coordinate frame traced from the THD campus layout image",
+    "transform": "relative tracing only; coordinates were normalized to a plausible local simulation scale after tracing the official campus diagram, not georeferenced to pixels",
+    "approx_scale_m_per_image_pixel": null,
+    "accuracy_warning": "The official public campus plan is an orientation diagram, not a survey or scaled cadastral drawing. All metric footprints, local coordinates, ramp positions/grades, steps, water features and route centreline are estimates. Use as a detailed simulation world, not a map suitable for real-world autonomous deployment."
+  },
+  "bounds": {
+    "xmin": -92,
+    "xmax": 92,
+    "ymin": -64,
+    "ymax": 76
+  },
+  "model": {
+    "rover_length_m": 0.3,
+    "rover_total_width_m": 0.2,
+    "rover_height_m": 0.055,
+    "wheel_track_m": 0.17,
+    "wheel_radius_m": 0.035,
+    "wheel_track_and_radius_status": "estimate; measure actual rover",
+    "box_length_m": 0.12,
+    "box_width_m": 0.1,
+    "box_height_m": 0.06,
+    "box_dimensions_status": "placeholder; measure actual CAS Box enclosure",
+    "lidar_height_m": 0.17,
+    "lidar_bins": 90,
+    "lidar_bin_deg": 4,
+    "lidar_max_range_m": 3.5,
+    "wheel_encoders": false,
+    "physical_surface_effects": {
+      "granite_slabs": {
+        "friction": "nominal dry stone; approximate",
+        "speed_factor": 0.85
+      },
+      "cobblestone": {
+        "friction": "rough/jointed; Gazebo model will include small height variation",
+        "speed_factor": 0.45
+      },
+      "smooth_concrete": {
+        "friction": "nominal dry concrete; approximate",
+        "speed_factor": 0.8
+      },
+      "timber_deck": {
+        "friction": "dry timber; approximate",
+        "speed_factor": 0.65
+      },
+      "grass": {
+        "friction": "uneven/off-route; discourage autonomous travel",
+        "speed_factor": 0.3
+      },
+      "wet_or_icy": {
+        "friction": "not simulated in current build; future disturbance scenario required",
+        "speed_factor": 0
+      }
+    }
+  },
+  "height_levels": [
+    {
+      "name": "north_upper_terrace",
+      "z_m": 0.6,
+      "basis": "landscape project describes staged terraces; height is a simulation estimate"
+    },
+    {
+      "name": "middle_courtyard",
+      "z_m": 0.3,
+      "basis": "estimated intermediate plateau"
+    },
+    {
+      "name": "south_lower_terrace",
+      "z_m": 0,
+      "basis": "local terrain datum; not surveyed elevation"
+    }
+  ],
+  "buildings": [
+    {
+      "name": "A",
+      "label": "Business Administration / Business Informatics",
+      "x": -70,
+      "y": 51.75,
+      "w": 35.5,
+      "d": 10.5,
+      "height": 10.5,
+      "base_z": 0.6,
+      "facade": "warm_pink",
+      "floors": 3
+    },
+    {
+      "name": "B",
+      "label": "Administration / International Office / Career Service",
+      "x": -27.25,
+      "y": 51.75,
+      "w": 35.75,
+      "d": 10.5,
+      "height": 11,
+      "base_z": 0.6,
+      "facade": "warm_pink",
+      "floors": 3,
+      "entrances": [
+        {
+          "name": "B_south_east_exit",
+          "x": -14,
+          "y": 46.4,
+          "accessible": true
+        }
+      ]
+    },
+    {
+      "name": "C",
+      "label": "Mechanical Engineering / Mechatronics / Copyshop",
+      "x": 36.25,
+      "y": 51.75,
+      "w": 80,
+      "d": 10.5,
+      "height": 11,
+      "base_z": 0.6,
+      "facade": "warm_pink",
+      "floors": 3
+    },
+    {
+      "name": "F",
+      "label": "Cafeteria / Mensa",
+      "x": -65,
+      "y": 31.75,
+      "w": 25,
+      "d": 16.25,
+      "height": 7,
+      "base_z": 0.3,
+      "facade": "glass_grey",
+      "floors": 2
+    },
+    {
+      "name": "G",
+      "label": "Library / MINT",
+      "x": 46.75,
+      "y": 31.75,
+      "w": 25,
+      "d": 16,
+      "height": 9,
+      "base_z": 0.3,
+      "facade": "glass_grey",
+      "floors": 3
+    },
+    {
+      "name": "D",
+      "label": "Civil and Construction Engineering",
+      "x": -48.375,
+      "y": 12.125,
+      "w": 78.25,
+      "d": 10.25,
+      "height": 10.5,
+      "base_z": 0.3,
+      "facade": "warm_pink",
+      "floors": 3
+    },
+    {
+      "name": "E",
+      "label": "Rohde & Schwarz Forum / Electrical Engineering and IT",
+      "x": 36.125,
+      "y": 12.125,
+      "w": 79.75,
+      "d": 10.25,
+      "height": 10.5,
+      "base_z": 0.3,
+      "facade": "warm_pink",
+      "floors": 3
+    },
+    {
+      "name": "H",
+      "label": "Kappenberger + Braun Forum / University Management",
+      "x": -40.25,
+      "y": -10,
+      "w": 19.5,
+      "d": 17.75,
+      "height": 12,
+      "base_z": 0,
+      "facade": "dark_forum",
+      "floors": 3,
+      "entrances": [
+        {
+          "name": "H_east_accessible_entrance",
+          "x": -30,
+          "y": -10,
+          "accessible": true
+        }
+      ]
+    },
+    {
+      "name": "I",
+      "label": "Günther Karl Forum / Lecture theatres",
+      "x": 14.125,
+      "y": -10,
+      "w": 35.75,
+      "d": 18,
+      "height": 11.5,
+      "base_z": 0,
+      "facade": "dark_forum",
+      "floors": 3
+    },
+    {
+      "name": "J",
+      "label": "Micro Epsilon Forum / Media Technology",
+      "x": -69.875,
+      "y": -28,
+      "w": 36.25,
+      "d": 16.5,
+      "height": 10.5,
+      "base_z": 0,
+      "facade": "warm_pink",
+      "floors": 3
+    },
+    {
+      "name": "K",
+      "label": "Kermi Forum / Applied Computer Science / Cafeteria",
+      "x": -19.75,
+      "y": -28,
+      "w": 18.5,
+      "d": 16.5,
+      "height": 10,
+      "base_z": 0,
+      "facade": "dark_forum",
+      "floors": 3
+    },
+    {
+      "name": "L",
+      "label": "Zollner Elektronik AG Forum / Applied Natural Sciences",
+      "x": 57.875,
+      "y": -28,
+      "w": 34.75,
+      "d": 16.5,
+      "height": 10.5,
+      "base_z": 0,
+      "facade": "warm_pink",
+      "floors": 3
+    }
+  ],
+  "surface_zones": [
+    {
+      "name": "upper_granite_plaza",
+      "type": "granite_slabs",
+      "x": -7,
+      "y": 46.5,
+      "w": 76,
+      "d": 16.8,
+      "z": 0.6,
+      "roughness": 0.04,
+      "speed_factor": 0.9,
+      "basis": "upper landing near B and north terrace; lower edge joins the B-to-middle ramp (estimated geometry)"
+    },
+    {
+      "name": "B_to_courtyard_paving",
+      "type": "granite_slabs",
+      "x": -14,
+      "y": 44.6,
+      "w": 9,
+      "d": 3,
+      "z": 0.6,
+      "roughness": 0.04,
+      "speed_factor": 0.9,
+      "basis": "small upper landing outside B; estimated footprint"
+    },
+    {
+      "name": "west_cobble_walk",
+      "type": "cobblestone",
+      "x": -18,
+      "y": 31,
+      "w": 3,
+      "d": 16,
+      "z": 0.3,
+      "roughness": 0.22,
+      "speed_factor": 0.55,
+      "basis": "cobblestone path visible in campus photography"
+    },
+    {
+      "name": "central_ramp_apron",
+      "type": "smooth_concrete",
+      "x": -6.5,
+      "y": 9.6,
+      "w": 2.2,
+      "d": 5.4,
+      "z": 0.15,
+      "roughness": 0.02,
+      "speed_factor": 0.75,
+      "basis": "transition surface at the middle-to-lower ramp; height is interpolated estimate"
+    },
+    {
+      "name": "D_E_passage_pavers",
+      "type": "granite_slabs",
+      "x": -6.5,
+      "y": 18,
+      "w": 5.1,
+      "d": 11.4,
+      "z": 0.3,
+      "roughness": 0.05,
+      "speed_factor": 0.8,
+      "basis": "upper landing / paved north-south passage between D and E; estimated boundaries"
+    },
+    {
+      "name": "south_bypass_cobble",
+      "type": "cobblestone",
+      "x": -18.5,
+      "y": 4,
+      "w": 24,
+      "d": 2.8,
+      "z": 0,
+      "roughness": 0.22,
+      "speed_factor": 0.55
+    },
+    {
+      "name": "H_east_approach_pavers",
+      "type": "granite_slabs",
+      "x": -28.8,
+      "y": -8.5,
+      "w": 3.4,
+      "d": 14,
+      "z": 0,
+      "roughness": 0.04,
+      "speed_factor": 0.85,
+      "basis": "flat approach strip outside east side of H; entrance accessibility is mapped but exact surface boundaries are not surveyed"
+    },
+    {
+      "name": "H_front_courtyard",
+      "type": "granite_slabs",
+      "x": -40,
+      "y": -22,
+      "w": 25,
+      "d": 5.8,
+      "z": 0,
+      "roughness": 0.04,
+      "speed_factor": 0.85
+    },
+    {
+      "name": "mensa_timber_deck",
+      "type": "timber_deck",
+      "x": -54,
+      "y": 22,
+      "w": 5.5,
+      "d": 10,
+      "z": 0.3,
+      "roughness": 0.1,
+      "speed_factor": 0.65
+    },
+    {
+      "name": "southern_green",
+      "type": "grass",
+      "x": 0,
+      "y": -50,
+      "w": 166,
+      "d": 8,
+      "z": 0,
+      "roughness": 0.25,
+      "speed_factor": 0.35
+    },
+    {
+      "name": "P_pavilion_north_forecourt",
+      "type": "granite_slabs",
+      "x": 10,
+      "y": 36,
+      "w": 15,
+      "d": 2.6,
+      "z": 0.3,
+      "roughness": 0.04,
+      "speed_factor": 0.85
+    },
+    {
+      "name": "P_pavilion_west_sidewalk",
+      "type": "cobblestone",
+      "x": 3.8,
+      "y": 31.5,
+      "w": 2.2,
+      "d": 10.8,
+      "z": 0.3,
+      "roughness": 0.22,
+      "speed_factor": 0.55,
+      "basis": "cobble path beside the west face of Pavilion P, matching the photographic paving treatment; exact surface extent is approximate"
+    },
+    {
+      "name": "P_pavilion_south_forecourt",
+      "type": "granite_slabs",
+      "x": 10,
+      "y": 26.8,
+      "w": 15,
+      "d": 2.6,
+      "z": 0.3,
+      "roughness": 0.04,
+      "speed_factor": 0.85
+    }
+  ],
+  "ramps": [
+    {
+      "name": "B_to_middle_terrace_ramp",
+      "axis": "y",
+      "x": -11,
+      "y_start": 38.1,
+      "length": 5.4,
+      "width": 1.8,
+      "z_start": 0.3,
+      "z_end": 0.6,
+      "max_slope_ratio": "1:18 (estimated)",
+      "accessible_route": true,
+      "blocks_rover": false,
+      "basis": "smooth continuous route through terrace level change; location/grade are inferred"
+    },
+    {
+      "name": "middle_to_lower_ramp",
+      "axis": "y",
+      "x": -6.5,
+      "y_start": 6.9,
+      "length": 5.4,
+      "width": 1.8,
+      "z_start": 0,
+      "z_end": 0.3,
+      "max_slope_ratio": "1:18 (estimated)",
+      "accessible_route": true,
+      "blocks_rover": false
+    },
+    {
+      "name": "H_east_accessible_ramp",
+      "axis": "y",
+      "x": -28.8,
+      "y_start": -5.2,
+      "length": 7.2,
+      "width": 1.35,
+      "z_start": 0,
+      "z_end": 0,
+      "max_slope_ratio": "level landing; grade unknown",
+      "accessible_route": true,
+      "blocks_rover": false,
+      "basis": "accessible approach inferred from plan's wheelchair/access marker; exact ramp geometry unverified"
+    }
+  ],
+  "stairs": [
+    {
+      "name": "campus_granite_step_sculpture",
+      "x": -25,
+      "y": 30,
+      "width": 7,
+      "tread": 0.38,
+      "rise": 0.14,
+      "steps": 5,
+      "axis": "y",
+      "high_direction": "north",
+      "material": "granite",
+      "blocks_rover": true,
+      "basis": "landscape architect documents granite stair sculptures; precise location/size are approximate",
+      "base_z": 0.3
+    },
+    {
+      "name": "H_forum_main_steps",
+      "x": -40,
+      "y": -21.2,
+      "width": 10.5,
+      "tread": 0.42,
+      "rise": 0.15,
+      "steps": 4,
+      "axis": "y",
+      "high_direction": "north",
+      "material": "granite_concrete",
+      "blocks_rover": true,
+      "basis": "published K+B Forum photograph shows broad steps at building H; exact run and dimensions estimated"
+    },
+    {
+      "name": "south_terrace_steps",
+      "x": 18,
+      "y": -43,
+      "width": 12,
+      "tread": 0.42,
+      "rise": 0.15,
+      "steps": 4,
+      "axis": "y",
+      "high_direction": "north",
+      "material": "granite",
+      "blocks_rover": true,
+      "basis": "terraced campus landscape stepping toward Danube; position/size approximate"
+    }
+  ],
+  "water_features": [
+    {
+      "name": "west_reflecting_basin",
+      "x": -35,
+      "y": 31.5,
+      "w": 6,
+      "d": 15,
+      "water_depth": 0.25,
+      "rim_height": 0.18,
+      "blocks_rover": true,
+      "basis": "landscape architect documents two water basins; exact plan position approximate"
+    },
+    {
+      "name": "east_reflecting_basin",
+      "x": 25,
+      "y": 31.5,
+      "w": 6,
+      "d": 15,
+      "water_depth": 0.25,
+      "rim_height": 0.18,
+      "blocks_rover": true,
+      "basis": "landscape architect documents two water basins; exact plan position approximate"
+    }
+  ],
+  "drainage_channels": [
+    {
+      "name": "rill_west",
+      "x1": -45,
+      "y1": 23,
+      "x2": -45,
+      "y2": -4,
+      "width": 0.14,
+      "depth": 0.12,
+      "crossing": "small bridge at y=10",
+      "blocks_rover": true,
+      "simulation_note": "represented as a narrow collision-marked channel strip in this approximation; actual cut-section/depth and bridge deck need survey"
+    },
+    {
+      "name": "rill_centre_south",
+      "x1": 5,
+      "y1": 22,
+      "x2": 5,
+      "y2": -12,
+      "width": 0.14,
+      "depth": 0.12,
+      "crossing": "bridge at y=1",
+      "blocks_rover": true,
+      "simulation_note": "represented as a narrow collision-marked channel strip in this approximation; actual cut-section/depth and bridge deck need survey"
+    },
+    {
+      "name": "rill_east",
+      "x1": 39,
+      "y1": 20,
+      "x2": 39,
+      "y2": -18,
+      "width": 0.14,
+      "depth": 0.12,
+      "crossing": "bridge at y=-5",
+      "blocks_rover": true,
+      "simulation_note": "represented as a narrow collision-marked channel strip in this approximation; actual cut-section/depth and bridge deck need survey"
+    }
+  ],
+  "bridges": [
+    {
+      "name": "west_rill_bridge",
+      "x": -45,
+      "y": 10,
+      "w": 1.8,
+      "d": 2,
+      "z": 0.3,
+      "material": "stone"
+    },
+    {
+      "name": "centre_rill_bridge",
+      "x": 5,
+      "y": 1,
+      "w": 1.8,
+      "d": 2,
+      "z": 0,
+      "material": "stone"
+    },
+    {
+      "name": "east_rill_bridge",
+      "x": 39,
+      "y": -5,
+      "w": 1.8,
+      "d": 2,
+      "z": 0,
+      "material": "stone"
+    }
+  ],
+  "trees": [
+    {
+      "name": "north_tree_row",
+      "x_start": -80,
+      "x_end": 72,
+      "y": 65,
+      "spacing": 6,
+      "height": 7,
+      "crown_radius": 1.5
+    },
+    {
+      "name": "east_tree_row",
+      "x": 80,
+      "y_start": 29,
+      "y_end": -34,
+      "spacing": 6,
+      "height": 7,
+      "crown_radius": 1.6
+    },
+    {
+      "name": "courtyard_tree_court",
+      "x_start": 22,
+      "x_end": 46,
+      "y_start": -18,
+      "y_end": -14,
+      "spacing_x": 6,
+      "spacing_y": 4,
+      "height": 5.5,
+      "crown_radius": 1.35
+    },
+    {
+      "name": "west_courtyard_trees",
+      "x_start": -58,
+      "x_end": -50,
+      "y_start": 22,
+      "y_end": 28,
+      "spacing_x": 4,
+      "spacing_y": 3,
+      "height": 5,
+      "crown_radius": 1.2
+    }
+  ],
+  "furniture": [
+    {
+      "name": "campus_store_pavilion_P",
+      "type": "pavilion",
+      "x": 10,
+      "y": 31.5,
+      "w": 9,
+      "d": 6.5,
+      "height": 4.6,
+      "z": 0.3,
+      "material": "dark_forum",
+      "collision": true,
+      "label": "P — Campus Store / meeting pavilion",
+      "entry_side": "west",
+      "basis": "THD campus map labels P as pavilion / meeting place / Campus Store; exact pavilion footprint and local elevation are approximate"
+    },
+    {
+      "name": "raised_tree_planter",
+      "type": "planter",
+      "x": 34,
+      "y": -17,
+      "w": 27,
+      "d": 6,
+      "height": 0.35,
+      "z": 0,
+      "material": "concrete",
+      "collision": true
+    },
+    {
+      "name": "north_south_seat_wall",
+      "type": "bench",
+      "x": -55,
+      "y": 20.5,
+      "w": 4,
+      "d": 0.55,
+      "height": 0.48,
+      "z": 0.3,
+      "material": "dark_stone",
+      "collision": true
+    },
+    {
+      "name": "H_plaza_bench_1",
+      "type": "bench",
+      "x": -50,
+      "y": -23,
+      "w": 2,
+      "d": 0.55,
+      "height": 0.48,
+      "z": 0,
+      "material": "timber",
+      "collision": true
+    },
+    {
+      "name": "H_plaza_bike_rack",
+      "type": "bike_rack",
+      "x": -31.5,
+      "y": -3.5,
+      "w": 2.4,
+      "d": 0.35,
+      "height": 0.85,
+      "z": 0,
+      "material": "black_metal",
+      "collision": true
+    }
+  ],
+  "bollard_rows": [
+    {
+      "name": "store_plaza_bollards",
+      "x_start": -2,
+      "x_end": 22,
+      "y": 23,
+      "spacing": 2.4,
+      "height": 0.75,
+      "radius": 0.07
+    },
+    {
+      "name": "H_approach_bollards",
+      "x": -24,
+      "y_start": -2,
+      "y_end": -16,
+      "spacing": 3.5,
+      "height": 0.75,
+      "radius": 0.07
+    }
+  ],
+  "lamp_rows": [
+    {
+      "name": "courtyard_lighting",
+      "points": [
+        [
+          -20,
+          39
+        ],
+        [
+          -20,
+          30
+        ],
+        [
+          -20,
+          21
+        ],
+        [
+          -20,
+          12
+        ],
+        [
+          -20,
+          3
+        ],
+        [
+          -20,
+          -6
+        ],
+        [
+          -20,
+          -15
+        ]
+      ],
+      "height": 4.2
+    },
+    {
+      "name": "east_walkway_lighting",
+      "points": [
+        [
+          70,
+          25
+        ],
+        [
+          70,
+          12
+        ],
+        [
+          70,
+          -1
+        ],
+        [
+          70,
+          -14
+        ],
+        [
+          70,
+          -27
+        ]
+      ],
+      "height": 4.2
+    }
+  ],
+  "route": [
+    {
+      "name": "B_SOUTH_EXIT",
+      "x": -14,
+      "y": 45,
+      "z": 0.6,
+      "type": "start",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "B_RAMP_UPPER_LANDING",
+      "x": -11,
+      "y": 43.5,
+      "z": 0.6,
+      "type": "waypoint",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "B_TO_MIDDLE_RAMP",
+      "x": -11,
+      "y": 40.8,
+      "z": 0.45,
+      "type": "ramp",
+      "surface": "smooth_concrete"
+    },
+    {
+      "name": "MIDDLE_RAMP_LANDING",
+      "x": -11,
+      "y": 38.1,
+      "z": 0.3,
+      "type": "waypoint",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "CAMPUS_STORE_NW_PASSAGE",
+      "x": -5,
+      "y": 37,
+      "z": 0.3,
+      "type": "waypoint",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "CAMPUS_STORE_WEST_APPROACH",
+      "x": 4,
+      "y": 35,
+      "z": 0.3,
+      "type": "waypoint",
+      "surface": "cobblestone"
+    },
+    {
+      "name": "CAMPUS_STORE_WEST_FACE",
+      "x": 4,
+      "y": 31.5,
+      "z": 0.3,
+      "type": "landmark",
+      "surface": "cobblestone"
+    },
+    {
+      "name": "CAMPUS_STORE_SOUTH_PASSAGE",
+      "x": 4,
+      "y": 26.5,
+      "z": 0.3,
+      "type": "waypoint",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "D_E_PASSAGE_NORTH",
+      "x": -6.5,
+      "y": 22,
+      "z": 0.3,
+      "type": "waypoint",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "MIDDLE_TO_LOWER_RAMP_TOP",
+      "x": -6.5,
+      "y": 12.3,
+      "z": 0.3,
+      "type": "waypoint",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "MIDDLE_TO_LOWER_RAMP",
+      "x": -6.5,
+      "y": 9.6,
+      "z": 0.15,
+      "type": "ramp",
+      "surface": "smooth_concrete"
+    },
+    {
+      "name": "MIDDLE_TO_LOWER_RAMP_BOTTOM",
+      "x": -6.5,
+      "y": 6.9,
+      "z": 0,
+      "type": "waypoint",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "SOUTH_OF_BLOCK_D",
+      "x": -6.5,
+      "y": 4,
+      "z": 0,
+      "type": "waypoint",
+      "surface": "cobblestone"
+    },
+    {
+      "name": "H_EAST_APPROACH",
+      "x": -27.3,
+      "y": 4,
+      "z": 0,
+      "type": "waypoint",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "H_ACCESSIBLE_APPROACH",
+      "x": -28.8,
+      "y": -6,
+      "z": 0,
+      "type": "ramp",
+      "surface": "granite_slabs"
+    },
+    {
+      "name": "BLOCK_H_FINISH",
+      "x": -28.8,
+      "y": -10,
+      "z": 0,
+      "type": "goal",
+      "surface": "granite_slabs"
+    }
+  ],
+  "assumptions_and_limits": [
+    "The current THD campus map identifies P as the pavilion/meeting place/Campus Store and H as the Kappenberger + Braun Forum / university management area. Earlier maps may label H differently; this model follows the 2025 guide.",
+    "Landscape-project sources support the existence of granite paving, stepped terraces, three north-south paths, tree courts, two water basins, granite stair sculptures, drainage channels and bridges. Their exact dimensions/locations are estimated from published diagrams and photographs.",
+    "The simulated rover footprint is 0.30 x 0.20 m. Wheel track/radius, box enclosure and sensor mounting locations remain estimates. Standard campus stairs are marked impassable to this small wheeled robot; ramps are preferred.",
+    "This is a route-planning/test world, not a safety-certified digital twin or a surveyed map. Do not use it to send a physical robot onto public campus pathways without on-site survey, route authorization, obstacle review and supervised validation.",
+    "The H east-side approach is a flat connector inferred from the accessibility map marker; the actual entry, ramp run and grades need verification in the official 360 tour or a site survey."
+  ],
+  "route_policy": {
+    "waypoint_order_required": true,
+    "stairs": "hard no-go for a small wheeled rover; use documented accessible corridors/ramps only",
+    "water_features": "hard no-go including interior pool surface and basin rim",
+    "drainage_channels": "no-go except where an explicit bridge spans the channel",
+    "cobblestone": "traversable only at reduced speed; enable small height-bump collision in Gazebo",
+    "grass": "not preferred for route; use only as emergency replan zone if its roughness and slope are modelled",
+    "finish": "stop at BLOCK_H_FINISH, command both motors zero, latch FINISHED until reset",
+    "uncertain_obstacles": "treat unknown or unverified path as blocked in autonomous planning"
+  },
+  "feature_layers": {
+    "building_massing": "A–L rectangular massing, approximate height and facade class; not cadastral footprints",
+    "pavilion_P": "Campus Store / meeting pavilion, called out separately from building blocks",
+    "surface_materials": "large-format granite slabs, cobblestone, concrete ramp, timber deck, grass",
+    "vertical_access": "two main level-change ramps, H level access connector, three stair features coded as no-go",
+    "water_drainage": "two water basins, three linear drainage channels, three bridge crossings",
+    "street_furniture": "trees/canopies, benches, planter/tree court, bike rack, bollards and lamps",
+    "route": "ordered B exit → ramp landing → P west passage → D/E passage → lower ramp → H accessible approach/finish"
+  },
+  "photo_derived_features": {
+    "notes": [
+      "Feature types and arrangement are drawn from operator stills/video; local coordinates and dimensions are representative estimates.",
+      "The raised threshold centre crossing is a simulation hypothesis, not a verified wheelchair-style curb cut.",
+      "Tactile strips, warning studs, flush covers and drain slots are low-profile and may not be detectable by the 17 cm-high LiDAR."
+    ],
+    "covered_arcades": [
+      {
+        "name": "H_east_covered_colonnade",
+        "wall_x": -30.5,
+        "column_x": -26.9,
+        "y_start": -14.5,
+        "y_end": 2,
+        "column_spacing_m": 3.6,
+        "column_radius_m": 0.25,
+        "column_height_m": 3.35,
+        "roof_z_m": 3.45,
+        "roof_width_m": 4.6,
+        "roof_thickness_m": 0.16
+      },
+      {
+        "name": "P_courtyard_edge_columns",
+        "wall_x": 1.7,
+        "column_x": 5,
+        "y_start": 37.6,
+        "y_end": 28,
+        "column_spacing_m": 3.4,
+        "column_radius_m": 0.22,
+        "column_height_m": 3.5,
+        "roof_z_m": 3.6,
+        "roof_width_m": 3.8,
+        "roof_thickness_m": 0.14
+      }
+    ],
+    "tactile_guides": [
+      {
+        "name": "H_arcade_guidance_strip",
+        "axis": "y",
+        "x_center": -29.15,
+        "y_start": -14.4,
+        "y_end": 3.2,
+        "strips": 4,
+        "strip_width_m": 0.018,
+        "strip_spacing_m": 0.052,
+        "z_m": 0.012
+      },
+      {
+        "name": "plaza_crossing_guidance_strip",
+        "axis": "y",
+        "x_center": -7.5,
+        "y_start": 18.5,
+        "y_end": 25.8,
+        "strips": 4,
+        "strip_width_m": 0.018,
+        "strip_spacing_m": 0.052,
+        "z_m": 0.312
+      }
+    ],
+    "tactile_warning_pads": [
+      {
+        "name": "H_arcade_dot_warning",
+        "x": -29.15,
+        "y": 2.7,
+        "width_m": 0.95,
+        "depth_m": 0.85,
+        "rows": 8,
+        "columns": 8,
+        "stud_radius_m": 0.024,
+        "z_m": 0.012
+      },
+      {
+        "name": "plaza_dot_warning",
+        "x": -7.5,
+        "y": 25.6,
+        "width_m": 0.95,
+        "depth_m": 0.75,
+        "rows": 8,
+        "columns": 8,
+        "stud_radius_m": 0.024,
+        "z_m": 0.312
+      }
+    ],
+    "ground_lights_and_covers": [
+      {
+        "name": "H_colonnade_ground_light_1",
+        "x": -25.1,
+        "y": 0.7,
+        "outer_radius_m": 0.19,
+        "inner_radius_m": 0.145
+      },
+      {
+        "name": "H_colonnade_ground_light_2",
+        "x": -25.1,
+        "y": -5,
+        "outer_radius_m": 0.19,
+        "inner_radius_m": 0.145
+      },
+      {
+        "name": "H_colonnade_ground_light_3",
+        "x": -25.1,
+        "y": -10.7,
+        "outer_radius_m": 0.19,
+        "inner_radius_m": 0.145
+      },
+      {
+        "name": "P_cobble_utility_cover",
+        "x": 2.4,
+        "y": 31.5,
+        "outer_radius_m": 0.23,
+        "inner_radius_m": 0.18
+      }
+    ],
+    "linear_drains": [
+      {
+        "name": "P_cobble_to_slab_transverse_drain",
+        "axis": "x",
+        "x": 0.5,
+        "y": 27.8,
+        "length_m": 10,
+        "width_m": 0.18,
+        "bar_spacing_m": 0.055
+      },
+      {
+        "name": "plaza_cross_drain",
+        "axis": "x",
+        "x": -6.5,
+        "y": 22.5,
+        "length_m": 13.5,
+        "width_m": 0.18,
+        "bar_spacing_m": 0.055
+      },
+      {
+        "name": "H_arcade_edge_drain",
+        "axis": "y",
+        "x": -25.3,
+        "y": -5.5,
+        "length_m": 17.5,
+        "width_m": 0.13,
+        "bar_spacing_m": 0.055
+      }
+    ],
+    "thresholds": [
+      {
+        "name": "P_cobble_alley_raised_threshold",
+        "axis": "x",
+        "x_min": -4.5,
+        "x_max": 5.4,
+        "y": 28.8,
+        "depth_m": 0.2,
+        "height_m": 0.075,
+        "base_z_m": 0.3,
+        "gap_center_x": 4,
+        "gap_width_m": 1.15,
+        "bevel_run_m": 0.48,
+        "crossing_height_m": 0.025
+      },
+      {
+        "name": "H_plaza_surface_transition",
+        "axis": "x",
+        "x_min": -33,
+        "x_max": -23.5,
+        "y": 3,
+        "depth_m": 0.1,
+        "height_m": 0.025,
+        "base_z_m": 0,
+        "gap_center_x": -28.8,
+        "gap_width_m": 1.5,
+        "bevel_run_m": 0.32
+      }
+    ],
+    "wet_patches": [
+      {
+        "name": "P_cobble_wet_patch",
+        "x": 3,
+        "y": 29.5,
+        "w": 2.7,
+        "d": 2,
+        "z_m": 0.318,
+        "wet_friction_mu": 0.38,
+        "dry_friction_mu": 0.72,
+        "speed_factor": 0.52
+      },
+      {
+        "name": "H_arcade_wet_tiles",
+        "x": -28.7,
+        "y": -4.8,
+        "w": 2.9,
+        "d": 7,
+        "z_m": 0.015,
+        "wet_friction_mu": 0.32,
+        "dry_friction_mu": 0.7,
+        "speed_factor": 0.5
+      },
+      {
+        "name": "central_plaza_wet_tiles",
+        "x": -6.8,
+        "y": 22.2,
+        "w": 11.5,
+        "d": 3.8,
+        "z_m": 0.315,
+        "wet_friction_mu": 0.36,
+        "dry_friction_mu": 0.7,
+        "speed_factor": 0.52
+      }
+    ],
+    "signboards": [
+      {
+        "name": "building_D_wayfinding_sign",
+        "x": -10.2,
+        "y": 20,
+        "z_m": 0,
+        "width_m": 0.38,
+        "height_m": 1.75,
+        "facing_yaw_deg": 0,
+        "text": "GEBÄUDE D"
+      },
+      {
+        "name": "building_E_wayfinding_sign",
+        "x": -2.9,
+        "y": 20,
+        "z_m": 0,
+        "width_m": 0.38,
+        "height_m": 1.75,
+        "facing_yaw_deg": 180,
+        "text": "GEBÄUDE E"
+      }
+    ],
+    "pedestrian_scenarios": [
+      {
+        "name": "plaza_crossing_pedestrian",
+        "path": [
+          [
+            -10.5,
+            23.2
+          ],
+          [
+            -4.5,
+            23.2
+          ]
+        ],
+        "radius_m": 0.28,
+        "height_m": 1.7,
+        "speed_mps": 0.65,
+        "synthetic": true
+      },
+      {
+        "name": "colonnade_pedestrian",
+        "path": [
+          [
+            -29.4,
+            1
+          ],
+          [
+            -29.4,
+            -12.5
+          ]
+        ],
+        "radius_m": 0.28,
+        "height_m": 1.7,
+        "speed_mps": 0.55,
+        "synthetic": true
+      }
+    ],
+    "facade_runs": [
+      {
+        "name": "P_cobble_lane_pink_facade",
+        "axis": "y",
+        "x": 1.45,
+        "y_start": 27.2,
+        "y_end": 39.2,
+        "thickness_m": 0.25,
+        "height_m": 4.4,
+        "base_z_m": 0.3,
+        "finish": "warm_pink",
+        "window_bays": 3,
+        "window_width_m": 1.05,
+        "window_height_m": 1.25,
+        "door_bay_y": 34
+      }
+    ],
+    "door_landings": [
+      {
+        "name": "P_lane_door_landing",
+        "x": 1.95,
+        "y": 34,
+        "w": 1,
+        "d": 1.45,
+        "height_m": 0.055,
+        "z": 0.3
+      }
+    ]
+  }
+}
