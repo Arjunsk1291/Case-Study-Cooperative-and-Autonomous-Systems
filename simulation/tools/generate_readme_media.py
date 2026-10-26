@@ -161,7 +161,7 @@ def draw_plan(ax,cfg,extent=None,labels=True,progress=None,rover_xy=None,rover_h
 def make_3d(cfg,out):
     fig=plt.figure(figsize=(12,8),facecolor="#edf1f3"); ax=fig.add_subplot(111,projection="3d",facecolor="#edf1f3")
     bnd=cfg["bounds"]; z=-.15
-    ax.add_collection3d(Poly3DCollection([[(bnd["xmin"],bnd["ymin"],z),(bnd["xmax"],bnd["ymin"],z),(bnd["xmax"],bnd["ymax"],z),(bnd["xmin"],bnd["ymax"],z)]],facecolors="#c4c9c2",edgecolors="#818a86",linewidths=.4))
+    # Avoid one campus-sized ground polygon: Matplotlib 3D painter sorting can place it in front of smaller terrain details. Surface zones below provide the visible ground texture.
     for s in cfg.get("surface_zones",[]):
         x1,x2=s["x"]-s["w"]/2,s["x"]+s["w"]/2; y1,y2=s["y"]-s["d"]/2,s["y"]+s["d"]/2; z=s.get("z",0)
         ax.add_collection3d(Poly3DCollection([[(x1,y1,z),(x2,y1,z),(x2,y2,z),(x1,y2,z)]],facecolors=C.get(s["type"],"#bbb"),edgecolors="none",alpha=.8))
@@ -177,7 +177,7 @@ def make_3d(cfg,out):
     ax.scatter([pts[0]["x"],pts[-1]["x"]],[pts[0]["y"],pts[-1]["y"]],[pts[0]["z"]+.4,pts[-1]["z"]+.4],c=["#2776bd","#c64e46"],s=42)
     ax.set_title("TH Deggendorf · R07 Block B → Block H terrain (schematic 3D)",fontsize=14,pad=16)
     ax.set_xlabel("Local X (m)"); ax.set_ylabel("Local Y (m)"); ax.set_zlabel("Height (m; estimated)")
-    ax.view_init(elev=32,azim=-59); ax.set_xlim(bnd["xmin"],bnd["xmax"]); ax.set_ylim(bnd["ymin"],bnd["ymax"]); ax.set_zlim(0,16); ax.set_box_aspect((1.3,1,.45))
+    ax.view_init(elev=32,azim=-59); ax.set_xlim(bnd["xmin"],bnd["xmax"]); ax.set_ylim(bnd["ymin"],bnd["ymax"]); ax.set_zlim(-.3,16); ax.set_box_aspect((1.3,1,.45))
     fig.text(.5,.02,"Building footprints, terrain levels and route coordinates are approximate—not a surveyed map.",ha="center",fontsize=9,color="#7c413a")
     fig.tight_layout(rect=(0,.04,1,1)); fig.savefig(out,dpi=110,bbox_inches="tight"); plt.close(fig)
 
