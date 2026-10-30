@@ -18,7 +18,7 @@
 
 class WebHMI {
 public:
-  static const uint8_t kMaxValues = 16;  // named values in the "Dev" view
+  static const uint8_t kMaxValues = 32;  // named values in the "Dev" view
 
   // Starts the access point (password min. 8 characters) and the web server.
   void begin(const char* ssid, const char* pass, IPAddress ip, uint8_t channel);
@@ -34,6 +34,9 @@ public:
   void getDrive(float& left, float& right, uint32_t& ageMs) const;
   bool autonomyEnabled() const;
   bool autonomyHeartbeatFresh(uint32_t maxAgeMs = 600) const;
+  bool driveInhibited() const;
+  void stopDrive();             // latch stop, disable autonomy, zero setpoint
+  void clearDriveInhibit();     // explicit operator acknowledgement; does not move the rover
 
   void tick();  // call once per loop pass (measures the loop time for the "Dev" view)
 
@@ -66,6 +69,7 @@ private:
   uint32_t _drivePageId = 0, _driveSeq = 0;  // newest accepted command (page id, number)
   volatile bool _autonomyEnabled = false;     // autonomy OFF at boot
   volatile uint32_t _autonomyHeartbeatMs = 0;
+  volatile bool _driveInhibited = false;
 
   // loop time statistics, loop() only
   uint32_t _cycleLastUs = 0, _cycleWinMs = 0, _cycleMinUs = 0, _cycleMaxUs = 0, _cycleCount = 0;
