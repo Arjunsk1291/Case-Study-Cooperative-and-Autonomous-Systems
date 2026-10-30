@@ -759,7 +759,12 @@ integrity/data_quality_report.json before using this data for training/navigatio
         with self.lock:
             s=self.session; active=bool(s and s["state"] in {"active","finalizing","finalize_error","storage_error"})
             disk=shutil.disk_usage(self.data_root)
-            camera_age=time.monotonic()-self.camera_last_frame_mono if self.camera_last_frame_mono else None
+            camera_age=time.monotonic()-self.camera_last_heartbeat_mono if self.camera_last_heartbeat_mono else None
+            frame_age=time.monotonic()-self.camera_last_frame_mono if self.camera_last_frame_mono else None
+            live_values=values_dict(self.latest or {})
+            rover_online=live_values.get("rover.connected","false").lower()=="true"
+            camera_online=self.camera_online()
+            system_ready=bool(self.box_online and rover_online and camera_online and self.camera_board_status.get("camera_ready",False))
             sinfo=None
             if s:
                 sinfo={"session_id":s["id"],"state":s["state"],"started_at":s["started_at"],
@@ -772,13 +777,15 @@ integrity/data_quality_report.json before using this data for training/navigatio
               "box_last_error":self.box_last_error,"box_poll_failures_current":self.poll_failures,
               "box_poll_failures_total":self.total_poll_failures,"latest":self.latest,
               "session_active":active,"session":sinfo,"drive_enabled":self.drive_enabled,
+              "rover_online":rover_online,"system_ready":system_ready,
               "estop_latched":self.estop_latched,"pending_wall_prompt":self.pending_prompt,
               "centreline_suggestion":self.open_area_suggestion,"wall_following_motion_enabled":False,
               "wall_following_disabled_reason":"No calibrated/physically validated wall-follow motion controller is enabled.",
               "last_vision":self.last_vision,
-              "camera":{"last_frame_at":self.camera_last_frame_at,"last_frame_age_s":None if camera_age is None else round(camera_age,2),
+              "camera":{"last_frame_at":self.camera_last_frame_at,"last_frame_age_s":None if frame_age is None else round(frame_age,2),
+                "last_heartbeat_at":self.camera_last_heartbeat_at,"last_heartbeat_age_s":None if camera_age is None else round(camera_age,2),
                 "frames_received_total":self.camera_frames_received,"transfer_errors":self.camera_errors,
-                "sequence_gaps":self.camera_missing_frames,"online":camera_age is not None and camera_age<5,
+                "sequence_gaps":self.camera_missing_frames,"online":camera_online,"board":self.camera_board_status,
                 "token_configured":bool(self.camera_token and self.camera_token!="CHANGE_ME_CAMERA_TOKEN")},
               "storage":{"path":str(self.data_root),"free_bytes":disk.free,"total_bytes":disk.total}}
 
