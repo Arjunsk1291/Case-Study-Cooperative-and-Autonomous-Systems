@@ -494,6 +494,10 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
   _server->on("/values", HTTP_GET, [this](AsyncWebServerRequest* req) {
     req->send(200, "application/json", _buildJson());
   });
+  _server->on("/clock", HTTP_GET, [](AsyncWebServerRequest* req) {
+    const uint32_t deviceMs = millis();
+    req->send(200, "application/json", String("{\"device_ms\":") + String(deviceMs) + "}");
+  });
   _server->on("/autonomy", HTTP_GET, [this](AsyncWebServerRequest* req) {
     if (req->hasParam("on")) {
       const bool on = req->getParam("on")->value() == "1";
