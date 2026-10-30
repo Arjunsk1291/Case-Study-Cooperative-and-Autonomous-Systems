@@ -58,6 +58,7 @@ static constexpr size_t MAX_JPEG_BYTES = 300 * 1024;
 static constexpr uint32_t MIN_FREE_SD_BYTES = 512 * 1024;
 
 static WebServer archiveServer(ARCHIVE_PORT);
+static bool archiveServerStarted = false;
 static bool cameraReady = false;
 static bool sdReady = false;
 static uint32_t frameSequence = 0;
@@ -68,6 +69,8 @@ static uint32_t nextCaptureAt = 0;
 static uint32_t lastMemoryLog = 0;
 static String activeEventId;
 static uint8_t framesRemaining = 0;
+static uint8_t activeRequestedFrames = 0;
+static uint8_t activeSavedFrames = 0;
 static char lastError[48] = "none";
 
 static String boxBaseUrl() {
@@ -289,7 +292,10 @@ static void acknowledgeEvent() {
   Serial.printf("[capture] event %s complete; %u frames requested/attempted\n",
                 activeEventId.c_str(), (unsigned)0);
   activeEventId = "";
+  Serial.printf(", saved=%u/%u\\n", (unsigned)activeSavedFrames, (unsigned)activeRequestedFrames);
+  activeEventId = "";
   framesRemaining = 0;
+  activeRequestedFrames = activeSavedFrames = 0;
 }
 
 static void pollCaptureCommand() {
@@ -301,6 +307,8 @@ static void pollCaptureCommand() {
   if (eventId.isEmpty() || eventId == activeEventId) return;
   activeEventId = eventId;
   framesRemaining = (uint8_t)requested;
+  activeRequestedFrames = (uint8_t)requested;
+  activeSavedFrames = 0;
   nextCaptureAt = millis();
   Serial.printf("[capture] new request event=%s frames=%u\n",
                 activeEventId.c_str(), (unsigned)framesRemaining);
@@ -376,6 +384,7 @@ static void handleManifest() {
 }
 
 static void beginArchiveServer() {
+  if (archiveServerStarted) return;
   archiveServer.on("/", HTTP_GET, handleArchiveRoot);
   archiveServer.on("/file", HTTP_GET, handleArchiveFile);
   archiveServer.on("/manifest", HTTP_GET, handleManifest);
@@ -389,6 +398,7 @@ static void beginArchiveServer() {
   });
   archiveServer.onNotFound([]() { archiveServer.send(404, "text/plain", "Not found"); });
   archiveServer.begin();
+  archiveServerStarted = true;
   Serial.printf("[archive] image files served at http://%s:%u/\n",
                 WiFi.localIP().toString().c_str(), ARCHIVE_PORT);
 }
@@ -430,6 +440,13 @@ void loop() {
   archiveServer.handleClient();
   const uint32_t now = millis();
 
+  static uint32_t nextInitRetry = 0;
+  if ((!cameraReady || !sdReady) && now >= nextInitRetry) {
+    nextInitRetry = now + 10000;
+    if (!cameraReady) cameraReady = initCamera();
+    if (!sdReady) sdReady = initStorage();
+    if (cameraReady && sdReady) strncpy(lastError, "none", sizeof(lastError) - 1);
+  }
   if (now - lastHeartbeat >= HEARTBEAT_MS) {
     lastHeartbeat = now;
     sendHeartbeat();
@@ -447,7 +464,7 @@ void loop() {
       strncpy(lastError, "frame_capture_failed", sizeof(lastError) - 1);
       Serial.println("[capture] camera framebuffer unavailable");
     } else {
-      saveFrame(fb, activeEventId);
+      if (saveFrame(fb, activeEventId)) ++activeSavedFrames;
       esp_camera_fb_return(fb);  // Release single framebuffer immediately after SD write.
     }
     --framesRemaining;
