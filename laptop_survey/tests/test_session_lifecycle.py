@@ -70,7 +70,7 @@ def test_survey_stop_keeps_logging_and_finalize_builds_verified_zip(tmp_path: Pa
     manager.read_values = lambda: fake_payload(10)
     manager.camera_heartbeat({"board_id": "AI_THINKER_ESP32CAM_R04", "firmware": "R04-CAM-1.0.0", "camera_ready": True, "width": 320, "height": 240, "jpeg_quality": 12, "xclk_hz": 20000000, "psram_detected": False, "free_heap": 249544, "min_free_heap": 246372, "largest_free_block": 110580, "wifi_rssi": -45, "wifi_ip": "192.168.14.3", "frame_sequence": 0})
     assert manager.camera_online() is True
-    manager.camera_preview_saved({"laptop_received_at": "2026-10-30T12:00:00Z"}, tmp_path / "preview.jpg")
+    manager.camera_preview_saved({"frame_id": "preview_1", "laptop_received_at": "2026-10-30T12:00:00Z"}, tmp_path / "preview.jpg")
     manager.box_request = lambda method, path, params=None, timeout=0.8: FakeResponse(
         200, {"ok": True, "drive_inhibited": True}
     )
