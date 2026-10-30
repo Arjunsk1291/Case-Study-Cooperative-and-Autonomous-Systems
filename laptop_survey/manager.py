@@ -76,6 +76,7 @@ class SurveyManager:
         self.camera_last_heartbeat_at=None
         self.camera_last_heartbeat_mono=0.0
         self.camera_board_status={}
+        self.camera_preview_path=None
         self.last_vision=None
         self.capture_requests=[]
         self.camera_accepting=True
@@ -300,8 +301,8 @@ class SurveyManager:
         values = values_dict(payload)
         if values.get("rover.connected", "false").lower() != "true":
             raise RuntimeError("R04 rover is not connected to CAS-Box-04 yet; wait for the RoverLink status to become connected.")
-        if not self.camera_online():
-            raise RuntimeError("AI-Thinker ESP32-CAM has not checked in yet. Wait for Camera online before starting the investigation.")
+        if not self.camera_online() or not self.camera_board_status.get("camera_ready", False):
+            raise RuntimeError("AI-Thinker ESP32-CAM has not checked in and initialized. Wait for Camera ready before starting the investigation.")
         stop=self.box_request("POST","/safety/stop",timeout=1.0)
         if stop.status_code!=200:
             raise RuntimeError(f"Survey firmware safety stop is required (HTTP {stop.status_code}); update the box firmware first")
@@ -592,6 +593,13 @@ class SurveyManager:
         with self.camera_upload_condition:
             self.camera_uploads_inflight=max(0,self.camera_uploads_inflight-1)
             self.camera_upload_condition.notify_all()
+
+    def camera_preview_saved(self,meta,path):
+        with self.lock:
+            self.camera_preview_path=Path(path)
+            self.camera_last_frame_at=meta["laptop_received_at"]
+            self.camera_last_frame_mono=time.monotonic()
+            return {"ok":True,"frame_id":meta["frame_id"]}
 
     def camera_saved(self,meta,path):
         with self.lock:
