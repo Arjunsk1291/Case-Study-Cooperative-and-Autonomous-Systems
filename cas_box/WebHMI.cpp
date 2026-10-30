@@ -568,7 +568,8 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     req->send(200, "application/json", out);
   });
   _server->on("/camera/capture", HTTP_POST, [](AsyncWebServerRequest* req) {
-    char eventId[40]; uint8_t frames = 3; bool online, sd;
+    char eventId[40] = "";
+    uint8_t frames = 3; bool online, sd, created = false;
     if (req->hasParam("frames")) frames = (uint8_t)constrain(req->getParam("frames")->value().toInt(), 1, 5);
     portENTER_CRITICAL(&gCameraMux);
     online = gCameraLastSeenMs != 0 && (uint32_t)(millis() - gCameraLastSeenMs) < 5000;
@@ -576,12 +577,12 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     if (online && sd && !gCameraCapturePending) {
       ++gCameraEventCounter;
       snprintf(gCameraEventId, sizeof(gCameraEventId), "R04E_%lu_%lu", (unsigned long)millis(), (unsigned long)gCameraEventCounter);
-      gCameraRequestedFrames = frames; gCameraCapturePending = true;
+      gCameraRequestedFrames = frames; gCameraCapturePending = true; created = true;
+      strlcpy(eventId, gCameraEventId, sizeof(eventId));
     }
-    strlcpy(eventId, gCameraEventId, sizeof(eventId));
     portEXIT_CRITICAL(&gCameraMux);
     if (!online || !sd) { req->send(503, "application/json", "{\"ok\":false,\"reason\":\"camera_or_microSD_not_ready\"}"); return; }
-    if (eventId[0] == '\0') { req->send(409, "application/json", "{\"ok\":false,\"reason\":\"capture_already_pending\"}"); return; }
+    if (!created) { req->send(409, "application/json", "{\"ok\":false,\"reason\":\"capture_already_pending\"}"); return; }
     String out = "{\"ok\":true,\"event_id\":\"" + String(eventId) + "\",\"frames\":" + String(frames) + "}";
     req->send(200, "application/json", out);
   });
