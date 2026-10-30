@@ -15,13 +15,13 @@ from analysis import detect_tactile_strip_jpeg
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
 DATA_ROOT = Path(os.environ.get("CAS_SURVEY_DATA", str(ROOT / "survey_data")))
-BOX_URL = os.environ.get("CAS_BOX_URL", "http://192.168.17.1")
+BOX_URL = os.environ.get("CAS_BOX_URL", "http://192.168.14.1")
 CAMERA_TOKEN = os.environ.get("CAS_CAMERA_TOKEN", "CHANGE_ME_CAMERA_TOKEN")
 MAX_IMAGE_BYTES = int(os.environ.get("CAS_MAX_JPEG_BYTES", str(3 * 1024 * 1024)))
 MAX_DRIVE = 0.25
 
 manager = SurveyManager(BOX_URL, DATA_ROOT, CAMERA_TOKEN)
-app = FastAPI(title="CAS B3/R07 Survey Collector", version="0.1.0")
+app = FastAPI(title="CAS B3/R04 Survey Collector", version="0.1.0")
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
