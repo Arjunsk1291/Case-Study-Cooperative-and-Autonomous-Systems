@@ -72,6 +72,8 @@ jobs:
           arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
           arduino-cli core update-index
           arduino-cli core install esp32:esp32@3.3.1
+      - name: Prepare safe example camera config for CI
+        run: cp camera_s3/CameraStation/camera_user_config.example.h camera_s3/CameraStation/camera_user_config.h
       - name: Compile AI-Thinker ESP32-CAM (OV2640)
         run: arduino-cli compile --fqbn esp32:esp32:esp32cam camera_s3/CameraStation
 
