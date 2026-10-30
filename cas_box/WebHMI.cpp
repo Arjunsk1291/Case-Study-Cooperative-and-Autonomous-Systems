@@ -550,7 +550,7 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     strlcpy(gCameraError, err.c_str(), sizeof(gCameraError));
     gCameraStoredImages = frames; gCameraFrameSequence = seq; gCameraLastSeenMs = millis();
     portEXIT_CRITICAL(&gCameraMux);
-    req->send(200, "application/json", "{\\"ok\\":true}");
+    req->send(200, "application/json", "{\"ok\":true}");
   });
   _server->on("/camera/state", HTTP_GET, [](AsyncWebServerRequest* req) {
     char ip[16], err[48]; bool ready, sd; uint32_t last, frames, seq;
@@ -560,11 +560,11 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     frames = gCameraStoredImages; seq = gCameraFrameSequence;
     portEXIT_CRITICAL(&gCameraMux);
     const bool online = last != 0 && (uint32_t)(millis() - last) < 5000;
-    String out = "{\\"online\\":" + String(online ? "true" : "false") +
-      ",\\"camera_ready\\":" + String(ready ? "true" : "false") +
-      ",\\"sd_ready\\":" + String(sd ? "true" : "false") +
-      ",\\"ip\\":\\"" + String(ip) + "\\",\\"stored_images\\":" + String(frames) +
-      ",\\"frame_sequence\\":" + String(seq) + ",\\"last_error\\":\\"" + String(err) + "\\"}";
+    String out = "{\"online\":" + String(online ? "true" : "false") +
+      ",\"camera_ready\":" + String(ready ? "true" : "false") +
+      ",\"sd_ready\":" + String(sd ? "true" : "false") +
+      ",\"ip\":\"" + String(ip) + "\",\"stored_images\":" + String(frames) +
+      ",\"frame_sequence\":" + String(seq) + ",\"last_error\":\"" + String(err) + "\"}";
     req->send(200, "application/json", out);
   });
   _server->on("/camera/capture", HTTP_POST, [](AsyncWebServerRequest* req) {
@@ -580,9 +580,9 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     }
     strlcpy(eventId, gCameraEventId, sizeof(eventId));
     portEXIT_CRITICAL(&gCameraMux);
-    if (!online || !sd) { req->send(503, "application/json", "{\\"ok\\":false,\\"reason\\":\\"camera_or_microSD_not_ready\\"}"); return; }
-    if (eventId[0] == '\\0') { req->send(409, "application/json", "{\\"ok\\":false,\\"reason\\":\\"capture_already_pending\\"}"); return; }
-    String out = "{\\"ok\\":true,\\"event_id\\":\\"" + String(eventId) + "\\",\\"frames\\":" + String(frames) + "}";
+    if (!online || !sd) { req->send(503, "application/json", "{\"ok\":false,\"reason\":\"camera_or_microSD_not_ready\"}"); return; }
+    if (eventId[0] == '\0') { req->send(409, "application/json", "{\"ok\":false,\"reason\":\"capture_already_pending\"}"); return; }
+    String out = "{\"ok\":true,\"event_id\":\"" + String(eventId) + "\",\"frames\":" + String(frames) + "}";
     req->send(200, "application/json", out);
   });
   _server->on("/camera/command", HTTP_GET, [](AsyncWebServerRequest* req) {
@@ -590,8 +590,8 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     portENTER_CRITICAL(&gCameraMux);
     pending = gCameraCapturePending; strlcpy(eventId, gCameraEventId, sizeof(eventId)); frames = gCameraRequestedFrames;
     portEXIT_CRITICAL(&gCameraMux);
-    if (!pending) { req->send(200, "application/json", "{\\"capture\\":false}"); return; }
-    String out = "{\\"capture\\":true,\\"event_id\\":\\"" + String(eventId) + "\\",\\"frames\\":" + String(frames) + "}";
+    if (!pending) { req->send(200, "application/json", "{\"capture\":false}"); return; }
+    String out = "{\"capture\":true,\"event_id\":\"" + String(eventId) + "\",\"frames\":" + String(frames) + "}";
     req->send(200, "application/json", out);
   });
   _server->on("/camera/ack", HTTP_GET, [](AsyncWebServerRequest* req) {
@@ -599,10 +599,10 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     bool matched = false;
     portENTER_CRITICAL(&gCameraMux);
     if (gCameraCapturePending && ack == gCameraEventId) {
-      gCameraCapturePending = false; gCameraRequestedFrames = 0; gCameraEventId[0] = '\\0'; matched = true;
+      gCameraCapturePending = false; gCameraRequestedFrames = 0; gCameraEventId[0] = '\0'; matched = true;
     }
     portEXIT_CRITICAL(&gCameraMux);
-    req->send(matched ? 200 : 409, "application/json", matched ? "{\\"ok\\":true}" : "{\\"ok\\":false}");
+    req->send(matched ? 200 : 409, "application/json", matched ? "{\"ok\":true}" : "{\"ok\":false}");
   });
   _server->on("/clock", HTTP_GET, [](AsyncWebServerRequest* req) {
     const uint32_t deviceMs = millis();
