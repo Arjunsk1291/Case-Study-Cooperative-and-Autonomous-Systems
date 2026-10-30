@@ -21,6 +21,7 @@ button{appearance:none;border:0;border-radius:14px;font-weight:650;cursor:pointe
  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);}
 .btnTiny{padding:10px 12px;font-size:13px;}
 .stop{background:linear-gradient(180deg,rgba(255,90,95,.95),rgba(255,90,95,.75));color:#190406;}
+.safetyBar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}.safetyBar button{padding:11px 14px}.safetyState{font-size:12px;color:var(--muted)}
 .pad{display:grid;grid-template-columns:repeat(3,72px);grid-template-rows:repeat(3,72px);gap:10px;
  justify-content:center;margin:6px 0 10px;touch-action:none;user-select:none;-webkit-user-select:none;}
 .pad button{font-size:24px;touch-action:none;}
@@ -38,7 +39,8 @@ input[type=range]{width:100%;}
 canvas{display:block;margin:0 auto;max-width:100%;}
 </style></head><body><div class='wrap'>
 <div class='top'><div class='title'>%TITLE%</div><div class='pill' id='conn'>-</div>
- <button id='devBtn' class='btnTiny'>Dev</button></div>
+ <div style='display:flex;gap:8px;align-items:center'><button id='emergencyStop' class='btnTiny stop'>STOP ROVER / E-STOP</button><button id='devBtn' class='btnTiny'>Dev</button></div></div>
+ <div class='safetyBar'><button id='clearStop' class='btnTiny' disabled>Clear stop latch</button><span class='safetyState' id='safetyState'>Drive interlock: checking</span></div>
 <div class='card'><div class='label'>State</div><div class='value' id='state'>-</div></div>
 <div class='card'><div class='sectionTitle'>Live troubleshooting</div>
  <div class='label'>Use this panel to tell whether the box is sensing, connected to the rover, commanding motion, or recovering from suspected no movement. Motion is inferred from LiDAR scene change because this rover has no wheel encoders.</div>
@@ -412,6 +414,11 @@ async function poll(){
     $('conn').textContent='Online';
     if(autoOn)fetch('/autonomy?hb=1',{cache:'no-store'}).catch(()=>{});
     $('state').textContent=j.state||'-';
+    if(j.safety){
+      const locked=!!j.safety.drive_inhibited;
+      $('safetyState').textContent=locked?'STOP LATCHED · movement blocked':'Drive interlock clear';
+      $('clearStop').disabled=!locked;
+    }
     latestSnapshot={...j,receivedAt:Date.now()};
     // Refresh guided investigation button availability whenever a live snapshot arrives.
     // Previously invUi() ran only once at page load (before latestSnapshot existed), so
@@ -491,6 +498,17 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     }
     req->send(400, "application/json", "{\"ok\":false}");
   });
+  _server->on("/safety/stop", HTTP_POST, [this](AsyncWebServerRequest* req) {
+    stopDrive();
+    req->send(200, "application/json", "{\"ok\":true,\"drive_inhibited\":true}");
+  });
+  _server->on("/safety/clear", HTTP_POST, [this](AsyncWebServerRequest* req) {
+    clearDriveInhibit();
+    req->send(200, "application/json", "{\"ok\":true,\"drive_inhibited\":false}");
+  });
+  _server->on("/safety/state", HTTP_GET, [this](AsyncWebServerRequest* req) {
+    req->send(200, "application/json", driveInhibited() ? "{\"drive_inhibited\":true}" : "{\"drive_inhibited\":false}");
+  });
   _server->on("/drive", HTTP_GET, [this](AsyncWebServerRequest* req) {
     if (!req->hasParam("l") || !req->hasParam("r") || !req->hasParam("id") || !req->hasParam("n")) {
       req->send(400, "application/json", "{\"ok\":false}");
@@ -500,10 +518,11 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     const float r = constrain(req->getParam("r")->value().toFloat(), -_driveMax, _driveMax);
     const uint32_t id = strtoul(req->getParam("id")->value().c_str(), nullptr, 10);
     const uint32_t n = strtoul(req->getParam("n")->value().c_str(), nullptr, 10);
-    bool fresh;
+    bool fresh = false, inhibited = false;
     portENTER_CRITICAL(&_driveMux);
+    inhibited = _driveInhibited || _autonomyEnabled;
     // a new page (id) starts over; within a page only a higher number counts
-    fresh = (id != _drivePageId) || (n > _driveSeq);
+    fresh = !inhibited && ((id != _drivePageId) || (n > _driveSeq));
     if (fresh) {
       _drivePageId = id;
       _driveSeq = n;
@@ -512,7 +531,8 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
       _driveMs = millis();
     }
     portEXIT_CRITICAL(&_driveMux);
-    req->send(200, "application/json", fresh ? "{\"ok\":true}" : "{\"ok\":false,\"stale\":true}");
+    if (inhibited) req->send(423, "application/json", "{\"ok\":false,\"reason\":\"drive inhibited or autonomy active\"}");
+    else req->send(200, "application/json", fresh ? "{\"ok\":true}" : "{\"ok\":false,\"stale\":true}");
   });
   _server->begin();
   _cycleLastUs = micros();
@@ -575,6 +595,31 @@ bool WebHMI::autonomyEnabled() const {
   return enabled;
 }
 
+bool WebHMI::driveInhibited() const {
+  portENTER_CRITICAL(&_driveMux);
+  const bool inhibited = _driveInhibited;
+  portEXIT_CRITICAL(&_driveMux);
+  return inhibited;
+}
+
+void WebHMI::stopDrive() {
+  portENTER_CRITICAL(&_driveMux);
+  _driveInhibited = true;
+  _autonomyEnabled = false;
+  _autonomyHeartbeatMs = 0;
+  _driveL = _driveR = 0;
+  _driveMs = millis();
+  portEXIT_CRITICAL(&_driveMux);
+}
+
+void WebHMI::clearDriveInhibit() {
+  portENTER_CRITICAL(&_driveMux);
+  _driveL = _driveR = 0;
+  _driveMs = millis();
+  _driveInhibited = false;
+  portEXIT_CRITICAL(&_driveMux);
+}
+
 bool WebHMI::autonomyHeartbeatFresh(uint32_t maxAgeMs) const {
   portENTER_CRITICAL(&_driveMux);
   const bool enabled = _autonomyEnabled;
@@ -620,7 +665,12 @@ String WebHMI::_buildJson() const {
   xSemaphoreTake(_mtx, portMAX_DELAY);
   out += "{\"state\":\"";
   jsonEscape(out, _state.c_str());
-  out += "\",\"values\":[";
+  portENTER_CRITICAL(&_driveMux);
+  const bool driveLocked = _driveInhibited;
+  portEXIT_CRITICAL(&_driveMux);
+  out += "\",\"safety\":{\"drive_inhibited\":";
+  out += driveLocked ? "true" : "false";
+  out += "},\"values\":[";
   bool first = true;
   for (const Value& v : _values) {
     if (!v.inUse) continue;
