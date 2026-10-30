@@ -2,9 +2,9 @@
 
 ## Selected data path
 
-The ESP32-S3 camera joins the existing CAS-Box-07 Wi-Fi AP as a station and uploads JPEG frames directly to the laptop FastAPI service:
+The ESP32-S3 camera joins the existing CAS-Box-04 Wi-Fi AP as a station and uploads JPEG frames directly to the laptop FastAPI service:
 
-ESP32-S3 camera → Wi-Fi station → CAS-Box-07 AP → laptop POST /api/camera/frame.
+ESP32-S3 camera → Wi-Fi station → CAS-Box-04 AP → laptop POST /api/camera/frame.
 
 JPEG payloads do not pass through the main ESP32. The main ESP32 continues sampling sensors and sending motor commands through its existing RoverLink task.
 
@@ -17,7 +17,7 @@ Do not copy pins from another camera board. camera_board_config.template.h is a 
 Required information:
 - Exact ESP32-S3 board/module and camera sensor (for example OV2640, if confirmed).
 - Manufacturer pin map for PWDN, RESET, XCLK, SIOD, SIOC, D0-D7, VSYNC, HREF and PCLK.
-- Laptop IP address assigned by the CAS-Box-07 AP (use ip addr on Linux while connected to CAS-Box-07).
+- Laptop IP address assigned by the CAS-Box-04 AP (use ip addr on Linux while connected to CAS-Box-04).
 - A shared random upload token.
 
 ## Laptop API protocol
