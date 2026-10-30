@@ -121,7 +121,7 @@ The camera pins are assigned by the sketch; they are not available for other per
 
     python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
 
-5. Open camera_s3/CameraStation/camera_user_config.h and set:
+5. Copy camera_s3/CameraStation/camera_user_config.example.h to camera_s3/CameraStation/camera_user_config.h. The real config is ignored by Git. Set:
    - CAS_CAMERA_LAPTOP_HOST to the laptop IPv4 address you just found.
    - CAS_CAMERA_TOKEN to the generated token.
    - Keep the R04 SSID/password unchanged (CAS-Box-04 / CASbox04).
