@@ -82,11 +82,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Assemble two-board R04 upload kit
         run: |
-          mkdir -p CAS_Box_B3_R04_Upload_Kit/main_esp32
-          mkdir -p CAS_Box_B3_R04_Upload_Kit/ai_thinker_camera
+          mkdir -p CAS_Box_B3_R04_Upload_Kit/cas_box
+          mkdir -p CAS_Box_B3_R04_Upload_Kit/camera_s3/CameraStation
           mkdir -p CAS_Box_B3_R04_Upload_Kit/laptop_survey
-          cp -a cas_box/. CAS_Box_B3_R04_Upload_Kit/main_esp32/
-          cp -a camera_s3/CameraStation/. CAS_Box_B3_R04_Upload_Kit/ai_thinker_camera/
+          cp -a cas_box/. CAS_Box_B3_R04_Upload_Kit/cas_box/
+          cp -a camera_s3/CameraStation/. CAS_Box_B3_R04_Upload_Kit/camera_s3/CameraStation/
           cp -a laptop_survey/. CAS_Box_B3_R04_Upload_Kit/laptop_survey/
           cp R04_FLASH_GUIDE.md CAS_Box_B3_R04_Upload_Kit/
           cp README.md CAS_Box_B3_R04_Upload_Kit/
