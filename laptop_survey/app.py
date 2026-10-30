@@ -181,28 +181,33 @@ async def camera_frame(
         raise HTTPException(409, "No active investigation session")
     if not x_session_id or x_session_id != active.get("session_id"):
         raise HTTPException(409, "Camera session ID does not match active investigation")
-    content_type = (request.headers.get("content-type") or "").lower()
-    if "image/jpeg" not in content_type:
-        raise HTTPException(415, "Upload must be image/jpeg")
-    length = request.headers.get("content-length")
-    if length and int(length) > MAX_IMAGE_BYTES:
-        raise HTTPException(413, "JPEG too large")
+    if not manager.begin_camera_upload(x_session_id):
+        raise HTTPException(409, "Camera uploads are closed for this session")
+    temp_path: Path | None = None
+    final_path: Path | None = None
+    try:
+        content_type = (request.headers.get("content-type") or "").lower()
+        if "image/jpeg" not in content_type:
+            raise HTTPException(415, "Upload must be image/jpeg")
+        length = request.headers.get("content-length")
+        if length and int(length) > MAX_IMAGE_BYTES:
+            raise HTTPException(413, "JPEG too large")
 
-    session_dir = manager.session["dir"]
-    temp_dir = session_dir / "camera" / "frames"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    frame_id = re.sub(r"[^A-Za-z0-9_-]", "_", (x_frame_id or str(uuid.uuid4())))[:80]
-    if not frame_id:
-        frame_id = str(uuid.uuid4())
-    temp_path = temp_dir / f".{frame_id}.part"
-    final_path = temp_dir / f"{frame_id}.jpg"
-    if final_path.exists():
-        frame_id = frame_id + "_" + uuid.uuid4().hex[:8]
+        session_dir = manager.session["dir"]
+        temp_dir = session_dir / "camera" / "frames"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        frame_id = re.sub(r"[^A-Za-z0-9_-]", "_", (x_frame_id or str(uuid.uuid4())))[:80]
+        if not frame_id:
+            frame_id = str(uuid.uuid4())
         temp_path = temp_dir / f".{frame_id}.part"
         final_path = temp_dir / f"{frame_id}.jpg"
-    total = 0
-    digest = hashlib.sha256()
-    try:
+        if final_path.exists():
+            frame_id = frame_id + "_" + uuid.uuid4().hex[:8]
+            temp_path = temp_dir / f".{frame_id}.part"
+            final_path = temp_dir / f"{frame_id}.jpg"
+
+        total = 0
+        digest = hashlib.sha256()
         with temp_path.open("wb") as out:
             async for chunk in request.stream():
                 if not chunk:
@@ -232,35 +237,47 @@ async def camera_frame(
         except UnidentifiedImageError as exc:
             raise HTTPException(400, "JPEG decoder rejected image") from exc
         temp_path.replace(final_path)
-    except Exception:
-        temp_path.unlink(missing_ok=True)
-        raise
 
-    received = datetime.now(timezone.utc).isoformat()
-    seq = int(x_frame_sequence) if x_frame_sequence and x_frame_sequence.isdigit() else None
-    cam_ms = int(x_camera_monotonic_ms) if x_camera_monotonic_ms and x_camera_monotonic_ms.isdigit() else None
-    meta = {
-        "frame_id": frame_id, "frame_sequence": seq, "camera_board_id": x_camera_board_id,
-        "camera_monotonic_ms": cam_ms, "camera_timestamp_utc": x_camera_timestamp_utc,
-        "laptop_received_at": received, "width": width, "height": height, "bytes": total,
-        "sha256": digest.hexdigest(), "capture_event_id": x_capture_event_id,
-    }
-    try:
+        received = datetime.now(timezone.utc).isoformat()
+        seq = int(x_frame_sequence) if x_frame_sequence and x_frame_sequence.isdigit() else None
+        cam_ms = int(x_camera_monotonic_ms) if x_camera_monotonic_ms and x_camera_monotonic_ms.isdigit() else None
+        meta = {
+            "frame_id": frame_id, "frame_sequence": seq, "camera_board_id": x_camera_board_id,
+            "camera_monotonic_ms": cam_ms, "camera_timestamp_utc": x_camera_timestamp_utc,
+            "laptop_received_at": received, "width": width, "height": height, "bytes": total,
+            "sha256": digest.hexdigest(), "capture_event_id": x_capture_event_id,
+        }
         manager.camera_saved(meta, final_path)
-    except Exception as exc:
-        final_path.unlink(missing_ok=True)
-        manager.camera_errors += 1
-        raise HTTPException(500, f"Frame could not be indexed: {exc}") from exc
 
-    # Observational classical CV only; it can never command movement.
-    try:
-        image_bytes = final_path.read_bytes()
-        vision = await asyncio.to_thread(detect_tactile_strip_jpeg, image_bytes)
-        manager.set_vision(frame_id, vision)
-        meta["vision"] = vision
+        # Observational classical CV only; it can never command movement.
+        try:
+            image_bytes = final_path.read_bytes()
+            vision = await asyncio.to_thread(detect_tactile_strip_jpeg, image_bytes)
+            manager.set_vision(frame_id, vision)
+            meta["vision"] = vision
+        except Exception as exc:
+            manager.set_vision(frame_id, {
+                "available": False, "valid": False, "classification": "vision_error",
+                "detected": False, "confidence": 0.0, "reason": f"{type(exc).__name__}: {exc}",
+                "motion_authorized": False,
+            })
+        return {"ok": True, **meta}
     except Exception as exc:
-        manager.set_vision(frame_id, {"available": False, "valid": False, "reason": f"{type(exc).__name__}: {exc}"})
-    return {"ok": True, **meta}
+        if temp_path:
+            temp_path.unlink(missing_ok=True)
+        if final_path and final_path.exists():
+            # A frame is removed only if it failed before indexing; manager.camera_saved logs success.
+            try:
+                if manager.session and manager.session.get("latest_frame_id") != final_path.stem:
+                    final_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+        if not isinstance(exc, HTTPException):
+            manager.camera_errors += 1
+            raise HTTPException(500, f"Camera frame failed: {exc}") from exc
+        raise
+    finally:
+        manager.end_camera_upload()
 
 
 @app.get("/api/camera/latest")
