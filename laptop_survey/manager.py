@@ -301,8 +301,9 @@ class SurveyManager:
         values = values_dict(payload)
         if values.get("rover.connected", "false").lower() != "true":
             raise RuntimeError("R04 rover is not connected to CAS-Box-04 yet; wait for the RoverLink status to become connected.")
-        if not self.camera_online() or not self.camera_board_status.get("camera_ready", False):
-            raise RuntimeError("AI-Thinker ESP32-CAM has not checked in and initialized. Wait for Camera ready before starting the investigation.")
+        preview_recent = bool(self.camera_last_frame_mono and (time.monotonic()-self.camera_last_frame_mono) < 5.0)
+        if not self.camera_online() or not self.camera_board_status.get("camera_ready", False) or not preview_recent:
+            raise RuntimeError("AI-Thinker ESP32-CAM is not fully ready. Wait for a fresh heartbeat and a recent preview JPEG on the laptop before starting the investigation.")
         stop=self.box_request("POST","/safety/stop",timeout=1.0)
         if stop.status_code!=200:
             raise RuntimeError(f"Survey firmware safety stop is required (HTTP {stop.status_code}); update the box firmware first")
@@ -772,7 +773,8 @@ integrity/data_quality_report.json before using this data for training/navigatio
             live_values=values_dict(self.latest or {})
             rover_online=live_values.get("rover.connected","false").lower()=="true"
             camera_online=self.camera_online()
-            system_ready=bool(self.box_online and rover_online and camera_online and self.camera_board_status.get("camera_ready",False))
+            preview_online=bool(frame_age is not None and frame_age < 5.0)
+            system_ready=bool(self.box_online and rover_online and camera_online and preview_online and self.camera_board_status.get("camera_ready",False))
             sinfo=None
             if s:
                 sinfo={"session_id":s["id"],"state":s["state"],"started_at":s["started_at"],
@@ -793,7 +795,7 @@ integrity/data_quality_report.json before using this data for training/navigatio
               "camera":{"last_frame_at":self.camera_last_frame_at,"last_frame_age_s":None if frame_age is None else round(frame_age,2),
                 "last_heartbeat_at":self.camera_last_heartbeat_at,"last_heartbeat_age_s":None if camera_age is None else round(camera_age,2),
                 "frames_received_total":self.camera_frames_received,"transfer_errors":self.camera_errors,
-                "sequence_gaps":self.camera_missing_frames,"online":camera_online,"board":self.camera_board_status,
+                "sequence_gaps":self.camera_missing_frames,"online":camera_online,"preview_online":preview_online,"board":self.camera_board_status,
                 "token_configured":bool(self.camera_token and self.camera_token!="CHANGE_ME_CAMERA_TOKEN")},
               "storage":{"path":str(self.data_root),"free_bytes":disk.free,"total_bytes":disk.total}}
 
