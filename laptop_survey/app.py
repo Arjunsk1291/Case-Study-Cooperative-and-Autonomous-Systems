@@ -360,7 +360,7 @@ def system_config():
         "box_ssid": "CAS-Box-04",
         "box_password": "CASbox04",
         "box_ip": "192.168.14.1",
-        "camera_transport": "ESP32-S3 joins CAS-Box-07 and posts JPEG directly to this laptop service; main ESP32 does not relay image bytes.",
+        "camera_transport": "AI-Thinker ESP32-CAM joins CAS-Box-04 and posts JPEG directly to this laptop service; main ESP32 does not relay image bytes.",
         "camera_token_required": True,
         "camera_board_pin_map_available": True,
         "camera_board": "AI-Thinker ESP32-CAM with OV2640",
@@ -370,6 +370,6 @@ def system_config():
         "notes": [
             "A laptop-side stop requires Wi-Fi to the box. Use a physical hardware stop if fitted; none is wired in this repository.",
             "Main ESP32 RoverLink deadman remains the last software layer if commands expire.",
-            "Camera board GPIO/pin mapping must be filled from the exact ESP32-S3 camera hardware before camera firmware is compiled.",
+            "AI-Thinker ESP32-CAM / OV2640 GPIO mapping is integrated in camera_s3/CameraStation/CameraStation.ino; use the board-specific sketch and config header.",
         ],
     }
