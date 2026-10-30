@@ -115,6 +115,23 @@ const esc=s=>(''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt
 
 // ---- "Dev" view toggle
 let dev=false;
+$('emergencyStop').onclick=async()=>{
+  $('emergencyStop').disabled=true;
+  try {
+    const r=await fetch('/safety/stop',{method:'POST',cache:'no-store'});
+    $('safetyState').textContent=r.ok?'STOP LATCHED · drive commands blocked':'STOP REQUEST FAILED · connection unavailable';
+    $('clearStop').disabled=!r.ok;
+  } catch(e) { $('safetyState').textContent='STOP REQUEST FAILED · connection unavailable'; }
+  $('emergencyStop').disabled=false;
+};
+$('clearStop').onclick=async()=>{
+  if(!window.confirm('Clear the stop latch? The rover will remain stationary until a new drive command is made.'))return;
+  try {
+    const r=await fetch('/safety/clear',{method:'POST',cache:'no-store'});
+    if(r.ok){$('safetyState').textContent='Stop latch cleared · rover remains stationary';$('clearStop').disabled=true;}
+    else $('safetyState').textContent='Could not clear stop latch';
+  } catch(e){$('safetyState').textContent='Could not clear stop latch';}
+};
 $('devBtn').onclick=()=>{dev=!dev;$('devRoot').classList.toggle('hidden',!dev);$('devBtn').textContent=dev?'Hide':'Dev';};
 
 // ---- drive pad: send while a key is held (every 150 ms), stop on release / hide / blur
@@ -661,7 +678,7 @@ String WebHMI::_buildPage() const {
 // {"state":"..","values":[{"name":..,"value":..}],"cycle":{min,avg,max},"sensors":{..}|null}
 String WebHMI::_buildJson() const {
   String out;
-  out.reserve(1200);
+  out.reserve(6000);
   xSemaphoreTake(_mtx, portMAX_DELAY);
   out += "{\"state\":\"";
   jsonEscape(out, _state.c_str());
