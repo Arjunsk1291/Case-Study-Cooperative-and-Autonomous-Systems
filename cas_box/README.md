@@ -199,3 +199,24 @@ may slowly rotate it during a scan with the drive pad, pausing first so stationa
 frames are both captured. A LiDAR alone does not guarantee return-to-start: that requires validated
 scan matching/localization and a closed-loop controller, neither of which this data logger implements.
 Download the JSON before refreshing/closing the dashboard.
+
+## Survey firmware additions (branch survey/r07-investigation-2026-10-30)
+
+- The /values response now includes a top-level box_response_device_ms timestamp and the existing sensor snapshot sequence/device time.
+- The sensor JSON includes the existing 90-bin chassis-frame LD20 summary plus filtered_1deg_mm[360]. This 360-bin rolling-filtered map is the parser's current distance map; it is not a raw packet capture and has no intensity/native point timestamps. The 90-bin display applies the configured vehicle/LiDAR angular offset during snapshot conversion; the 360-bin array is the parser map before that additional snapshot remap.
+- BNO055 raw acceleration (m/s²), gyro (rad/s), magnetic field (µT) and temperature (°C) are included with a validity flag. Raw vectors are sampled on the existing ~100 ms IMU update, not synchronized exactly to the 250 ms sensor snapshot.
+- GPS decoded altitude, speed, course and UTC date/time are included only with separate validity flags. Raw NMEA sentences are not retained.
+- Snapshot sequence increments on each 250 ms Sensors snapshot. The laptop compares sequence numbers to estimate lost snapshots.
+- GET /clock returns the main ESP32 millis() clock value. This is a device uptime clock, not UTC.
+
+### Latched software stop interlock
+
+- POST /safety/stop latches the software stop, disables autonomy/heartbeat, zeros the requested drive setpoint and blocks /drive.
+- POST /safety/clear clears the latch but leaves the setpoint at zero. A new explicit drive command is still required to move.
+- GET /safety/state reports the latch.
+- /drive returns HTTP 423 while stop is latched or autonomy is active.
+- The main loop applies a final zero-command check immediately before RoverLink.setDrive().
+
+This is a software stop over the CAS-Box-07 Wi-Fi link. It is not a physical E-stop input or a substitute for a hardwired emergency stop/power disconnect. The existing RoverLink 500 ms deadman is retained.
+
+Survey manual commands are issued through the laptop collector and capped at ±0.25. The underlying RoverLink interface and rover firmware protocol are unchanged. No measured wheel speed/distance is available because the project has no encoder input.
