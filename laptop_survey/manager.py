@@ -666,7 +666,7 @@ class SurveyManager:
             (folder/"README.md").write_text(self._readme(s,quality),encoding="utf-8")
             checksums={}
             for p in sorted(folder.rglob("*")):
-                if p.is_file() and p.name not in {"checksums.json","manifest.json"}:
+                if p.is_file() and not p.name.startswith(".") and not p.name.endswith(".part") and p.name not in {"checksums.json","manifest.json"}:
                     h=hashlib.sha256()
                     with p.open("rb") as f:
                         for chunk in iter(lambda:f.read(1024*1024),b""): h.update(chunk)
@@ -679,7 +679,8 @@ class SurveyManager:
             if archive.exists(): archive.unlink()
             with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=4) as z:
                 for p in sorted(folder.rglob("*")):
-                    if p.is_file(): z.write(p,arcname=str(Path(s["id"])/p.relative_to(folder)))
+                    if p.is_file() and not p.name.startswith(".") and not p.name.endswith(".part"):
+                        z.write(p,arcname=str(Path(s["id"])/p.relative_to(folder)))
             with zipfile.ZipFile(archive) as z:
                 bad=z.testzip()
                 if bad: raise RuntimeError(f"ZIP CRC check failed for {bad}")
