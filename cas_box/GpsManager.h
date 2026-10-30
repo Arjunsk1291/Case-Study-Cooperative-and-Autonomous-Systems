@@ -18,7 +18,14 @@ public:
   double lonDeg();             // longitude, valid if hasFix()
   int satellites();            // satellites used (0 if unknown)
   float hdop();                // horizontal dilution of precision (0 if unknown)
-  uint32_t charsReceived();    // NMEA characters received since start
+  uint32_t charsReceived();    // NMEA characters processed since start (not raw NMEA sentences)
+  uint32_t locationAgeMs();
+  bool altitudeValid(); double altitudeM();
+  bool speedValid(); double speedKmph();
+  bool courseValid(); double courseDeg();
+  bool dateTimeValid();
+  int year(); int month(); int day();
+  int hour(); int minute(); int second(); int centisecond();
 
 private:
   TinyGPSPlus _gps;
