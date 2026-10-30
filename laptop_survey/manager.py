@@ -647,6 +647,16 @@ class SurveyManager:
                 if bad: raise RuntimeError(f"ZIP CRC check failed for {bad}")
                 manifest=json.loads(z.read(f"{s['id']}/manifest.json"))
                 if manifest.get("session_id")!=s["id"]: raise RuntimeError("Manifest session mismatch")
+                for rel, expected in manifest.get("files", {}).items():
+                    arc_name=str(Path(s["id"])/rel)
+                    digest=hashlib.sha256()
+                    total=0
+                    with z.open(arc_name, "r") as item:
+                        for chunk in iter(lambda: item.read(1024*1024), b""):
+                            digest.update(chunk)
+                            total += len(chunk)
+                    if digest.hexdigest()!=expected.get("sha256") or total!=expected.get("bytes"):
+                        raise RuntimeError(f"Checksum/size mismatch after ZIP creation: {rel}")
             with self.lock:
                 s["archive_path"]=archive; s["archive_bytes"]=archive.stat().st_size
                 s["state"]="ready"; s["finalized_at"]=now_iso(); s["error"]=None
