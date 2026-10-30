@@ -1,30 +1,35 @@
 /*
- * CAS Box B3 / Rover R04
- * Board: AI-Thinker ESP32-CAM (OV2640)
+ * CAS Box B3 / Rover R04 — AI-Thinker ESP32-CAM (OV2640)
  *
- * Camera joins CAS-Box-04 as a Wi-Fi station. JPEG frames go directly to the laptop
- * running the CAS R04 survey service. The main ESP32 is not used as an image relay.
+ * Network architecture:
+ *   phone ───────┐
+ *                ├── Wi-Fi AP CAS-Box-04 / main ESP32 (192.168.14.1)
+ *   camera ──────┘       ↑ capture requests + camera health metadata
  *
- * Idle: 1 FPS preview to laptop.
- * Investigation active: 2 FPS JPEG survey upload, plus camera heartbeat.
+ * Original JPEGs are saved directly to the AI-Thinker board's microSD card.
+ * The main ESP32 receives no JPEG payloads and does not allocate image buffers.
+ * The laptop is not part of the live robot network or control loop.
  *
- * Low-RAM configuration based on the measured board diagnostics:
- * QVGA 320x240, JPEG quality 12, 20 MHz XCLK, one frame buffer in internal DRAM.
- * PSRAM was reported as not detected. No image-processing buffers are allocated here.
+ * Requires a FAT32 microSD card in the AI-Thinker ESP32-CAM card slot.
+ * SD is mounted in 1-bit mode to avoid camera GPIO conflicts.
+ * Camera settings: QVGA 320x240 JPEG, q12, 20 MHz XCLK, 1 DRAM framebuffer.
  */
 
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WebServer.h>
+#include <FS.h>
+#include <SD_MMC.h>
 #include <esp_camera.h>
 #include <esp_heap_caps.h>
 #include "camera_user_config.h"
 
-#if !defined(CAS_CAMERA_LAPTOP_HOST) || !defined(CAS_CAMERA_TOKEN)
-#error "Set CAS_CAMERA_LAPTOP_HOST and CAS_CAMERA_TOKEN in camera_user_config.h."
+#if !defined(CAS_BOX_HOST) || !defined(CAS_BOX_SSID) || !defined(CAS_BOX_PASSWORD)
+#error "Set CAS_BOX_HOST, CAS_BOX_SSID and CAS_BOX_PASSWORD in camera_user_config.h."
 #endif
 
-// AI-Thinker ESP32-CAM / OV2640 wiring — do not reuse camera GPIOs.
+// AI-Thinker ESP32-CAM / OV2640 pin map.
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
 #define XCLK_GPIO_NUM      0
@@ -42,17 +47,31 @@
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
 
-static constexpr uint16_t LAPTOP_PORT = 8000;
+static constexpr uint16_t BOX_PORT = 80;
+static constexpr uint16_t ARCHIVE_PORT = 81;
 static constexpr uint32_t WIFI_RETRY_MS = 5000;
 static constexpr uint32_t HEARTBEAT_MS = 1000;
-static constexpr uint32_t SESSION_POLL_MS = 750;
-static constexpr uint32_t PREVIEW_INTERVAL_MS = 1000; // 1 FPS while no survey is running
-static constexpr uint32_t SURVEY_INTERVAL_MS = 500;   // 2 FPS during an investigation
-static constexpr uint32_t HTTP_TIMEOUT_MS = 2500;
+static constexpr uint32_t COMMAND_POLL_MS = 500;
+static constexpr uint32_t BURST_INTERVAL_MS = 450;
+static constexpr uint32_t HTTP_TIMEOUT_MS = 900;
 static constexpr size_t MAX_JPEG_BYTES = 300 * 1024;
+static constexpr uint32_t MIN_FREE_SD_BYTES = 512 * 1024;
 
-static String baseUrl() {
-  return String("http://") + CAS_CAMERA_LAPTOP_HOST + ":" + String(LAPTOP_PORT);
+static WebServer archiveServer(ARCHIVE_PORT);
+static bool cameraReady = false;
+static bool sdReady = false;
+static uint32_t frameSequence = 0;
+static uint32_t storedImages = 0;
+static uint32_t lastHeartbeat = 0;
+static uint32_t lastCommandPoll = 0;
+static uint32_t nextCaptureAt = 0;
+static uint32_t lastMemoryLog = 0;
+static String activeEventId;
+static uint8_t framesRemaining = 0;
+static char lastError[48] = "none";
+
+static String boxBaseUrl() {
+  return String("http://") + CAS_BOX_HOST;
 }
 
 static String jsonString(const String& body, const char* key) {
@@ -90,123 +109,17 @@ static bool connectBox() {
   WiFi.setSleep(false);
   WiFi.setHostname("R04-Camera");
   WiFi.begin(CAS_BOX_SSID, CAS_BOX_PASSWORD);
-
   const uint32_t started = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - started < 10000) {
-    delay(150); // camera board only; main ESP32/motor loop is unaffected
+    delay(100);  // Only blocks the camera board, never the main ESP32.
   }
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("[wifi] connected to %s | camera IP %s | laptop %s\n",
-                  CAS_BOX_SSID, WiFi.localIP().toString().c_str(), baseUrl().c_str());
+    Serial.printf("[wifi] connected to %s | camera IP %s | main box %s\n",
+                  CAS_BOX_SSID, WiFi.localIP().toString().c_str(), boxBaseUrl().c_str());
     return true;
   }
-  Serial.printf("[wifi] cannot join %s; retrying in %lu ms\n",
-                CAS_BOX_SSID, (unsigned long)WIFI_RETRY_MS);
+  Serial.printf("[wifi] cannot join %s; will retry\n", CAS_BOX_SSID);
   return false;
-}
-
-static bool postHeartbeat(bool cameraReady, const char* lastError, uint32_t frameSeq) {
-  if (WiFi.status() != WL_CONNECTED) return false;
-
-  const bool psram = psramFound();
-  const uint32_t freeHeap = ESP.getFreeHeap();
-  const uint32_t minHeap = ESP.getMinFreeHeap();
-  const uint32_t largestBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
-
-  String body;
-  body.reserve(420);
-  body = "{";
-  body += "\"board_id\":\""; body += CAS_CAMERA_BOARD_ID; body += "\",";
-  body += "\"firmware\":\""; body += CAS_CAMERA_FIRMWARE_VERSION; body += "\",";
-  body += "\"camera_ready\":"; body += cameraReady ? "true" : "false"; body += ",";
-  body += "\"width\":320,\"height\":240,\"jpeg_quality\":12,\"xclk_hz\":20000000,";
-  body += "\"psram_detected\":"; body += psram ? "true" : "false"; body += ",";
-  body += "\"free_heap\":"; body += freeHeap; body += ",";
-  body += "\"min_free_heap\":"; body += minHeap; body += ",";
-  body += "\"largest_free_block\":"; body += largestBlock; body += ",";
-  body += "\"wifi_rssi\":"; body += WiFi.RSSI(); body += ",";
-  body += "\"wifi_ip\":\""; body += WiFi.localIP().toString(); body += "\",";
-  body += "\"frame_sequence\":"; body += frameSeq; body += ",";
-  body += "\"last_error\":\""; body += lastError ? lastError : ""; body += "\"}";
-
-  HTTPClient http;
-  http.setTimeout(1200);
-  if (!http.begin(baseUrl() + "/api/camera/heartbeat")) return false;
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("X-Camera-Token", CAS_CAMERA_TOKEN);
-  const int code = http.POST((uint8_t*)body.c_str(), body.length());
-  http.end();
-  return code == 200;
-}
-
-static bool pollSurveySession(String& sessionId, String& captureEventId, int& framesRemaining) {
-  if (WiFi.status() != WL_CONNECTED) return false;
-
-  HTTPClient http;
-  http.setTimeout(1200);
-  if (!http.begin(baseUrl() + "/api/camera/session")) return false;
-  http.addHeader("X-Camera-Token", CAS_CAMERA_TOKEN);
-  const int code = http.GET();
-  if (code != 200) {
-    http.end();
-    return false;
-  }
-  const String body = http.getString();
-  http.end();
-
-  if (!jsonBool(body, "active")) {
-    sessionId = "";
-    captureEventId = "";
-    framesRemaining = 0;
-    return true;
-  }
-
-  sessionId = jsonString(body, "session_id");
-  captureEventId = "";
-  framesRemaining = 0;
-  const int capturePos = body.indexOf("\"capture\":{");
-  if (capturePos >= 0) {
-    const String captureJson = body.substring(capturePos);
-    captureEventId = jsonString(captureJson, "event_id");
-    framesRemaining = jsonInt(captureJson, "frames_remaining", 0);
-  }
-  return !sessionId.isEmpty();
-}
-
-static bool postJpeg(camera_fb_t* fb, bool preview, const String& sessionId,
-                     const String& captureEventId, uint32_t frameSeq) {
-  if (!fb || !fb->buf || fb->len < 4 || fb->len > MAX_JPEG_BYTES ||
-      fb->format != PIXFORMAT_JPEG) {
-    Serial.printf("[capture] invalid/oversized JPEG; bytes=%u\n", fb ? (unsigned)fb->len : 0);
-    return false;
-  }
-
-  HTTPClient http;
-  http.setTimeout(HTTP_TIMEOUT_MS);
-  const String route = preview ? "/api/camera/preview" : "/api/camera/frame";
-  if (!http.begin(baseUrl() + route)) return false;
-  http.addHeader("Content-Type", "image/jpeg");
-  http.addHeader("X-Camera-Token", CAS_CAMERA_TOKEN);
-  http.addHeader("X-Camera-Board-Id", CAS_CAMERA_BOARD_ID);
-  http.addHeader("X-Frame-Id", String(CAS_CAMERA_BOARD_ID) + "_" + String(frameSeq));
-  http.addHeader("X-Frame-Sequence", String(frameSeq));
-  http.addHeader("X-Camera-Monotonic-Ms", String(millis()));
-  if (!preview) {
-    http.addHeader("X-Session-Id", sessionId);
-    if (!captureEventId.isEmpty()) http.addHeader("X-Capture-Event-Id", captureEventId);
-  }
-
-  // Send the existing framebuffer directly. No JPEG String/copy is created.
-  const int code = http.POST(fb->buf, fb->len);
-  if (code == 200) {
-    Serial.printf("[%s] frame %lu stored | %u bytes\n",
-                  preview ? "preview" : "survey", (unsigned long)frameSeq, (unsigned)fb->len);
-  } else {
-    Serial.printf("[%s] upload failed HTTP %d | frame %lu\n",
-                  preview ? "preview" : "survey", code, (unsigned long)frameSeq);
-  }
-  http.end();
-  return code == 200;
 }
 
 static bool initCamera() {
@@ -247,22 +160,252 @@ static bool initCamera() {
     sensor->set_framesize(sensor, FRAMESIZE_QVGA);
     sensor->set_quality(sensor, 12);
   }
-  Serial.printf("[camera] initialized AI-Thinker OV2640 | QVGA | JPEG q12 | XCLK 20 MHz | PSRAM %s\n",
+  Serial.printf("[camera] AI-Thinker OV2640 ready | QVGA | q12 | 20 MHz | PSRAM %s\n",
                 psramFound() ? "yes" : "no");
   return true;
+}
+
+static uint32_t countStoredImages() {
+  if (!sdReady) return 0;
+  File dir = SD_MMC.open("/captures");
+  if (!dir || !dir.isDirectory()) return 0;
+  uint32_t count = 0;
+  File f = dir.openNextFile();
+  while (f) {
+    if (!f.isDirectory()) {
+      String name = String(f.name());
+      if (name.endsWith(".jpg")) ++count;
+    }
+    f.close();
+    f = dir.openNextFile();
+  }
+  dir.close();
+  return count;
+}
+
+static bool initStorage() {
+  // AI-Thinker onboard microSD: 1-bit mode uses GPIO 2/14/15 and avoids 4-bit bus conflicts.
+  if (!SD_MMC.begin("/sdcard", true)) {
+    Serial.println("[sd] mount failed; insert a FAT32 microSD card and reboot");
+    return false;
+  }
+  if (SD_MMC.cardType() == CARD_NONE) {
+    Serial.println("[sd] no card detected");
+    SD_MMC.end();
+    return false;
+  }
+  if (!SD_MMC.exists("/captures") && !SD_MMC.mkdir("/captures")) {
+    Serial.println("[sd] cannot create /captures");
+    SD_MMC.end();
+    return false;
+  }
+  sdReady = true;
+  storedImages = countStoredImages();
+  Serial.printf("[sd] ready | total=%lu MB used=%lu MB images=%lu\n",
+                (unsigned long)(SD_MMC.totalBytes() / 1024 / 1024),
+                (unsigned long)(SD_MMC.usedBytes() / 1024 / 1024),
+                (unsigned long)storedImages);
+  return true;
+}
+
+static bool saveFrame(camera_fb_t* fb, const String& eventId) {
+  if (!sdReady || !fb || !fb->buf || fb->len < 4 ||
+      fb->len > MAX_JPEG_BYTES || fb->format != PIXFORMAT_JPEG) {
+    strncpy(lastError, "invalid_frame_or_sd", sizeof(lastError) - 1);
+    return false;
+  }
+  const uint64_t total = SD_MMC.totalBytes();
+  const uint64_t used = SD_MMC.usedBytes();
+  if (total <= used || (total - used) < MIN_FREE_SD_BYTES + fb->len) {
+    strncpy(lastError, "sd_low_space", sizeof(lastError) - 1);
+    return false;
+  }
+  if (fb->buf[0] != 0xFF || fb->buf[1] != 0xD8 ||
+      fb->buf[fb->len - 2] != 0xFF || fb->buf[fb->len - 1] != 0xD9) {
+    strncpy(lastError, "jpeg_marker_invalid", sizeof(lastError) - 1);
+    return false;
+  }
+
+  char filename[80];
+  snprintf(filename, sizeof(filename), "/captures/R04_%06lu_%s.jpg",
+           (unsigned long)frameSequence, eventId.c_str());
+  File out = SD_MMC.open(filename, FILE_WRITE);
+  if (!out) {
+    strncpy(lastError, "sd_open_failed", sizeof(lastError) - 1);
+    return false;
+  }
+  const size_t written = out.write(fb->buf, fb->len);
+  out.flush();
+  out.close();
+  if (written != fb->len) {
+    SD_MMC.remove(filename);
+    strncpy(lastError, "sd_short_write", sizeof(lastError) - 1);
+    return false;
+  }
+
+  File manifest = SD_MMC.open("/captures/manifest.csv", FILE_APPEND);
+  if (manifest) {
+    if (manifest.size() == 0) manifest.println("frame_sequence,event_id,filename,bytes,camera_device_ms");
+    manifest.printf("%lu,%s,%s,%u,%lu\n", (unsigned long)frameSequence,
+                    eventId.c_str(), filename + 10, (unsigned)fb->len,
+                    (unsigned long)millis());
+    manifest.flush();
+    manifest.close();
+  }
+  ++storedImages;
+  strncpy(lastError, "none", sizeof(lastError) - 1);
+  Serial.printf("[capture] saved %s | %u bytes | event=%s\n",
+                filename, (unsigned)fb->len, eventId.c_str());
+  return true;
+}
+
+static bool boxGet(const String& path, String* responseBody = nullptr) {
+  if (WiFi.status() != WL_CONNECTED) return false;
+  HTTPClient http;
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  if (!http.begin(boxBaseUrl() + path)) return false;
+  const int code = http.GET();
+  if (responseBody && code == 200) *responseBody = http.getString();
+  http.end();
+  return code == 200;
+}
+
+static void sendHeartbeat() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  String path = "/camera/heartbeat?ready=" + String(cameraReady ? 1 : 0) +
+                "&sd=" + String(sdReady ? 1 : 0) +
+                "&ip=" + WiFi.localIP().toString() +
+                "&frames=" + String(storedImages) +
+                "&seq=" + String(frameSequence) +
+                "&heap=" + String(ESP.getFreeHeap()) +
+                "&err=" + String(lastError);
+  if (!boxGet(path)) Serial.println("[heartbeat] main ESP32 did not respond");
+}
+
+static void acknowledgeEvent() {
+  if (activeEventId.isEmpty()) return;
+  String path = "/camera/ack?event_id=" + activeEventId;
+  boxGet(path);
+  Serial.printf("[capture] event %s complete; %u frames requested/attempted\n",
+                activeEventId.c_str(), (unsigned)0);
+  activeEventId = "";
+  framesRemaining = 0;
+}
+
+static void pollCaptureCommand() {
+  String body;
+  if (!boxGet("/camera/command", &body)) return;
+  if (!jsonBool(body, "capture")) return;
+  const String eventId = jsonString(body, "event_id");
+  const int requested = constrain(jsonInt(body, "frames", 3), 1, 5);
+  if (eventId.isEmpty() || eventId == activeEventId) return;
+  activeEventId = eventId;
+  framesRemaining = (uint8_t)requested;
+  nextCaptureAt = millis();
+  Serial.printf("[capture] new request event=%s frames=%u\n",
+                activeEventId.c_str(), (unsigned)framesRemaining);
+}
+
+static void handleArchiveRoot() {
+  String html;
+  html.reserve(1800);
+  html += "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>";
+  html += "<title>R04 camera archive</title><style>body{font:16px system-ui;max-width:760px;margin:24px auto;padding:0 14px;background:#101722;color:#eef}a{color:#79baff}li{margin:10px 0}.muted{color:#9aa}</style></head><body>";
+  html += "<h2>R04 camera archive</h2><p>Original QVGA JPEG files stored on this camera's microSD card.</p>";
+  html += "<p>Stored images: " + String(storedImages) + "</p>";
+  if (!sdReady) {
+    html += "<p>microSD unavailable. Insert a FAT32 card and reboot the camera.</p>";
+  } else {
+    html += "<p><a href='/manifest'>Download manifest.csv</a></p><ul>";
+    File dir = SD_MMC.open("/captures");
+    File f = dir ? dir.openNextFile() : File();
+    while (f) {
+      if (!f.isDirectory()) {
+        String full = String(f.name());
+        String name = full.substring(full.lastIndexOf('/') + 1);
+        if (name.endsWith(".jpg")) {
+          html += "<li><a href='/file?name=" + name + "' download>" + name + "</a> (" + String(f.size()) + " bytes)</li>";
+        }
+      }
+      f.close();
+      f = dir.openNextFile();
+    }
+    if (dir) dir.close();
+    html += "</ul>";
+  }
+  html += "</body></html>";
+  archiveServer.send(200, "text/html; charset=utf-8", html);
+}
+
+static void handleArchiveFile() {
+  if (!sdReady || !archiveServer.hasArg("name")) {
+    archiveServer.send(400, "text/plain", "Missing file name or SD card unavailable");
+    return;
+  }
+  const String name = archiveServer.arg("name");
+  if (!name.startsWith("R04_") || !name.endsWith(".jpg") ||
+      name.indexOf('/') >= 0 || name.indexOf('\\') >= 0 || name.indexOf("..") >= 0) {
+    archiveServer.send(400, "text/plain", "Invalid file name");
+    return;
+  }
+  const String path = "/captures/" + name;
+  File file = SD_MMC.open(path, FILE_READ);
+  if (!file || file.isDirectory()) {
+    archiveServer.send(404, "text/plain", "Image not found");
+    return;
+  }
+  archiveServer.sendHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
+  archiveServer.sendHeader("Cache-Control", "no-store");
+  archiveServer.streamFile(file, "image/jpeg");
+  file.close();
+}
+
+static void handleManifest() {
+  if (!sdReady) {
+    archiveServer.send(503, "text/plain", "microSD unavailable");
+    return;
+  }
+  File file = SD_MMC.open("/captures/manifest.csv", FILE_READ);
+  if (!file) {
+    archiveServer.send(404, "text/plain", "No captures yet");
+    return;
+  }
+  archiveServer.sendHeader("Content-Disposition", "attachment; filename=\"R04_camera_manifest.csv\"");
+  archiveServer.streamFile(file, "text/csv");
+  file.close();
+}
+
+static void beginArchiveServer() {
+  archiveServer.on("/", HTTP_GET, handleArchiveRoot);
+  archiveServer.on("/file", HTTP_GET, handleArchiveFile);
+  archiveServer.on("/manifest", HTTP_GET, handleManifest);
+  archiveServer.on("/api/status", HTTP_GET, []() {
+    String body = "{\"camera_ready\":";
+    body += cameraReady ? "true" : "false";
+    body += ",\"sd_ready\":";
+    body += sdReady ? "true" : "false";
+    body += ",\"stored_images\":" + String(storedImages) + "}";
+    archiveServer.send(200, "application/json", body);
+  });
+  archiveServer.onNotFound([]() { archiveServer.send(404, "text/plain", "Not found"); });
+  archiveServer.begin();
+  Serial.printf("[archive] image files served at http://%s:%u/\n",
+                WiFi.localIP().toString().c_str(), ARCHIVE_PORT);
 }
 
 void setup() {
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("CAS Box B3 / Rover R04 — AI-Thinker ESP32-CAM");
+  Serial.println("CAS Box B3 / Rover R04 — camera storage node");
 
-  const bool cameraReady = initCamera();
-  if (!cameraReady) {
-    Serial.println("[fatal] camera initialization failed; reboot after checking power/camera ribbon.");
-  }
+  cameraReady = initCamera();
+  if (!cameraReady) strncpy(lastError, "camera_init_failed", sizeof(lastError) - 1);
+  sdReady = initStorage();
+  if (!sdReady && cameraReady) strncpy(lastError, "sd_unavailable", sizeof(lastError) - 1);
+
   connectBox();
+  if (WiFi.status() == WL_CONNECTED) beginArchiveServer();
 
   Serial.printf("[memory] free=%lu min=%lu largest=%lu psram=%s flash=%lu\n",
                 (unsigned long)ESP.getFreeHeap(),
@@ -274,94 +417,51 @@ void setup() {
 
 void loop() {
   static uint32_t nextWifiRetry = 0;
-  static uint32_t nextCameraInitTry = 0;
-  static uint32_t lastHeartbeat = 0;
-  static uint32_t lastSessionPoll = 0;
-  static uint32_t lastFrame = 0;
-  static uint32_t lastMemoryLog = 0;
-  static uint32_t frameSequence = 0;
-  static String activeSession;
-  static String captureEventId;
-  static int captureFramesRemaining = 0;
-  static bool cameraReady = false;
-  static char lastError[80] = "none";
-
-  const uint32_t now = millis();
-
   if (WiFi.status() != WL_CONNECTED) {
-    if (now >= nextWifiRetry) {
-      nextWifiRetry = now + WIFI_RETRY_MS;
+    if (millis() >= nextWifiRetry) {
+      nextWifiRetry = millis() + WIFI_RETRY_MS;
       connectBox();
+      if (WiFi.status() == WL_CONNECTED) beginArchiveServer();
     }
     delay(5);
     return;
   }
 
+  archiveServer.handleClient();
+  const uint32_t now = millis();
+
   if (now - lastHeartbeat >= HEARTBEAT_MS) {
     lastHeartbeat = now;
-    if (!postHeartbeat(cameraReady, lastError, frameSequence)) {
-      Serial.println("[heartbeat] laptop receiver not responding; retrying");
-    }
+    sendHeartbeat();
+  }
+  if (now - lastCommandPoll >= COMMAND_POLL_MS) {
+    lastCommandPoll = now;
+    pollCaptureCommand();
   }
 
-  if (!cameraReady && now >= nextCameraInitTry) {
-    nextCameraInitTry = now + 5000;
-    cameraReady = initCamera();
-    if (!cameraReady) {
-      strncpy(lastError, "camera_init_failed", sizeof(lastError)-1);
-    } else {
-      strncpy(lastError, "none", sizeof(lastError)-1);
-    }
-  }
-  if (!cameraReady) {
-    delay(10);
-    return;
-  }
-
-  if (now - lastSessionPoll >= SESSION_POLL_MS) {
-    lastSessionPoll = now;
-    String sessionId, eventId;
-    int remaining = 0;
-    if (pollSurveySession(sessionId, eventId, remaining)) {
-      activeSession = sessionId;
-      if (!eventId.isEmpty()) {
-        captureEventId = eventId;
-        captureFramesRemaining = remaining;
-      }
-    } else {
-      strncpy(lastError, "session_poll_failed", sizeof(lastError)-1);
-    }
-  }
-
-  const bool surveyActive = !activeSession.isEmpty();
-  const uint32_t interval = surveyActive ? SURVEY_INTERVAL_MS : PREVIEW_INTERVAL_MS;
-  if (now - lastFrame >= interval) {
-    lastFrame = now;
+  if (cameraReady && sdReady && framesRemaining > 0 && now >= nextCaptureAt) {
+    nextCaptureAt = now + BURST_INTERVAL_MS;
     camera_fb_t* fb = esp_camera_fb_get();
+    ++frameSequence;
     if (!fb) {
-      strncpy(lastError, "frame_capture_failed", sizeof(lastError)-1);
-      Serial.println("[capture] esp_camera_fb_get failed");
+      strncpy(lastError, "frame_capture_failed", sizeof(lastError) - 1);
+      Serial.println("[capture] camera framebuffer unavailable");
     } else {
-      ++frameSequence;
-      const bool uploaded = postJpeg(fb, !surveyActive, activeSession, captureEventId, frameSequence);
-      esp_camera_fb_return(fb); // always release framebuffer after upload attempt
-      if (!uploaded) strncpy(lastError, "frame_upload_failed", sizeof(lastError)-1);
-      else strncpy(lastError, "none", sizeof(lastError)-1);
-      if (uploaded && surveyActive && captureFramesRemaining > 0) {
-        --captureFramesRemaining;
-        if (captureFramesRemaining == 0) captureEventId = "";
-      }
+      saveFrame(fb, activeEventId);
+      esp_camera_fb_return(fb);  // Release single framebuffer immediately after SD write.
     }
+    --framesRemaining;
+    if (framesRemaining == 0) acknowledgeEvent();
   }
 
   if (now - lastMemoryLog >= 10000) {
     lastMemoryLog = now;
-    Serial.printf("[memory] free=%lu min=%lu largest=%lu psram=%s wifi_rssi=%d frames=%lu\n",
+    Serial.printf("[memory] free=%lu min=%lu largest=%lu psram=%s wifi_rssi=%d seq=%lu stored=%lu\n",
                   (unsigned long)ESP.getFreeHeap(),
                   (unsigned long)ESP.getMinFreeHeap(),
                   (unsigned long)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT),
                   psramFound() ? "yes" : "no", WiFi.RSSI(),
-                  (unsigned long)frameSequence);
+                  (unsigned long)frameSequence, (unsigned long)storedImages);
   }
   delay(2);
 }
