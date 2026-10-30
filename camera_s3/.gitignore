@@ -1,0 +1,2 @@
+# Generated camera-board configuration is local and must never be committed
+camera_board_config.h
