@@ -497,6 +497,10 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
   _server->on("/autonomy", HTTP_GET, [this](AsyncWebServerRequest* req) {
     if (req->hasParam("on")) {
       const bool on = req->getParam("on")->value() == "1";
+      if (on && driveInhibited()) {
+        req->send(423, "application/json", "{\"autonomy\":false,\"reason\":\"safety stop latched\"}");
+        return;
+      }
       portENTER_CRITICAL(&_driveMux);
       _autonomyEnabled = on;
       _autonomyHeartbeatMs = on ? millis() : 0;
