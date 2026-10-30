@@ -33,6 +33,8 @@ void Sensors::update() {
     _pitch = _imu.pitchDeg();
     _roll = _imu.rollDeg();
     _imu.calibration(_cal[0], _cal[1], _cal[2], _cal[3]);
+    _imuRaw = _imu.rawMeasurements();
+    _imuAgeMs = _imu.ageMs();
   } else {
     _startImuIfPresent();
   }
@@ -53,6 +55,7 @@ void Sensors::update() {
   }
   _snapshotLidar();
   _snapshotGps();
+  ++_snapshotSeq;
 }
 
 // The IMU start blocks ~3.5 s once (north alignment); RoverLink's deadman stops the rover meanwhile.
@@ -98,14 +101,29 @@ void Sensors::_snapshotGps() {
   _sats = _gps.satellites();
   _hdop = _gps.hdop();
   _gpsChars = _gps.charsReceived();
+  _gpsAgeMs = _gps.locationAgeMs();
+  _gpsAltValid = _gps.altitudeValid();
+  _gpsAltitudeM = _gpsAltValid ? _gps.altitudeM() : 0;
+  _gpsSpeedValid = _gps.speedValid();
+  _gpsSpeedKmph = _gpsSpeedValid ? _gps.speedKmph() : 0;
+  _gpsCourseValid = _gps.courseValid();
+  _gpsCourseDeg = _gpsCourseValid ? _gps.courseDeg() : 0;
+  _gpsUtcValid = _gps.dateTimeValid();
+  if (_gpsUtcValid) {
+    _gpsYear = _gps.year(); _gpsMonth = _gps.month(); _gpsDay = _gps.day();
+    _gpsHour = _gps.hour(); _gpsMinute = _gps.minute(); _gpsSecond = _gps.second();
+    _gpsCentisecond = _gps.centisecond();
+  }
 }
 
 // {"us":[5 x cm],"usRaw":[5],"usFiltered":[5],"usValid":[5],"usAgeMs":[5],"usTimeouts":[5],"usMax":.., ...
 //  "gps":{fix,sats,hdop,lat,lon,chars}}
 String Sensors::toJson() const {
   String j;
-  j.reserve(1100);
-  j += "{\"us\":[";
+  j.reserve(4200);
+  j += "{\"snapshot_device_ms\":"; j += _lastSnapMs;
+  j += ",\"snapshot_seq\":"; j += _snapshotSeq;
+  j += ",\"us\":[";
   for (int i = 0; i < 5; i++) { if (i) j += ','; j += _usCm[i]; }
   j += "],\"usMax\":"; j += kUsMaxCm;
   j += ",\"usRaw\":[";
@@ -123,7 +141,16 @@ String Sensors::toJson() const {
   j += ",\"crc\":"; j += String(_lidarCrcPct, 1);
   j += ",\"d\":[";
   for (int i = 0; i < kLidarPoints; i++) { if (i) j += ','; j += _lidarCm[i]; }
+  j += "],\"age_ms\":"; j += (_lidar.lastPacketMs() ? (int32_t)(millis() - _lidar.lastPacketMs()) : -1);
+  j += ",\"filtered_1deg_mm\":[";
+  for (int i = 0; i < 360; ++i) { if (i) j += ','; j += _lidar.distanceMm(i); }
   j += "]},\"imu\":{\"ok\":"; j += _imuReady ? "true" : "false";
+  j += ",\"age_ms\":"; j += (_imuAgeMs == UINT32_MAX ? -1 : (int32_t)_imuAgeMs);
+  j += ",\"raw_valid\":"; j += _imuRaw.valid ? "true" : "false";
+  j += ",\"accel_m_s2\":["; j += String(_imuRaw.accelX, 4); j += ','; j += String(_imuRaw.accelY, 4); j += ','; j += String(_imuRaw.accelZ, 4); j += ']';
+  j += ",\"gyro_rad_s\":["; j += String(_imuRaw.gyroX, 5); j += ','; j += String(_imuRaw.gyroY, 5); j += ','; j += String(_imuRaw.gyroZ, 5); j += ']';
+  j += ",\"mag_uT\":["; j += String(_imuRaw.magX, 3); j += ','; j += String(_imuRaw.magY, 3); j += ','; j += String(_imuRaw.magZ, 3); j += ']';
+  j += ",\"temperature_c\":"; j += _imuRaw.temperatureC;
   j += ",\"yaw\":"; j += String(_yaw, 1);
   j += ",\"pitch\":"; j += String(_pitch, 1);
   j += ",\"roll\":"; j += String(_roll, 1);
@@ -133,7 +160,18 @@ String Sensors::toJson() const {
   j += ",\"hdop\":"; j += String(_hdop, 1);
   j += ",\"lat\":"; j += String(_lat, 6);
   j += ",\"lon\":"; j += String(_lon, 6);
-  j += ",\"chars\":"; j += _gpsChars;
+  j += ",\"age_ms\":"; j += (_gpsAgeMs == UINT32_MAX ? -1 : (int32_t)_gpsAgeMs);
+  j += ",\"altitude_valid\":"; j += _gpsAltValid ? "true" : "false";
+  j += ",\"altitude_m\":"; j += String(_gpsAltitudeM, 2);
+  j += ",\"speed_valid\":"; j += _gpsSpeedValid ? "true" : "false";
+  j += ",\"speed_kmph\":"; j += String(_gpsSpeedKmph, 2);
+  j += ",\"course_valid\":"; j += _gpsCourseValid ? "true" : "false";
+  j += ",\"course_deg\":"; j += String(_gpsCourseDeg, 2);
+  j += ",\"utc_valid\":"; j += _gpsUtcValid ? "true" : "false";
+  j += ",\"utc\":\"";
+  char utc[32] = {0};
+  if (_gpsUtcValid) snprintf(utc, sizeof(utc), "%04d-%02d-%02dT%02d:%02d:%02d.%02dZ", _gpsYear, _gpsMonth, _gpsDay, _gpsHour, _gpsMinute, _gpsSecond, _gpsCentisecond);
+  j += utc; j += "\",\"chars\":"; j += _gpsChars;
   j += "}}";
   return j;
 }
