@@ -45,7 +45,12 @@ private:
   ImuManager _imu;
 
   int _lidarOffsetDeg = 0;
-  uint32_t _lastSnapMs = 0, _lastImuTryMs = 0, _lastPpsMs = 0, _lastPackets = 0;
+  uint32_t _lastSnapMs = 0, _lastImuTryMs = 0, _lastPpsMs = 0, _lastPackets = 0, _snapshotSeq = 0;
+  uint32_t _imuAgeMs = UINT32_MAX, _gpsAgeMs = UINT32_MAX;
+  ImuManager::RawMeasurements _imuRaw;
+  bool _gpsAltValid = false, _gpsSpeedValid = false, _gpsCourseValid = false, _gpsUtcValid = false;
+  double _gpsAltitudeM = 0, _gpsSpeedKmph = 0, _gpsCourseDeg = 0;
+  int _gpsYear = 0, _gpsMonth = 0, _gpsDay = 0, _gpsHour = 0, _gpsMinute = 0, _gpsSecond = 0, _gpsCentisecond = 0;
 
   // snapshot values (loop() only)
   int _usCm[5] = {kUsMaxCm, kUsMaxCm, kUsMaxCm, kUsMaxCm, kUsMaxCm};
