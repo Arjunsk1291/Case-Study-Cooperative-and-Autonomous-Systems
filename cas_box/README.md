@@ -51,7 +51,7 @@ If the Library Manager asks to install dependencies, answer "Install all".
 
 1. Switch on the **box first, then the rover** (the rover looks for its box only while booting).
 2. Phone: join Wi-Fi **`CAS-Box-NN`**, password **`CASboxNN`** (NN = kit number, two digits).
-3. Open **http://192.168.(10+N).1** – kit 1: `192.168.11.1`, kit 7: `192.168.17.1`,
+3. Open **http://192.168.(10+N).1** – kit 1: `192.168.11.1`, kit 7: `192.168.14.1`,
    kit 10: `192.168.20.1`.
 4. Hold an arrow key to drive, release to stop. The slider sets the speed (max = full speed).
 
@@ -87,7 +87,7 @@ not need it.
 | No COM port | USB cable with data lines, CH340 driver |
 | Sensor shows nothing | Serial monitor JSON line `[sys] {...}`; IMU/OLED start up to 5 s later |
 
-## Ultrasonic diagnostics update (B3 / R07)
+## Ultrasonic diagnostics update (B3 / R04)
 
 The updated box code preserves the existing HC-SR04 GPIO mapping and controller interface.
 The web UI now shows the latest raw echo, a median-filtered distance from up to five valid
@@ -104,11 +104,11 @@ The diagnostic `Test_Code.ino` now shows raw and median readings in the same way
 remains 45-degree angled, front, back, left, right. Main CAS Box JSON order remains front, left,
 right, back, front angled.
 
-**Team configuration:** `BOX_ID = 7` for Team B3 / Rover R07. This yields SSID `CAS-Box-07`,
-password `CASbox07`, web URL `http://192.168.17.1`, and Wi-Fi channel 1. Rover firmware is unchanged.
+**Team configuration:** `BOX_ID = 4` for Team B3 / Rover R04. This yields SSID `CAS-Box-04`,
+password `CASbox04`, web URL `http://192.168.14.1`, and Wi-Fi channel 1. Rover firmware is unchanged.
 
 
-## Indoor sensor logging (B3 / R07)
+## Indoor sensor logging (B3 / R04)
 
 The web dashboard includes a browser-side CSV logger. It records the current 90-bin LiDAR snapshot,
 ultrasonic raw/median/valid/age/timeout fields, IMU yaw/pitch/roll/calibration, GPS status and
@@ -125,7 +125,7 @@ A, move to each known landmark, stop, mark it, and record the surroundings. Do n
 from these logs yet. Rover stop/deadman logic is unchanged.
 
 
-## Navigation research logger — B3 / R07
+## Navigation research logger — B3 / R04
 
 This revision expands browser-side CSV logs with:
 - explicit event types and labels (waypoint, rotation, wall, obstacle, start, goal, note)
@@ -146,7 +146,7 @@ Recommended collection protocol:
 6. This log is not a map and does not estimate x/y. With no wheel encoders, odometry will drift. Fully onboard autonomy needs a localization approach such as LiDAR scan matching/SLAM, enough RAM/CPU, a verified map frame, and safety-tested low-level control. Ultrasonic/IMU snapshots alone are not sufficient to infer reliable global waypoints.
 
 
-## Experimental scan-and-wander controller (B3 / R07, 2026-10-23)
+## Experimental scan-and-wander controller (B3 / R04, 2026-10-23)
 
 - `Navigation.h` evaluates eight candidate headings from the 90-bin LiDAR scan (bin 0 = forward; bins increase clockwise; 4 degrees/bin).
 - If the forward sector is sufficiently clear, it drives a short bounded leg and rescans. If blocked, it selects a clear sector, checks the immediate 45-degree pivot sweep, executes one measured 45-degree turn step, stops/settles, and rescans.
@@ -182,7 +182,7 @@ Safety notes:
 - No wheel encoders means the box cannot verify physical movement or accurately measure distance travelled. A bounded timed leg is only a short motion command, not an odometry estimate.
 - This revision has not been compiled with the exact Arduino ESP32 toolchain or tested on hardware. Verify in Arduino IDE before uploading.
 
-## Guided investigation mode (B3 / R07)
+## Guided investigation mode (B3 / R04)
 
 The investigation panel uses a guided state sequence: start-location scan, travel logging,
 arrival scan for each waypoint, then a final destination scan and JSON export. Scan durations are
@@ -217,6 +217,6 @@ Download the JSON before refreshing/closing the dashboard.
 - /drive returns HTTP 423 while stop is latched or autonomy is active.
 - The main loop applies a final zero-command check immediately before RoverLink.setDrive().
 
-This is a software stop over the CAS-Box-07 Wi-Fi link. It is not a physical E-stop input or a substitute for a hardwired emergency stop/power disconnect. The existing RoverLink 500 ms deadman is retained.
+This is a software stop over the CAS-Box-04 Wi-Fi link. It is not a physical E-stop input or a substitute for a hardwired emergency stop/power disconnect. The existing RoverLink 500 ms deadman is retained.
 
 Survey manual commands are issued through the laptop collector and capped at ±0.25. The underlying RoverLink interface and rover firmware protocol are unchanged. No measured wheel speed/distance is available because the project has no encoder input.
