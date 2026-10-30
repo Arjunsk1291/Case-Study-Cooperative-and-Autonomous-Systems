@@ -160,6 +160,7 @@ void loop() {
     if (hmi.driveInhibited()) hmi.setStateText("SAFETY STOP LATCHED · drive commands blocked");
     else if (!hmi.autonomyEnabled()) hmi.setStateText(rover.statusText());
     hmi.showValue("rover.ip", rover.ip().toString());
+    hmi.showValue("rover.connected", rover.connected() ? "true" : "false");
     hmi.showValue("rover.voltage_V", rover.voltage());
     hmi.showValue("rover.rtt_ms", rover.rttMs());
     hmi.showValue("rover.ok", (double)rover.okCount());
