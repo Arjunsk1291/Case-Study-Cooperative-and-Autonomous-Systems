@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+.pytest_cache/
+survey_data/
+.env
+camera_board_config.h

@@ -1,0 +1,5 @@
+CI checks on this exact source revision passed:
+- Main ESP32 firmware: esp32:esp32:esp32, ESP32 Arduino core 3.3.1
+- AI-Thinker ESP32-CAM: esp32:esp32:esp32cam, ESP32 Arduino core 3.3.1
+- Laptop backend syntax checks and pytest suite
+Physical flash, Wi-Fi association, camera image upload and rover operation still require hardware verification.
