@@ -571,8 +571,16 @@ class SurveyManager:
         with self.lock:
             self.last_vision={"frame_id":frame_id,**result}
             if self.session and self.session["state"]=="active":
+                stamp=now_iso()
                 write_jsonl(self.session["dir"]/"derived"/"vision_tracking.jsonl",{
-                  "timestamp":now_iso(),"frame_id":frame_id,**result})
+                  "timestamp":stamp,"frame_id":frame_id,**result})
+                write_csv(self.session["dir"]/"derived"/"vision_tracking.csv",
+                  ["timestamp","frame_id","available","valid","classification","detected","candidate_rib_count",
+                   "lateral_offset_normalized","heading_error_image_deg","confidence","processing_latency_ms","reason"],
+                  [stamp,frame_id,result.get("available"),result.get("valid"),result.get("classification"),
+                   result.get("detected"),result.get("candidate_rib_count"),result.get("lateral_offset_normalized"),
+                   result.get("heading_error_image_deg"),result.get("confidence"),result.get("processing_latency_ms"),
+                   result.get("reason")])
 
     def finalize(self):
         # Stop rover first; camera is not awaited.
