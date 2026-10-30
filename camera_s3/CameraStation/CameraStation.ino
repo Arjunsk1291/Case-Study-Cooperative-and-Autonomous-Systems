@@ -274,6 +274,7 @@ void setup() {
 
 void loop() {
   static uint32_t nextWifiRetry = 0;
+  static uint32_t nextCameraInitTry = 0;
   static uint32_t lastHeartbeat = 0;
   static uint32_t lastSessionPoll = 0;
   static uint32_t lastFrame = 0;
@@ -296,21 +297,25 @@ void loop() {
     return;
   }
 
-  if (!cameraReady) {
-    cameraReady = initCamera();
-    if (!cameraReady) {
-      strncpy(lastError, "camera_init_failed", sizeof(lastError)-1);
-      delay(1000);
-      return;
-    }
-    strncpy(lastError, "none", sizeof(lastError)-1);
-  }
-
   if (now - lastHeartbeat >= HEARTBEAT_MS) {
     lastHeartbeat = now;
     if (!postHeartbeat(cameraReady, lastError, frameSequence)) {
       Serial.println("[heartbeat] laptop receiver not responding; retrying");
     }
+  }
+
+  if (!cameraReady && now >= nextCameraInitTry) {
+    nextCameraInitTry = now + 5000;
+    cameraReady = initCamera();
+    if (!cameraReady) {
+      strncpy(lastError, "camera_init_failed", sizeof(lastError)-1);
+    } else {
+      strncpy(lastError, "none", sizeof(lastError)-1);
+    }
+  }
+  if (!cameraReady) {
+    delay(10);
+    return;
   }
 
   if (now - lastSessionPoll >= SESSION_POLL_MS) {
