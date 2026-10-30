@@ -417,7 +417,7 @@ function renderDiagnostics(j){
   let issue='No obvious sensor/link fault detected from current snapshot.';
   let advice='Keep autonomy off until you have confirmed manual drive works and the rover is on a clear, level floor.';
   let good=false;
-  if(!connected){issue='ROVER LINK MISSING: the box has not found the rover.';advice='Power the box first, then reboot/power the rover so it joins CAS-Box-07. Check rover battery and the rover station on the box Wi-Fi.';}
+  if(!connected){issue='ROVER LINK MISSING: the box has not found the rover.';advice='Power the box first, then reboot/power the rover so it joins CAS-Box-04. Check rover battery and the rover station on the box Wi-Fi.';}
   else if(!L.ok || Number(L.crc)>5){issue='LIDAR FAULT: scan data is unavailable or checksum errors are high.';advice='Disable autonomy. Check LiDAR power, UART wiring and the live scan display.';}
   else if(state.includes('fault') || state.includes('stop:') || state.includes('recovery')){issue=j.state+'. '+diag;advice='Read the original fault and diagnostic above. Do not keep re-enabling autonomy to force motion; inspect the reported clearance, sensor freshness, motor polarity and power first.';}
   else if(!j.sensors){issue='No sensor snapshot received.';advice='Wait for the sensor snapshot; check serial output and sensor initialization.';}
