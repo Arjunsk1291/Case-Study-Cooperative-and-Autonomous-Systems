@@ -1,5 +1,5 @@
 from __future__ import annotations
-import asyncio, hashlib, io, json, os, uuid
+import asyncio, hashlib, hmac, json, os, re, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -147,7 +147,7 @@ def download(session_id: str):
 def check_camera_token(token: str | None):
     if not CAMERA_TOKEN or CAMERA_TOKEN == "CHANGE_ME_CAMERA_TOKEN":
         raise HTTPException(503, "Set CAS_CAMERA_TOKEN before enabling camera uploads")
-    if not token or not hashlib.sha256(token.encode()).digest() == hashlib.sha256(CAMERA_TOKEN.encode()).digest():
+    if not token or not hmac.compare_digest(token, CAMERA_TOKEN):
         raise HTTPException(401, "Camera token invalid")
 
 
@@ -191,9 +191,15 @@ async def camera_frame(
     session_dir = manager.session["dir"]
     temp_dir = session_dir / "camera" / "frames"
     temp_dir.mkdir(parents=True, exist_ok=True)
-    frame_id = (x_frame_id or str(uuid.uuid4())).replace("/", "_")[:80]
+    frame_id = re.sub(r"[^A-Za-z0-9_-]", "_", (x_frame_id or str(uuid.uuid4())))[:80]
+    if not frame_id:
+        frame_id = str(uuid.uuid4())
     temp_path = temp_dir / f".{frame_id}.part"
     final_path = temp_dir / f"{frame_id}.jpg"
+    if final_path.exists():
+        frame_id = frame_id + "_" + uuid.uuid4().hex[:8]
+        temp_path = temp_dir / f".{frame_id}.part"
+        final_path = temp_dir / f"{frame_id}.jpg"
     total = 0
     digest = hashlib.sha256()
     try:
