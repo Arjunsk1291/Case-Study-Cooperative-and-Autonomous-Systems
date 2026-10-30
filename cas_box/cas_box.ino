@@ -52,7 +52,7 @@
 #include "Navigation.h"
 
 // ---- YOUR KIT ------------------------------------------------------------------------------
-const int BOX_ID = 7;                      // Team B3 / Rover R07 kit number
+const int BOX_ID = 4;                      // New rover kit R04; derives CAS-Box-04 / CASbox04 / 192.168.14.1
 #define CAS_BOX_FIRMWARE_VERSION "survey-2026.10.30-1"
 
 // ---- settings --------------------------------------------------------------------------------
