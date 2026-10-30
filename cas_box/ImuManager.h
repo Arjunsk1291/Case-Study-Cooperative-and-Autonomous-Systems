@@ -20,6 +20,13 @@
 
 class ImuManager {
 public:
+  struct RawMeasurements {
+    float accelX = 0.0f, accelY = 0.0f, accelZ = 0.0f; // m/s^2
+    float gyroX = 0.0f, gyroY = 0.0f, gyroZ = 0.0f;    // rad/s
+    float magX = 0.0f, magY = 0.0f, magZ = 0.0f;       // microtesla
+    int16_t temperatureC = 0;
+    bool valid = false;
+  };
   // Starts the sensor and runs the 3 s north alignment (blocking).
   // Returns false if the BNO055 does not answer.
   bool begin();
