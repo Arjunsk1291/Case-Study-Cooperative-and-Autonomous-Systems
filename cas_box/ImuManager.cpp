@@ -50,6 +50,15 @@ void ImuManager::update() {
   float h;
   if (magneticHeadingDeg(sensorRoll, sensorPitch, h)) _magYawDeg = h;  // tilt comp. in sensor frame
 
+  const imu::Vector<3> accel = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+  const imu::Vector<3> gyro = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+  const imu::Vector<3> mag = bno.getVector(Adafruit_BNO055::VECTOR_MAGNETOMETER);
+  _raw.accelX = accel.x(); _raw.accelY = accel.y(); _raw.accelZ = accel.z();
+  _raw.gyroX = gyro.x(); _raw.gyroY = gyro.y(); _raw.gyroZ = gyro.z();
+  _raw.magX = mag.x(); _raw.magY = mag.y(); _raw.magZ = mag.z();
+  _raw.temperatureC = bno.getTemp();
+  _raw.valid = true;
+
   // sensor frame -> vehicle frame (ISO 8855), see header: sensor turned by 90 deg
   _pitchDeg = -sensorRoll;   // front down = sensor roll negative  -> ISO pitch positive
   _rollDeg = -sensorPitch;   // right down = sensor pitch negative -> ISO roll positive
