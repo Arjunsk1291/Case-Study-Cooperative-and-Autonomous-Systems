@@ -548,7 +548,7 @@ class SurveyManager:
                 s["camera_image_gaps"]+=seq-s["camera_sequence_last"]-1
             if isinstance(seq,int): s["camera_sequence_last"]=seq
             s["camera_frame_count"]+=1; s["latest_frame_id"]=meta["frame_id"]
-            self.camera_frames_received+=1; self.camera_last_frame_at=meta["laptop_received_at"]; self.camera_last_frame_mono=time.monotonic()
+            self.camera_frames_received+=1; self.camera_missing_frames+=max(0, seq-(s.get("camera_sequence_prev",seq) or seq)-1) if isinstance(seq,int) else 0; s["camera_sequence_prev"]=seq if isinstance(seq,int) else s.get("camera_sequence_prev"); self.camera_last_frame_at=meta["laptop_received_at"]; self.camera_last_frame_mono=time.monotonic()
             eid=meta.get("capture_event_id")
             if eid:
                 for q in list(self.capture_requests):
@@ -674,7 +674,7 @@ integrity/data_quality_report.json before using this data for training/navigatio
             if s:
                 sinfo={"session_id":s["id"],"state":s["state"],"started_at":s["started_at"],
                   "samples":s["quality"]["sensor_snapshots"],"collector_sequence":s["collector_seq"],
-                  "images":s["camera_frame_count"],"error":s.get("error"),"archive_bytes":s.get("archive_bytes"),
+                  "images":s["camera_frame_count"],"error":s.get("error"),"archive_bytes":s.get("archive_bytes"),"segments":s.get("segments",[]),
                   "download_url":f"/api/session/download/{s['id']}" if s["state"]=="ready" else None}
             return {"schema_version":SCHEMA,"backend_version":VERSION,"box_url":self.box_url,
               "box_online":self.box_online,"box_last_receive_at":self.box_last_receive_at,
@@ -694,6 +694,9 @@ integrity/data_quality_report.json before using this data for training/navigatio
 
     def archive(self,sid):
         with self.lock:
-            if not self.session or self.session["id"]!=sid or self.session["state"]!="ready":
-                raise FileNotFoundError("Validated ZIP not ready")
-            return Path(self.session["archive_path"])
+            if self.session and self.session["id"]==sid and self.session["state"]=="ready":
+                return Path(self.session["archive_path"])
+        matches=list(self.archives_root.glob("CAS_B3_R07_Survey_"+sid+".zip"))
+        if len(matches)==1 and matches[0].is_file():
+            return matches[0]
+        raise FileNotFoundError("Validated ZIP not found for this session")
