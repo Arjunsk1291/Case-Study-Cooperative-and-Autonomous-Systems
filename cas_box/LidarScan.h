@@ -80,6 +80,7 @@ public:
   }
 
   uint32_t packets() const { return _packets; }  // valid frames since start
+  uint32_t lastPacketMs() const { return _lastPacketMs; } // millis() of most recent CRC-valid frame; 0 if none
   float crcErrorPct() const {                     // share of frames with a wrong checksum
     uint32_t t = _packets + _crcErrors;
     return t ? 100.0f * _crcErrors / t : 0;
@@ -114,6 +115,6 @@ private:
   uint8_t _crcTab[256];
   uint8_t _buf[sizeof(Frame)];
   uint8_t _idx = 0;
-  uint32_t _packets = 0, _crcErrors = 0;
+  uint32_t _packets = 0, _crcErrors = 0, _lastPacketMs = 0;
   Bin _bins[360];
 };
