@@ -193,7 +193,8 @@ class SurveyManager:
         vals=values_dict(payload)
         rec={"schema_version":SCHEMA,"session_id":s["id"],"record_type":"sensor_snapshot",
              "collector_sequence":s["collector_seq"],"box_snapshot_sequence":seq,
-             "box_snapshot_device_ms":device_ms,"box_clock_domain":"millis since boot",
+             "box_snapshot_device_ms":device_ms,"box_response_device_ms":payload.get("box_response_device_ms"),
+             "box_clock_domain":"millis since boot",
              "laptop_received_at":wall,"laptop_received_monotonic_ns":mono,
              "dashboard_state":payload.get("state"),"cycle":payload.get("cycle"),
              "sensors":sensors,"named_system_values":vals}
@@ -201,7 +202,7 @@ class SurveyManager:
             write_jsonl(s["dir"]/"telemetry"/"sensor_snapshots.jsonl",rec)
             write_jsonl(s["dir"]/"telemetry"/"lidar_scans.jsonl",{
                 "session_id":s["id"],"collector_sequence":s["collector_seq"],
-                "box_snapshot_sequence":seq,"box_device_ms":device_ms,
+                "box_snapshot_sequence":seq,"box_device_ms":device_ms,"box_response_device_ms":payload.get("box_response_device_ms"),
                 "laptop_received_at":wall,"lidar":sensors.get("lidar")})
             self._imu_csv(s,rec); self._gps_csv(s,rec); self._us_csv(s,rec); self._system_csv(s,rec); self._motor_csv(s,rec)
             write_jsonl(s["dir"]/"telemetry"/"navigation_events.jsonl",{
