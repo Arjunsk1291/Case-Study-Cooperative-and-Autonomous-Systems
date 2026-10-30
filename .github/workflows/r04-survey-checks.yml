@@ -74,3 +74,36 @@ jobs:
           arduino-cli core install esp32:esp32@3.3.1
       - name: Compile AI-Thinker ESP32-CAM (OV2640)
         run: arduino-cli compile --fqbn esp32:esp32:esp32cam camera_s3/CameraStation
+
+  package-upload-kit:
+    needs: [laptop-backend, main-esp32, ai-thinker-camera]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble two-board R04 upload kit
+        run: |
+          mkdir -p CAS_Box_B3_R04_Upload_Kit/main_esp32
+          mkdir -p CAS_Box_B3_R04_Upload_Kit/ai_thinker_camera
+          mkdir -p CAS_Box_B3_R04_Upload_Kit/laptop_survey
+          cp -a cas_box/. CAS_Box_B3_R04_Upload_Kit/main_esp32/
+          cp -a camera_s3/CameraStation/. CAS_Box_B3_R04_Upload_Kit/ai_thinker_camera/
+          cp -a laptop_survey/. CAS_Box_B3_R04_Upload_Kit/laptop_survey/
+          cp R04_FLASH_GUIDE.md CAS_Box_B3_R04_Upload_Kit/
+          cp README.md CAS_Box_B3_R04_Upload_Kit/
+          rm -rf CAS_Box_B3_R04_Upload_Kit/laptop_survey/__pycache__
+          rm -rf CAS_Box_B3_R04_Upload_Kit/laptop_survey/.pytest_cache
+          rm -rf CAS_Box_B3_R04_Upload_Kit/laptop_survey/survey_data
+          cat > CAS_Box_B3_R04_Upload_Kit/BUILD_VERIFICATION.txt <<'EOF'
+          CI checks on this exact source revision passed:
+          - Main ESP32 firmware: esp32:esp32:esp32, ESP32 Arduino core 3.3.1
+          - AI-Thinker ESP32-CAM: esp32:esp32:esp32cam, ESP32 Arduino core 3.3.1
+          - Laptop backend syntax checks and pytest suite
+          Physical flash, Wi-Fi association, camera image upload and rover operation still require hardware verification.
+          EOF
+          zip -qr CAS_Box_B3_R04_Upload_Kit.zip CAS_Box_B3_R04_Upload_Kit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CAS_Box_B3_R04_Upload_Kit
+          path: CAS_Box_B3_R04_Upload_Kit.zip
+          if-no-files-found: error
+          retention-days: 30
