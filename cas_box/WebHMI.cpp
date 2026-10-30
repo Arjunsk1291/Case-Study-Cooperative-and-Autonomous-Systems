@@ -1,5 +1,4 @@
 #include "WebHMI.h"
-
 // ---------------------------------------------------------------------------------------------
 // The web page. %TITLE% and %MAXSPD% are filled in by _buildPage().
 // ---------------------------------------------------------------------------------------------
@@ -127,7 +126,6 @@ canvas{display:block;margin:0 auto;max-width:100%;}
 const MAX_SPEED=%MAXSPD%, ENV_MAX_CM=300;
 const $=id=>document.getElementById(id);
 const esc=s=>(''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
 // ---- camera status and event capture. The camera stores JPEGs locally on microSD.
 async function refreshCameraStatus(){
   try{
@@ -150,7 +148,6 @@ $('cameraCapture').onclick=async()=>{
   refreshCameraStatus();
 };
 refreshCameraStatus();setInterval(refreshCameraStatus,1500);
-
 // ---- Import an offline-generated compact route draft. It is never executed by this firmware.
 $('navPlanLoad').onclick=async()=>{
   const btn=$('navPlanLoad');btn.disabled=true;
@@ -166,7 +163,6 @@ $('navPlanLoad').onclick=async()=>{
 fetch('/navigation/plan',{cache:'no-store'}).then(r=>r.json()).then(j=>{
   if(j.received){$('navPlanJson').value=JSON.stringify(j.plan,null,2);$('navPlanStatus').textContent='Plan already stored · STORED ONLY · motion disabled';}
 }).catch(()=>{});
-
 // ---- "Dev" view toggle
 let dev=false;
 $('emergencyStop').onclick=async()=>{
@@ -187,7 +183,6 @@ $('clearStop').onclick=async()=>{
   } catch(e){$('safetyState').textContent='Could not clear stop latch';}
 };
 $('devBtn').onclick=()=>{dev=!dev;$('devRoot').classList.toggle('hidden',!dev);$('devBtn').textContent=dev?'Hide':'Dev';};
-
 // ---- drive pad: send while a key is held (every 150 ms), stop on release / hide / blur
 let drv=null,drvTimer=null,drvBtn=null;
 // Requests can overtake each other on Wi-Fi. Each command carries this page's random id and a
@@ -229,7 +224,6 @@ if(MAX_SPEED>0){
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&drvBtn)drvStop();});
   window.addEventListener('blur',()=>{if(drvBtn)drvStop();});
 }
-
 // ---- LiDAR top view: line through neighbouring points, broken at "no return" and at jumps
 function drawEnv(s){
   const cv=$('envCv'),g=cv.getContext('2d'),W=cv.width,c=W/2,k=(c-12)/ENV_MAX_CM;
@@ -247,7 +241,6 @@ function drawEnv(s){
   g.fillStyle='#e7edf5';g.fillRect(c-9,c-12,18,24);  // box
   g.fillStyle='#ffb020';g.beginPath();g.moveTo(c,c-20);g.lineTo(c-6,c-12);g.lineTo(c+6,c-12);g.fill();  // front
 }
-
 // ---- sensor cards
 function renderSensors(s){
   if(!s)return;
@@ -275,7 +268,6 @@ function renderSensors(s){
   if(G.fix)t+=`<tr><td class='k'>Latitude / longitude</td><td>${G.lat}, ${G.lon}</td></tr>`;
   $('navTable').innerHTML=t;
 }
-
 // ---- browser-side sensor logger: CSV download; no SD card or ESP32 RAM buffer needed
 let logging=false, logRows=[], logStartMs=0, latestSnapshot=null, logSampleCount=0;
 const usNames=['front','left','right','back','front_angled'];
@@ -433,7 +425,6 @@ $('invDownload').onclick=()=>{
   const blob=new Blob([JSON.stringify(out)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='CAS_B3_R07_investigation_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
-
 // Download a single self-contained JSON diagnostic: exact dashboard snapshot, raw sensor arrays,
 // UI/autonomy state, all named values, timestamps and operator observations.
 $('diagDownload').onclick=()=>{
@@ -456,7 +447,6 @@ $('diagDownload').onclick=()=>{
   a.href=url;a.download='CAS_B3_R07_diagnostic_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
-
 function renderDiagnostics(j){
   const vals={};(j.values||[]).forEach(v=>vals[v.name]=v.value);
   const connected=vals['rover.ip'] && vals['rover.ip']!=='0.0.0.0';
@@ -509,7 +499,6 @@ async function poll(){
 }
 invUi();setInterval(poll,250);poll();
 </script></body></html>)rawpage";
-
 // Appends s to out as JSON string content (quotes and backslashes escaped, control chars dropped).
 static void jsonEscape(String& out, const char* s) {
   for (; *s; ++s) {
@@ -518,7 +507,6 @@ static void jsonEscape(String& out, const char* s) {
     else if ((uint8_t)c >= 0x20) out += c;
   }
 }
-
 // Camera node status and one outstanding capture request. JPEG bytes are never handled here.
 static portMUX_TYPE gCameraMux = portMUX_INITIALIZER_UNLOCKED;
 static char gCameraIp[16] = "";
@@ -528,7 +516,6 @@ static bool gCameraReady = false, gCameraSdReady = false, gCameraCapturePending 
 static uint8_t gCameraRequestedFrames = 0;
 static uint32_t gCameraLastSeenMs = 0, gCameraStoredImages = 0, gCameraFrameSequence = 0;
 static uint32_t gCameraEventCounter = 0;
-
 // Small offline-generated route package mailbox. This is stored only as a draft;
 // Navigation remains stopped until a validated localization/execution layer exists.
 static portMUX_TYPE gPlanMux = portMUX_INITIALIZER_UNLOCKED;
@@ -536,19 +523,15 @@ static char gNavigationPlanJson[1200] = "";
 static bool gNavigationPlanReceived = false;
 static char gPlanUploadBuffer[1200] = "";
 static size_t gPlanUploadLength = 0;
-
 // ---------------------------------------------------------------------------------------------
-
 // Takes the mutex; creates it on first use (always in setup(), before the server task runs).
 void WebHMI::_lock() {
   if (!_mtx) _mtx = xSemaphoreCreateMutex();
   xSemaphoreTake(_mtx, portMAX_DELAY);
 }
-
 void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t channel) {
   _lock();  // make sure the mutex exists before the server starts
   xSemaphoreGive(_mtx);
-
   WiFi.mode(WIFI_AP);
   WiFi.setSleep(false);                                  // no Wi-Fi power save on the box
   WiFi.softAPConfig(ip, ip, IPAddress(255, 255, 255, 0));
@@ -558,7 +541,6 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
   } else {
     Serial.println("[WebHMI] WiFi.softAP failed");
   }
-
   _server = new AsyncWebServer(80);
   _server->on("/", HTTP_GET, [this](AsyncWebServerRequest* req) {
     req->send(200, "text/html; charset=utf-8", _buildPage());
@@ -645,11 +627,10 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
       ",\"execution_enabled\":false,\"reason\":\"indoor_localization_not_validated\",\"plan\":";
     out += received ? String(plan) : String("null"); out += '}';
     req->send(200, "application/json", out);
-  }, this);
+  });
   _server->on("/navigation/plan", HTTP_POST,
     [](AsyncWebServerRequest* req) {
-      // Body is handled incrementally below; this callback is used for empty requests only.
-      if (req->_tempObject) { delete (String*)req->_tempObject; req->_tempObject = nullptr; }
+      // Incremental request-body handler below.
     }, nullptr,
     [](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
       if (total == 0 || total >= sizeof(gPlanUploadBuffer)) {
@@ -665,11 +646,11 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
       gPlanUploadBuffer[total] = '\0';
       String body(gPlanUploadBuffer); body.trim();
       bool balanced = body.startsWith("{") && body.endsWith("}");
-      const bool schemaOk = body.indexOf("\\"schema\\":\\"CAS-R04-NAV-CMD-1\\"") >= 0;
-      const bool modeOk = body.indexOf("\\"mode\\":\\"route_pending\\"") >= 0;
-      const bool forbidden = body.indexOf("\\"execute\\":true") >= 0 || body.indexOf("\\"motor") >= 0 || body.indexOf("\\"drive") >= 0;
+      const bool schemaOk = body.indexOf("\"schema\":\"CAS-R04-NAV-CMD-1\"") >= 0;
+      const bool modeOk = body.indexOf("\"mode\":\"route_pending\"") >= 0;
+      const bool forbidden = body.indexOf("\"execute\":true") >= 0 || body.indexOf("\"motor") >= 0 || body.indexOf("\"drive") >= 0;
       uint8_t waypoints = 0; int pos = 0;
-      while ((pos = body.indexOf("\\"id\\":\\"", pos)) >= 0) { ++waypoints; pos += 6; }
+      while ((pos = body.indexOf("\"id\":\"", pos)) >= 0) { ++waypoints; pos += 6; }
       if (!balanced || !schemaOk || !modeOk || forbidden || waypoints < 1 || waypoints > 12) {
         req->send(400, "application/json", "{\"ok\":false,\"reason\":\"invalid_schema_or_waypoint_count\"}"); return;
       }
@@ -748,29 +729,23 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
   _cycleLastUs = micros();
   _cycleWinMs = millis();
 }
-
 void WebHMI::setTitle(const String& title) { _title = title; }
-
 void WebHMI::enableDrivePad(float maxSpeed) {
   _drivePad = true;
   _driveMax = maxSpeed;
 }
-
 void WebHMI::setStateText(const String& text) {
   _lock();
   _state = text;
   xSemaphoreGive(_mtx);
 }
-
 void WebHMI::setSensorJson(const String& json) {
   _lock();
   _sensorJson = json;
   xSemaphoreGive(_mtx);
 }
-
 void WebHMI::showValue(const char* name, double value) { _setValue(name, String(value, 3)); }
 void WebHMI::showValue(const char* name, const String& value) { _setValue(name, value); }
-
 // Updates the value with this name or takes the first free slot (ignored if all are used).
 void WebHMI::_setValue(const char* name, const String& text) {
   _lock();
@@ -788,7 +763,6 @@ void WebHMI::_setValue(const char* name, const String& text) {
   }
   xSemaphoreGive(_mtx);
 }
-
 void WebHMI::getDrive(float& left, float& right, uint32_t& ageMs) const {
   portENTER_CRITICAL(&_driveMux);
   left = _driveL;
@@ -797,21 +771,18 @@ void WebHMI::getDrive(float& left, float& right, uint32_t& ageMs) const {
   portEXIT_CRITICAL(&_driveMux);
   ageMs = ms ? millis() - ms : UINT32_MAX;  // millis() read after ms: never negative
 }
-
 bool WebHMI::autonomyEnabled() const {
   portENTER_CRITICAL(&_driveMux);
   const bool enabled = _autonomyEnabled;
   portEXIT_CRITICAL(&_driveMux);
   return enabled;
 }
-
 bool WebHMI::driveInhibited() const {
   portENTER_CRITICAL(&_driveMux);
   const bool inhibited = _driveInhibited;
   portEXIT_CRITICAL(&_driveMux);
   return inhibited;
 }
-
 void WebHMI::stopDrive() {
   portENTER_CRITICAL(&_driveMux);
   _driveInhibited = true;
@@ -821,7 +792,6 @@ void WebHMI::stopDrive() {
   _driveMs = millis();
   portEXIT_CRITICAL(&_driveMux);
 }
-
 void WebHMI::clearDriveInhibit() {
   portENTER_CRITICAL(&_driveMux);
   _driveL = _driveR = 0;
@@ -829,7 +799,6 @@ void WebHMI::clearDriveInhibit() {
   _driveInhibited = false;
   portEXIT_CRITICAL(&_driveMux);
 }
-
 bool WebHMI::autonomyHeartbeatFresh(uint32_t maxAgeMs) const {
   portENTER_CRITICAL(&_driveMux);
   const bool enabled = _autonomyEnabled;
@@ -837,7 +806,6 @@ bool WebHMI::autonomyHeartbeatFresh(uint32_t maxAgeMs) const {
   portEXIT_CRITICAL(&_driveMux);
   return enabled && hb != 0 && (millis() - hb <= maxAgeMs);
 }
-
 // Loop time over 1 s windows: min / average / max time between two tick() calls.
 void WebHMI::tick() {
   const uint32_t nowUs = micros();
@@ -847,7 +815,6 @@ void WebHMI::tick() {
   if (dt > _cycleMaxUs) _cycleMaxUs = dt;
   _cycleSumUs += dt;
   _cycleCount++;
-
   const uint32_t nowMs = millis();
   if (nowMs - _cycleWinMs < 1000) return;
   _cycleWinMs = nowMs;
@@ -860,14 +827,12 @@ void WebHMI::tick() {
   _cycleSumUs = 0;
   _cycleMaxUs = 0;
 }
-
 String WebHMI::_buildPage() const {
   String page = FPSTR(kPage);
   page.replace("%TITLE%", _title);
   page.replace("%MAXSPD%", _drivePad ? String(_driveMax, 2) : String("0"));
   return page;
 }
-
 // {"state":"..","values":[{"name":..,"value":..}],"cycle":{min,avg,max},"sensors":{..}|null}
 String WebHMI::_buildJson() const {
   String out;
