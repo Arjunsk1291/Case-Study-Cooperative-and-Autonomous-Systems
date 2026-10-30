@@ -12,6 +12,7 @@ This branch contains the **R04 manual survey implementation** alongside the exis
 ## Quick links
 
 - R04 separate-board upload guide: R04_FLASH_GUIDE.md
+- Compact offline navigation plan format: R04_NAV_COMMAND_SCHEMA.md
 - Main ESP32 firmware and drivers: cas_box/
 - AI-Thinker camera firmware and microSD archive: camera_s3/CameraStation/
 - Offline log packager: laptop_survey/
