@@ -1,51 +1,22 @@
-# ESP32-S3 camera survey transmitter
+# R04 camera firmware
 
-## Selected data path
+The flash-ready camera sketch is in:
 
-The ESP32-S3 camera joins the existing CAS-Box-04 Wi-Fi AP as a station and uploads JPEG frames directly to the laptop FastAPI service:
+- CameraStation/CameraStation.ino
+- CameraStation/camera_user_config.h
 
-ESP32-S3 camera → Wi-Fi station → CAS-Box-04 AP → laptop POST /api/camera/frame.
+Target: AI-Thinker ESP32-CAM with OV2640 (classic ESP32, not ESP32-S3).
 
-JPEG payloads do not pass through the main ESP32. The main ESP32 continues sampling sensors and sending motor commands through its existing RoverLink task.
+The sketch uses the confirmed AI-Thinker GPIO map directly and connects to CAS-Box-04. It sends:
+- Camera heartbeat (camera ready, board ID, Wi-Fi RSSI/IP, free heap, minimum free heap, largest free block and PSRAM state) every second.
+- Idle preview JPEG at approximately 1 FPS.
+- Survey JPEG at approximately 2 FPS while an investigation is active.
+- Capture event ID on the requested three-frame capture burst.
 
-## Hardware configuration blocker
+JPEGs go directly to the laptop FastAPI service. The main CAS Box ESP32 does not relay image bytes and does not depend on the camera for drive control or safety.
 
-The inspected repository does not identify the ESP32-S3 camera board model, camera sensor/module or GPIO pin map. Several ESP32-S3 camera boards have incompatible pinouts. Therefore camera_station.ino intentionally refuses to compile until camera_board_config.h contains the exact, verified board mapping.
+The selected camera memory configuration matches the supplied working setup: QVGA 320x240, JPEG quality 12, XCLK 20 MHz, one frame buffer in internal DRAM. The user-reported runtime diagnostics showed no PSRAM, so this sketch does not rely on PSRAM.
 
-Do not copy pins from another camera board. camera_board_config.template.h is a stub, not a valid hardware configuration.
+Set the laptop IPv4 address and shared camera token in camera_user_config.h before compiling. The laptop and camera must both join CAS-Box-04. The exact two-board flash sequence and physical programming notes are in the repository root file R04_FLASH_GUIDE.md.
 
-Required information:
-- Exact ESP32-S3 board/module and camera sensor (for example OV2640, if confirmed).
-- Manufacturer pin map for PWDN, RESET, XCLK, SIOD, SIOC, D0-D7, VSYNC, HREF and PCLK.
-- Laptop IP address assigned by the CAS-Box-04 AP (use ip addr on Linux while connected to CAS-Box-04).
-- A shared random upload token.
-
-## Laptop API protocol
-
-The camera transmitter polls:
-- GET /api/camera/session
-- GET /api/camera/commands
-- Optional time probe GET /api/camera/time
-
-It uploads raw JPEG bytes:
-- POST /api/camera/frame
-- Content-Type: image/jpeg
-- X-Camera-Token
-- X-Session-Id
-- X-Frame-Id
-- X-Frame-Sequence
-- X-Camera-Board-Id
-- X-Camera-Monotonic-Ms
-- X-Capture-Event-Id when the laptop requests an investigation capture burst.
-
-The current sketch targets 2 frames/s initially. Measure actual transfer rate and memory pressure before raising it. The laptop service limits images to 3 MiB, validates JPEG markers and dimensions, and stores them outside the main ESP32.
-
-## Clock handling
-
-The camera provides its monotonic millis() timestamp and the laptop records receive UTC and monotonic time. The camera timestamp is not UTC. Do not infer camera-to-box synchronization without a measured clock-offset exchange.
-
-## Build
-
-Install the Espressif ESP32 Arduino core and a version of esp32-camera compatible with the selected board/core. Add the verified camera_board_config.h, then select the exact ESP32-S3 board in Arduino IDE. This sketch cannot be reported as compiled until the board identity and pin mapping are supplied.
-
-Camera loss does not stop the main box's sensor/motor loops. The laptop can finalize a survey even if the camera is disconnected.
+The camera must initially be programmed via USB/serial or a compatible ESP32-CAM programmer board. OTA firmware update is not included in this baseline.
