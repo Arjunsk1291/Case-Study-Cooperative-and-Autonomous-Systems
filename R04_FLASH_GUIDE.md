@@ -1,51 +1,28 @@
-# CAS Box B3 / Rover R04 — Firmware Flash & Survey Setup
+# CAS Box B3 / Rover R04 — Updated Flash & Investigation Guide
 
-## Exactly which two boards to flash
+## Correct system architecture
 
-This package contains two independent Arduino sketches. Flash them separately:
+The main CAS Box ESP32 is the live hub and the only robot controller:
 
-| Target | Folder to open | Arduino board selection | Role |
-|---|---|---|---|
-| Main CAS Box ESP32 | cas_box/cas_box.ino | ESP32 Dev Module | Wi-Fi access point, sensors, RoverLink, motor commands, safety interlock and Web HMI endpoints |
-| Camera board | camera_s3/CameraStation/CameraStation.ino | AI Thinker ESP32-CAM | OV2640 camera, Wi-Fi station, preview JPEGs, survey JPEG uploads and camera health heartbeat |
+- Phone ──Wi-Fi──► main ESP32 (CAS-Box-04, 192.168.14.1)
+- AI-Thinker ESP32-CAM ──Wi-Fi──► main ESP32 (same AP)
+- Main ESP32 ──existing RoverLink──► R04 rover (motor controller firmware unchanged)
 
-**Do not flash the camera sketch onto the main ESP32. Do not flash the main cas_box sketch onto the AI-Thinker camera board.**
+The camera does not send image bytes to the main ESP32. It receives small capture requests and reports status/metadata. It saves the original JPEG files directly to its own onboard microSD card. The main ESP32 has no configured persistent image storage, and the camera images must not be buffered in its RAM or flash.
 
-The rover's motor-controller firmware is not one of the two flash targets here. The R04 rover must already be configured to join the R04 box network. The inspected project keeps the rover-side firmware/protocol unchanged.
+The laptop is not part of startup, live sensing, camera transfer or robot control. Use it only after the survey to package files for offline analysis.
 
-## R04 network identity
+## Hardware requirement for camera logging
 
-The main firmware has BOX_ID = 4. It derives:
+Insert a FAT32 microSD card into the AI-Thinker ESP32-CAM's built-in card slot. The camera sketch mounts it in SD_MMC 1-bit mode. It writes files to /captures/ and keeps a manifest.csv. If the card is not detected or has insufficient free space, image capture is disabled in the phone dashboard.
 
-- Wi-Fi SSID: CAS-Box-04
-- Wi-Fi password: CASbox04
-- Main ESP32 box/HMI address: 192.168.14.1
-- Laptop survey receiver: port 8000 on the laptop's address within 192.168.14.0/24
-- Camera board: DHCP address assigned by the box AP
+This is the storage path for original JPEGs. No external SD module or new wiring on the main ESP32 is required.
 
-The camera and laptop are clients of the main ESP32 access point. The main ESP32 and camera do not use a wired UART or I²C link between boards.
+## 1. Flash the main CAS Box ESP32
 
-## How all three connect at startup
+Target: ESP32 Dev Module. Open the complete cas_box folder via cas_box/cas_box.ino and retain all adjacent .h/.cpp files.
 
-1. Power the main CAS Box ESP32. It starts the CAS-Box-04 AP and the existing RoverLink search/task.
-2. Power the R04 rover. It joins the matching AP; the main ESP32 reports rover.connected=true when RoverLink has discovered it.
-3. Power the AI-Thinker ESP32-CAM. It joins CAS-Box-04 as a Wi-Fi station, then sends a heartbeat to the laptop every second and an idle preview JPEG approximately once per second.
-4. Connect the laptop to CAS-Box-04, start the laptop survey service, and open the survey HMI.
-5. The HMI separately shows box connectivity, rover connectivity and camera heartbeat/camera-ready status. **Start Investigation is enabled only when all three are ready.**
-
-The main ESP32 does not wait synchronously for the camera or laptop. RoverLink and camera Wi-Fi association run independently. A camera or laptop failure therefore cannot block the main ESP32 motor/safety loop. If any link is missing, the HMI reports which one is not ready.
-
-During an active investigation, the camera changes from idle preview to approximately 2 frames/second. Every JPEG is sent directly to the laptop; the main ESP32 never relays JPEG payloads.
-
----
-
-# 1. Flash the main ESP32 (CAS Box)
-
-### Software
-
-Install Arduino IDE 2.x and Espressif Arduino-ESP32 core 3.3.1. The R04 branch CI also compiles this sketch with that core.
-
-Install these libraries through Arduino IDE Library Manager:
+Use Arduino IDE 2.x, Espressif Arduino-ESP32 core 3.3.1, and these libraries:
 
 - ESP Async WebServer
 - Async TCP
@@ -56,159 +33,111 @@ Install these libraries through Arduino IDE Library Manager:
 - Adafruit BusIO
 - TinyGPSPlus-ESP32
 
-### Upload
+Set BOX_ID = 4 (already set in the R04 branch). Verify:
+- SSID: CAS-Box-04
+- Password: CASbox04
+- Main HMI: http://192.168.14.1
 
-1. Open cas_box/cas_box.ino in Arduino IDE. Keep the full cas_box folder intact because the sketch includes the other .h and .cpp files in that folder.
-2. Connect the main ESP32 development board to the laptop using its USB cable or its existing USB-to-UART adapter.
-3. Select Tools → Board → ESP32 Arduino → ESP32 Dev Module.
-4. Select the correct serial port.
-5. Select a reliable upload speed (115200 is a conservative starting point).
-6. Compile, then Upload.
-7. Open Serial Monitor at 115200 baud.
-8. Confirm that the box starts its AP and RoverLink begins searching for the rover.
-9. Connect the laptop to CAS-Box-04 with password CASbox04.
-10. Open http://192.168.14.1 to confirm the box HMI responds.
+Flash the main ESP32 and open Serial Monitor at 115200 baud. Power the main box first, then power/reboot the R04 rover so it joins the correct AP. Confirm RoverLink reports connected.
 
-This does not flash the rover's motor-controller board. Do not change the rover firmware unless the R04 rover is not configured for this SSID/password; verify that separately before attempting a campus run.
+The main ESP32 remains the controller. Its motor deadman and software stop latch are retained. The camera routes do not call RoverLink or change motor setpoints.
 
----
+## 2. Configure and flash the AI-Thinker ESP32-CAM
 
-# 2. Configure and flash the AI-Thinker ESP32-CAM
+Target: AI Thinker ESP32-CAM (OV2640). It is a separate board and must be flashed separately.
 
-### Confirmed camera settings
+### Replace the old camera config
 
-This sketch uses the confirmed AI-Thinker pin mapping and preserves the already-tested configuration:
+The previous camera sketch required a laptop IP and shared token. The updated design removes both. In the camera sketch folder, overwrite the old local config file with the new example:
 
-- Camera: AI-Thinker ESP32-CAM / OV2640
-- Output: JPEG
-- Resolution: QVGA 320 × 240
-- JPEG quality: 12
-- XCLK: 20 MHz
-- Frame buffers: 1
-- Frame-buffer location: internal DRAM
-- No PSRAM is required
+    cd camera_s3/CameraStation
+    cp -f camera_user_config.example.h camera_user_config.h
 
-The camera pins are assigned by the sketch; they are not available for other peripherals:
+The new config contains:
+- CAS_BOX_HOST = 192.168.14.1
+- CAS_BOX_SSID = CAS-Box-04
+- CAS_BOX_PASSWORD = CASbox04
 
-| Camera signal | GPIO |
-|---|---:|
-| PWDN | 32 |
-| RESET | -1 (not connected) |
-| XCLK | 0 |
-| SIOD / SCCB SDA | 26 |
-| SIOC / SCCB SCL | 27 |
-| Y9 / D7 | 35 |
-| Y8 / D6 | 34 |
-| Y7 / D5 | 39 |
-| Y6 / D4 | 36 |
-| Y5 / D3 | 21 |
-| Y4 / D2 | 19 |
-| Y3 / D1 | 18 |
-| Y2 / D0 | 5 |
-| VSYNC | 25 |
-| HREF | 23 |
-| PCLK | 22 |
+Do not retain the old CAS_CAMERA_LAPTOP_HOST or CAS_CAMERA_TOKEN definitions.
 
-### Configure laptop IP and shared token first
+### Camera board upload
 
-1. Connect the laptop to CAS-Box-04.
-2. On Ubuntu, run:
+1. Insert a FAT32 microSD card in the AI-Thinker ESP32-CAM card slot.
+2. Open camera_s3/CameraStation/CameraStation.ino in Arduino IDE.
+3. Select Tools → Board → ESP32 Arduino → AI Thinker ESP32-CAM.
+4. Select the camera serial port and upload.
+5. Open Serial Monitor at 115200 baud.
 
-    ip -4 addr
+The camera's pin map remains the confirmed AI-Thinker OV2640 mapping. Camera image settings remain JPEG QVGA 320x240, quality 12, XCLK 20 MHz and one internal-DRAM frame buffer. SD_MMC uses 1-bit mode.
 
-3. Find the IPv4 address on the Wi-Fi interface connected to CAS-Box-04. It should be in the 192.168.14.x subnet. **Do not use 192.168.14.1; that is the box.**
-4. Generate one long random camera token:
+Programming access limitation: the AI-Thinker ESP32-CAM has no native USB connector. Initial flashing requires an ESP32-CAM-MB programmer or USB-to-serial adapter and physical access to the board's programming pins. The current sketch does not implement OTA.
 
-    python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
+Expected serial messages:
+- camera initialization success
+- microSD mount and storage summary
+- Wi-Fi connected to CAS-Box-04
+- camera archive URL on port 81
+- periodic heap / Wi-Fi / capture diagnostics
 
-5. Copy camera_s3/CameraStation/camera_user_config.example.h to camera_s3/CameraStation/camera_user_config.h. The real config is ignored by Git. Set:
-   - CAS_CAMERA_LAPTOP_HOST to the laptop IPv4 address you just found.
-   - CAS_CAMERA_TOKEN to the generated token.
-   - Keep the R04 SSID/password unchanged (CAS-Box-04 / CASbox04).
+## 3. Start a survey using only the phone and robot
 
-6. In the laptop terminal, export exactly the same token:
+1. Power the main ESP32.
+2. Power the R04 rover and verify RoverLink connection.
+3. Power the camera with its microSD inserted.
+4. Connect the phone to CAS-Box-04 using password CASbox04.
+5. Open http://192.168.14.1.
+6. Wait for the camera panel to show Camera ready and microSD available.
+7. Use the normal investigation logger. Keep autonomy OFF and supervise all manual movement.
+8. At a relevant location or event, tap Capture 3 JPEG frames. The main ESP32 creates an event ID; the camera polls the main board and saves the original frames on its microSD.
+9. Continue recording route/sensor snapshots in the phone dashboard.
+10. Download the sensor/route JSON or CSV before refreshing/closing the phone page.
 
-    export CAS_CAMERA_TOKEN='paste-the-same-token-here'
+The main ESP32 receives small camera health and capture metadata only. There is no continuous image preview, no laptop receiver and no JPEG relay through the main board.
 
-The token must match byte-for-byte in both places. Do not upload/commit a real token to GitHub.
+## 4. Download camera files
 
-### Upload the camera sketch
+The camera heartbeat reports its DHCP address to the main ESP32. When the camera is online, the phone dashboard shows an Open camera archive link.
 
-1. Open camera_s3/CameraStation/CameraStation.ino in Arduino IDE. Keep camera_user_config.h in the same folder.
-2. Select Tools → Board → ESP32 Arduino → AI Thinker ESP32-CAM.
-3. Select the camera's serial port.
-4. Use Serial Monitor at 115200 baud.
-5. Upload the sketch.
+Open that link on the phone while still connected to CAS-Box-04. The camera archive page lists individual JPEGs under /captures/ and provides manifest.csv. Download the manifest and the original JPEGs associated with the survey events.
 
-**Programming access limitation:** the standard AI-Thinker ESP32-CAM has no native USB connector. A USB-to-serial adapter or ESP32-CAM-MB programmer is required. If the programmer board handles download mode automatically, use its USB connection. With a bare USB-to-serial adapter, the usual connections are adapter TX → U0R/GPIO3, adapter RX → U0T/GPIO1, common GND, and a suitable 5 V supply to the camera 5V input. GPIO0 must be held low during reset to enter serial bootloader mode. These are physical programming connections; they cannot be performed remotely by changing firmware. **If you currently cannot access the camera board/programmer or its USB connection, the camera sketch can be prepared but cannot be flashed until that physical access is available.** The supplied firmware does not yet implement OTA bootloader updates.
+Camera archive endpoint: http://<camera-dhcp-ip>:81/
 
-6. After upload, open Serial Monitor at 115200 baud. Expected messages include:
-   - camera initialized AI-Thinker OV2640
-   - Wi-Fi connected to CAS-Box-04
-   - camera IP and laptop URL
-   - periodic memory diagnostics
-   - heartbeat success (HTTP 200 is silent; lack of laptop response prints a retry warning)
+If the archive link does not open, verify that the camera is online, has a mounted SD card, and is connected to the same CAS-Box-04 network. The phone and camera must be able to communicate as clients on that AP.
 
-If the camera fails to join Wi-Fi, check the R04 SSID/password and laptop/box network. If the camera joins but never becomes ready on the HMI, verify the laptop IPv4 address and shared token in both configurations.
+## 5. Offline log processing on the laptop
 
----
+The laptop is not needed while the rover is operating.
 
-# 3. Run the laptop receiver and Web HMI
+After the run:
+1. Put the dashboard JSON/CSV, camera manifest.csv and original JPEGs together.
+2. Copy them to the laptop.
+3. Optional: run the offline package builder:
 
-Keep the laptop connected to CAS-Box-04. Open a terminal:
+       cd laptop_survey
+       python3 -m venv .venv
+       source .venv/bin/activate
+       pip install -r requirements.txt
+       uvicorn app:app --host 127.0.0.1 --port 8000
 
-    cd laptop_survey
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    pip install -r requirements-vision.txt
+4. Open http://127.0.0.1:8000, select the log and image files, and build one checksummed ZIP.
+5. Attach that ZIP to the analysis conversation for offline review.
 
-Export the box URL, storage directory and the same camera token used in the camera sketch:
+The packager does not connect to the robot, run vision or invent coordinates. The uploaded source data and original images are analysed offline. Any generated route instructions must distinguish measured facts from inferred geometry.
 
-    export CAS_BOX_URL="http://192.168.14.1"
-    export CAS_SURVEY_DATA="$HOME/CAS_B3_R04_Survey_Data"
-    export CAS_CAMERA_TOKEN="paste-the-same-token-here"
-    uvicorn app:app --host 0.0.0.0 --port 8000
+## 6. Return only a compact command package to the main ESP32
 
-Open http://127.0.0.1:8000 in the laptop browser. The camera sends preview frames to http://<laptop-ip>:8000 while idle. If Ubuntu's firewall is enabled, allow inbound TCP port 8000 on the Wi-Fi connection.
+The analysis result uses the bounded CAS-R04-NAV-CMD-1 JSON schema. It contains a route identifier, safety parameters and at most 12 waypoint records. The phone dashboard can submit that compact JSON via Send small plan to main ESP32.
 
-## Before starting a survey
+The firmware stores the plan in RAM as a draft and reports execution_enabled=false. It does not run the route. This is intentional: the current R04 firmware does not implement validated indoor localization, wheel odometry or a waypoint-tracking executor. GPS indoors, IMU yaw and sparse sensor logs are not enough to claim reliable x/y localization. Existing Navigation.h holds motion at zero while localization is unavailable.
 
-Check the HMI connection badge and camera panel:
+A future revision can connect the validated localization output to a motion executor after physical testing. Until then, use the route plan for review and manual supervised operation only. Do not bypass the safety latch or change Navigation.h to force motion.
 
-- Box: online (the HMI polls 192.168.14.1)
-- Rover: connected (reported by RoverLink on the main ESP32)
-- Camera: heartbeat recent and camera_ready=true; the preview should update
-- Laptop storage: free space available
+## 7. Safety and verification
 
-Start Investigation remains disabled until box + rover + camera are ready. The camera does not need to be physically wired to the main ESP32.
-
----
-
-# 4. What the system does
-
-| State | Camera action | Dataset effect |
-|---|---|---|
-| Idle / no investigation | Heartbeat every second; preview about 1 FPS | Only the latest preview is held on the laptop; no survey files are created |
-| Investigation active | Heartbeat every second; JPEG at about 2 FPS | JPEG frames and index rows are saved under the active session |
-| Investigation Capture | Server requests a three-frame capture association | Frames carry the capture event ID and are linked in the image index |
-| Camera goes offline | Heartbeat/frame timeout is shown | Main ESP32 safety/control continues; finalization remains available |
-| Stop Rover | Main ESP32 software stop latch is requested | Sensor and camera logging continue |
-| Stop Investigation & Finalize Dataset | Rover stop first; camera uploads are drained for a bounded period | Laptop builds, CRC-checks and SHA-256-checks the survey ZIP |
-
-The camera sends JPEG directly to the laptop, not through the main ESP32. The main ESP32 continues controlling the rover and sampling sensors independently.
-
----
-
-# 5. Build and verification status
-
-The R04 CI workflow compiles:
-- Main box sketch: esp32:esp32:esp32 (ESP32 Dev Module)
-- Camera sketch: esp32:esp32:esp32cam (AI Thinker ESP32-CAM)
-- Python syntax and laptop backend tests
-
-A successful CI compile proves source/toolchain compatibility only. It does not prove that firmware has been uploaded to your boards, that the R04 rover joins this AP, that the camera is physically connected, or that image transfer works on your network. Those still need your actual boards and laptop.
-
-## Important safety boundary
-
-The laptop's Stop Rover control is a Wi-Fi software stop. It is not a hardwired emergency-stop circuit. Keep the physical stop/power disconnect accessible. The camera has no authority to command rover movement, and camera failure must never be treated as a rover-safe-stop mechanism.
+- Main ESP32 software STOP is a Wi-Fi software interlock, not a physical E-stop circuit.
+- Keep the physical power disconnect/stop access available.
+- The rover motor-controller firmware and RoverLink protocol remain unchanged.
+- Camera failures cannot block the main ESP32 motor/safety loop.
+- Camera images are stored locally on microSD; main ESP32 RAM/flash is not used as an image archive.
+- The route-plan mailbox is draft-only and never changes motor commands.
+- CI compilation does not prove physical Wi-Fi association, SD reliability, camera image capture or rover operation. Test all hardware functions at low speed in a clear, supervised area.
