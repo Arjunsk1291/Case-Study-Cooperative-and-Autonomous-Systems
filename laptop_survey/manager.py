@@ -347,7 +347,7 @@ class SurveyManager:
         vals=values_dict(payload)
         (folder/"session"/"software_versions.json").write_text(json.dumps({
           "laptop_backend":VERSION,"dataset_schema":SCHEMA,"main_esp32":vals.get("sys.firmware","not reported"),
-          "rover_firmware":"unchanged and not version-reported","camera_board_firmware":"not present in repository",
+          "rover_firmware":"unchanged and not version-reported","camera_board_firmware":"R04-CAM-1.0.0 (camera_s3/CameraStation)",
           "python":os.sys.version,"opencv":"optional; per-frame availability recorded"},indent=2))
         (folder/"session"/"timing_and_sync.json").write_text(json.dumps({
           "box_clock":"millis since boot; sample_device_ms","laptop_wall":"UTC","laptop_monotonic":"monotonic_ns",
