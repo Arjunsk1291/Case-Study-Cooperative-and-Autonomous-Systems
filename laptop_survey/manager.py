@@ -73,6 +73,9 @@ class SurveyManager:
         self.camera_missing_frames=0
         self.camera_last_frame_at=None
         self.camera_last_frame_mono=0.0
+        self.camera_last_heartbeat_at=None
+        self.camera_last_heartbeat_mono=0.0
+        self.camera_board_status={}
         self.last_vision=None
         self.capture_requests=[]
         self.camera_accepting=True
@@ -294,6 +297,11 @@ class SurveyManager:
             if self.session and self.session.get("state") in {"active","finalizing","storage_error"}:
                 raise RuntimeError("An active or recoverable session already exists")
         payload=self.read_values()
+        values = values_dict(payload)
+        if values.get("rover.connected", "false").lower() != "true":
+            raise RuntimeError("R04 rover is not connected to CAS-Box-04 yet; wait for the RoverLink status to become connected.")
+        if not self.camera_online():
+            raise RuntimeError("AI-Thinker ESP32-CAM has not checked in yet. Wait for Camera online before starting the investigation.")
         stop=self.box_request("POST","/safety/stop",timeout=1.0)
         if stop.status_code!=200:
             raise RuntimeError(f"Survey firmware safety stop is required (HTTP {stop.status_code}); update the box firmware first")
@@ -312,7 +320,7 @@ class SurveyManager:
         (folder/"camera"/"frame_index.csv").write_text(
           "frame_id,frame_sequence,filename,camera_board_id,camera_monotonic_ms,camera_timestamp_utc,laptop_received_at,width,height,format,bytes,transfer_status,capture_event_id,vision_detected,vision_offset_normalized,vision_heading_error_deg,vision_confidence,vision_latency_ms\n")
         config={
-          "box_id":4,"rover_id":"R04","main_controller":"ESP32",
+          "box_id":4,"rover_id":"R04","main_controller":"ESP32","box_ssid":"CAS-Box-04","box_password":"CASbox04","box_ip":"192.168.14.1",
           "lidar":{"model":"LD20","uart":"Serial1","rx_gpio":27,"tx_gpio":33,"baud":230400,"one_degree_filtered_bins":360,
                    "dashboard_bins":90,"dashboard_bin_spacing_deg":4,"filter":"median up to three valid hits, minimum two, 500 ms expiry",
                    "raw_intensity_available":False,"native_point_frame_timestamps_available":False},
@@ -325,7 +333,7 @@ class SurveyManager:
           "drive":{"route":"laptop -> box /drive -> WebHMI -> RoverLink HTTP task -> rover",
                    "hardware_command_range":[-0.5,0.5],"laptop_survey_limit":[-MAX_DRIVE,MAX_DRIVE],
                    "wheel_encoders":False,"actual_wheel_speed_feedback":False},
-          "camera":{"model":"ESP32-S3 camera variant not identified in repository","transfer":"camera STA -> box AP -> laptop HTTP receiver",
+          "camera":{"model":"AI-Thinker ESP32-CAM / OV2640","resolution":"QVGA 320x240 JPEG","jpeg_quality":12,"xclk_hz":20000000,"frame_buffers":1,"psram_detected_in_user_test":False,"transfer":"camera STA -> CAS-Box-04 AP -> laptop HTTP receiver",
                     "direct_to_laptop":True,"main_ESP32_relay":False},
           "sampling":{"box_sensor_snapshot_target_hz":4,"laptop_poll_target_hz":round(1/POLL_S,2),
                       "timestamps":"device millis plus laptop wall UTC and monotonic_ns"}}
