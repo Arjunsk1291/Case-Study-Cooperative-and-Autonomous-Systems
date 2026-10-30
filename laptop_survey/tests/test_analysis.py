@@ -50,4 +50,5 @@ def test_parallel_lidar_walls_produce_midline_candidate():
 def test_vision_detector_handles_invalid_jpeg_without_claiming_detection():
     result = detect_tactile_strip_jpeg(b"not a jpeg")
     assert result["valid"] is False
-    assert result["classification"] in (None, "not_detected_or_ambiguous")
+    assert result["classification"] in ("vision_unavailable", "invalid_image", "not_detected_or_ambiguous")
+    assert result["motion_authorized"] is False
