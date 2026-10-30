@@ -33,6 +33,8 @@ public:
 
   // Calibration state 0 (none) .. 3 (fully calibrated): system, gyro, accel, magnetometer
   void calibration(uint8_t& sys, uint8_t& gyro, uint8_t& accel, uint8_t& mag) const;
+  RawMeasurements rawMeasurements() const { return _raw; }
+  uint32_t ageMs() const { return _lastUpdateMs ? millis() - _lastUpdateMs : UINT32_MAX; }
 
 private:
   void _alignNorth(uint16_t durationMs);
@@ -46,4 +48,5 @@ private:
   bool _northAnchored = false;
   float _northOffsetDeg = 0;   // magnetic heading - fusion heading at start
   uint8_t _cal[4] = {0, 0, 0, 0};
+  RawMeasurements _raw;
 };
