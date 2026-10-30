@@ -91,6 +91,7 @@ jobs:
           cp -a camera_s3/CameraStation/. CAS_Box_B3_R04_Upload_Kit/camera_s3/CameraStation/
           cp -a laptop_survey/. CAS_Box_B3_R04_Upload_Kit/laptop_survey/
           cp R04_FLASH_GUIDE.md CAS_Box_B3_R04_Upload_Kit/
+          cp R04_NAV_COMMAND_SCHEMA.md CAS_Box_B3_R04_Upload_Kit/
           cp README.md CAS_Box_B3_R04_Upload_Kit/
           rm -rf CAS_Box_B3_R04_Upload_Kit/laptop_survey/__pycache__
           rm -rf CAS_Box_B3_R04_Upload_Kit/laptop_survey/.pytest_cache
