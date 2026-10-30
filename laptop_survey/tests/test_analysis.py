@@ -24,8 +24,8 @@ def test_open_area_reports_no_centreline_without_walls():
     result = analyse_lidar(snapshot([250] * 90))
     assert result["valid"] is True
     assert result["open_area"] is True
-    assert result["centreline"]["kind"] == "possible_open_area_no_centreline"
-    assert result["centreline"]["motion_authorized"] is False
+    assert result["open_area_prompt"]["kind"] == "possible_open_area_no_centreline"
+    assert result["open_area_prompt"]["motion_authorized"] is False
 
 
 def test_parallel_lidar_walls_produce_midline_candidate():
