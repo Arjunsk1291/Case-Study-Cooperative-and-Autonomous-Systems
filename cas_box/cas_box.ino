@@ -110,10 +110,19 @@ void loop() {
   // yourself from the sensors, e.g. sensors.usCm(0) = front ultrasonic in cm, and call
   // rover.setDrive(l, r) every loop pass (range -0.5..0.5 per side).
   float l = 0, r = 0;
-  uint32_t age;
+  uint32_t age = UINT32_MAX;
   static bool wasAuto = false;
-  const bool autoRequested = hmi.autonomyEnabled();
-  if (autoRequested) {
+  const bool safetyStopped = hmi.driveInhibited();
+  const bool autoRequested = hmi.autonomyEnabled() && !safetyStopped;
+  if (safetyStopped) {
+    wasAuto = false;
+    l = r = 0;
+    hmi.setStateText("SAFETY STOP LATCHED · drive commands blocked");
+    hmi.showValue("nav.mode", "SAFETY_STOP");
+    hmi.showValue("nav.follow_side", navigation.sideName());
+    hmi.showValue("nav.command_l", 0.0);
+    hmi.showValue("nav.command_r", 0.0);
+  } else if (autoRequested) {
     if (!wasAuto) navigation.reset();
     wasAuto = true;
     if (hmi.autonomyHeartbeatFresh()) {
@@ -138,6 +147,9 @@ void loop() {
     hmi.showValue("nav.mode", "MANUAL");
     hmi.showValue("nav.follow_side", navigation.sideName());
   }
+  // Independent final interlock: even a stale/autonomy path cannot pass non-zero
+  // commands to RoverLink while the WebHMI stop latch is active.
+  if (hmi.driveInhibited()) l = r = 0;
   rover.setDrive(l, r);
 
   // ---- web page and OLED -----------------------------------------------------------------------
@@ -156,6 +168,13 @@ void loop() {
     hmi.showValue("rover.ok", (double)rover.okCount());
     hmi.showValue("rover.fail", (double)rover.failCount());
     hmi.showValue("sys.heap_kB", ESP.getFreeHeap() / 1024.0);
+    hmi.showValue("sys.min_heap_kB", ESP.getMinFreeHeap() / 1024.0);
+    hmi.showValue("sys.uptime_s", millis() / 1000.0);
+    hmi.showValue("wifi.ap_clients", (double)WiFi.softAPgetStationNum());
+    hmi.showValue("safety.drive_inhibited", hmi.driveInhibited() ? "true" : "false");
+    hmi.showValue("drive.command_l", l);
+    hmi.showValue("drive.command_r", r);
+    hmi.showValue("drive.command_age_ms", age);
   }
   if (now - lastOled >= 1000) {
     lastOled = now;
