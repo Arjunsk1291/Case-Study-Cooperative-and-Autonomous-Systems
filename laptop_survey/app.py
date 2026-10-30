@@ -157,6 +157,12 @@ def camera_session(x_camera_token: str | None = Header(default=None)):
     return manager.camera_session()
 
 
+@app.post("/api/camera/heartbeat")
+def camera_heartbeat(body: dict[str, Any], x_camera_token: str | None = Header(default=None)):
+    check_camera_token(x_camera_token)
+    return manager.camera_heartbeat(body)
+
+
 @app.get("/api/camera/time")
 def camera_time(x_camera_token: str | None = Header(default=None)):
     check_camera_token(x_camera_token)
@@ -304,9 +310,13 @@ def camera_commands(x_camera_token: str | None = Header(default=None)):
 def system_config():
     return {
         "main_box_url": BOX_URL,
+        "box_ssid": "CAS-Box-04",
+        "box_password": "CASbox04",
+        "box_ip": "192.168.14.1",
         "camera_transport": "ESP32-S3 joins CAS-Box-07 and posts JPEG directly to this laptop service; main ESP32 does not relay image bytes.",
         "camera_token_required": True,
-        "camera_board_pin_map_available": False,
+        "camera_board_pin_map_available": True,
+        "camera_board": "AI-Thinker ESP32-CAM with OV2640",
         "manual_drive_limit": MAX_DRIVE,
         "physical_estop_available_in_repo": False,
         "wall_following_motion_enabled": False,
