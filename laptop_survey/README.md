@@ -1,6 +1,6 @@
-# CAS Box B3 / R07 — Survey and Investigation System
+# CAS Box B3 / R04 — Survey and Investigation System
 
-This branch adds a laptop-owned survey logger and camera receiver alongside the existing CAS Box ESP32 firmware. The task title mentioned R04 once; the inspected repository, Wi-Fi identity and source code identify this hardware as B3 / Box 7 / Rover R07, so this implementation targets R07.
+This branch adds a laptop-owned survey logger and camera receiver alongside the existing CAS Box ESP32 firmware. The task title mentioned R04 once; the inspected repository, Wi-Fi identity and source code identify this hardware as B3 / Box 7 / Rover R04, so this implementation targets R04.
 
 ## Repository audit summary
 
@@ -11,7 +11,7 @@ Verified hardware/software interfaces in source:
 | Subsystem | Existing implementation |
 |---|---|
 | Main controller | ESP32 Dev Module, Arduino ESP32 core documented as 3.3.1 |
-| Box AP | SSID CAS-Box-07, password CASbox07, IP 192.168.17.1, channel 1 |
+| Box AP | SSID CAS-Box-04, password CASbox04, IP 192.168.14.1, channel 1 |
 | Rover control | Main ESP32 HMI /drive -> RoverLink FreeRTOS task -> rover HTTP /js?json=...; 100 ms task, ~400 ms HTTP timeout, 500 ms deadman |
 | Manual HMI | ESP Async WebServer endpoints /values, /drive and /autonomy; browser drivepad refreshes commands while held |
 | LiDAR | LD20, Serial1, RX GPIO 27 / TX GPIO 33, 230400 baud; parser maintains 360 one-degree filtered bins; dashboard summary has 90 four-degree bins |
@@ -59,14 +59,14 @@ The laptop Stop Rover control is a software stop over Wi-Fi. No physical mushroo
 ### ESP32-S3 camera transfer
 A camera transmitter sketch and API contract are provided under camera_s3/. The data path is:
 
-ESP32-S3 camera -> Wi-Fi station -> CAS-Box-07 AP -> laptop FastAPI /api/camera/frame
+ESP32-S3 camera -> Wi-Fi station -> CAS-Box-04 AP -> laptop FastAPI /api/camera/frame
 
 Camera images bypass the main ESP32. The sketch refuses to compile until camera_board_config.h contains the exact pin map for the actual ESP32-S3 camera board. This is intentional: guessing camera GPIO mappings would be unsafe.
 
 ## Run the laptop survey service (Ubuntu)
 
-1. Join laptop Wi-Fi CAS-Box-07 using password CASbox07.
-2. Confirm the box responds at http://192.168.17.1.
+1. Join laptop Wi-Fi CAS-Box-04 using password CASbox04.
+2. Confirm the box responds at http://192.168.14.1.
 3. Find the laptop's address on the box Wi-Fi network using ip -4 addr.
 4. Install and start the backend:
 
@@ -76,8 +76,8 @@ Camera images bypass the main ESP32. The sketch refuses to compile until camera_
     pip install -r requirements.txt
     pip install -r requirements-vision.txt
 
-    export CAS_BOX_URL="http://192.168.17.1"
-    export CAS_SURVEY_DATA="$HOME/CAS_B3_R07_Survey_Data"
+    export CAS_BOX_URL="http://192.168.14.1"
+    export CAS_SURVEY_DATA="$HOME/CAS_B3_R04_Survey_Data"
     export CAS_CAMERA_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
 
     uvicorn app:app --host 0.0.0.0 --port 8000
