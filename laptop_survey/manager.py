@@ -688,7 +688,7 @@ class SurveyManager:
                 "LD20 raw intensity and native per-point timestamps are not exposed by the current parser.",
                 "BNO055 raw vectors are updated at ~10 Hz, then latest values are included in ~4 Hz snapshots.",
                 "TinyGPSPlus raw NMEA sentences are not retained; decoded fields only.",
-                "Camera data exists only if ESP32-S3 is configured to join CAS-Box-07 and HTTP POST directly to laptop.",
+                "Camera data comes from AI-Thinker ESP32-CAM / OV2640 over CAS-Box-04 Wi-Fi; frame loss and camera outages are reported separately.",
                 "Wall/centreline/tactile-strip results are non-actuating candidate observations."] }
             (folder/"session"/"metadata.json").write_text(json.dumps(metadata,indent=2),encoding="utf-8")
             (folder/"session"/"timing_and_sync.json").write_text(json.dumps({
