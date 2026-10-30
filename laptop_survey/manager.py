@@ -7,7 +7,7 @@ from typing import Any
 import requests
 from analysis import analyse_lidar
 
-SCHEMA = "CAS-B3-R07-survey-1.0"
+SCHEMA = "CAS-B3-R04-survey-1.0"
 VERSION = "0.1.0"
 POLL_S = 0.22
 MAX_DRIVE = 0.25
@@ -312,7 +312,7 @@ class SurveyManager:
         (folder/"camera"/"frame_index.csv").write_text(
           "frame_id,frame_sequence,filename,camera_board_id,camera_monotonic_ms,camera_timestamp_utc,laptop_received_at,width,height,format,bytes,transfer_status,capture_event_id,vision_detected,vision_offset_normalized,vision_heading_error_deg,vision_confidence,vision_latency_ms\n")
         config={
-          "box_id":7,"rover_id":"R07","main_controller":"ESP32",
+          "box_id":4,"rover_id":"R04","main_controller":"ESP32",
           "lidar":{"model":"LD20","uart":"Serial1","rx_gpio":27,"tx_gpio":33,"baud":230400,"one_degree_filtered_bins":360,
                    "dashboard_bins":90,"dashboard_bin_spacing_deg":4,"filter":"median up to three valid hits, minimum two, 500 ms expiry",
                    "raw_intensity_available":False,"native_point_frame_timestamps_available":False},
@@ -675,7 +675,7 @@ class SurveyManager:
             (folder/"manifest.json").write_text(json.dumps({
               "schema_version":SCHEMA,"session_id":s["id"],"generated_at":now_iso(),
               "file_count":len(checksums)+2,"files":checksums,"checksums_file":"integrity/checksums.json"},indent=2),encoding="utf-8")
-            archive=self.archives_root/f"CAS_B3_R07_Survey_{s['id']}.zip"
+            archive=self.archives_root/f"CAS_B3_R04_Survey_{s['id']}.zip"
             if archive.exists(): archive.unlink()
             with zipfile.ZipFile(archive,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=4) as z:
                 for p in sorted(folder.rglob("*")):
@@ -706,7 +706,7 @@ class SurveyManager:
             raise
 
     def _readme(self,s,q):
-        return f"""CAS Box B3/R07 survey dataset
+        return f"""CAS Box B3/R04 survey dataset
 Session: {s['id']}
 Started: {s['started_at']}
 Finalized: {now_iso()}
@@ -753,7 +753,7 @@ integrity/data_quality_report.json before using this data for training/navigatio
         with self.lock:
             if self.session and self.session["id"]==sid and self.session["state"]=="ready":
                 return Path(self.session["archive_path"])
-        matches=list(self.archives_root.glob("CAS_B3_R07_Survey_"+sid+".zip"))
+        matches=list(self.archives_root.glob("CAS_B3_R04_Survey_"+sid+".zip"))
         if len(matches)==1 and matches[0].is_file():
             return matches[0]
         raise FileNotFoundError("Validated ZIP not found for this session")
