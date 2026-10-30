@@ -1,5 +1,5 @@
 from __future__ import annotations
-import asyncio, hashlib, hmac, json, os, re, uuid
+import asyncio, hashlib, hmac, io, json, os, re, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -286,16 +286,63 @@ async def camera_frame(
         manager.end_camera_upload()
 
 
+@app.post("/api/camera/preview")
+async def camera_preview(
+    request: Request,
+    x_camera_token: str | None = Header(default=None),
+    x_frame_id: str | None = Header(default=None),
+    x_frame_sequence: str | None = Header(default=None),
+    x_camera_board_id: str | None = Header(default=None),
+    x_camera_monotonic_ms: str | None = Header(default=None),
+):
+    check_camera_token(x_camera_token)
+    if "image/jpeg" not in (request.headers.get("content-type") or "").lower():
+        raise HTTPException(415, "Preview upload must be image/jpeg")
+    image_bytes = await request.body()
+    if len(image_bytes) < 4 or len(image_bytes) > MAX_IMAGE_BYTES:
+        raise HTTPException(413, "Preview JPEG is empty or larger than configured limit")
+    if image_bytes[:2] != b"\xff\xd8" or image_bytes[-2:] != b"\xff\xd9":
+        raise HTTPException(400, "JPEG markers are invalid")
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as im:
+            im.verify()
+        with Image.open(io.BytesIO(image_bytes)) as im:
+            width, height = im.size
+            if width <= 0 or height <= 0 or width > 4096 or height > 3072:
+                raise HTTPException(400, "Unexpected preview dimensions")
+    except UnidentifiedImageError as exc:
+        raise HTTPException(400, "JPEG decoder rejected preview") from exc
+
+    preview_dir = DATA_ROOT / "camera_preview"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    final_path = preview_dir / "latest.jpg"
+    temp_path = preview_dir / "latest.jpg.part"
+    temp_path.write_bytes(image_bytes)
+    temp_path.replace(final_path)
+    received = datetime.now(timezone.utc).isoformat()
+    meta = {
+        "frame_id": x_frame_id or str(uuid.uuid4()),
+        "frame_sequence": int(x_frame_sequence) if x_frame_sequence and x_frame_sequence.isdigit() else None,
+        "camera_board_id": x_camera_board_id,
+        "camera_monotonic_ms": int(x_camera_monotonic_ms) if x_camera_monotonic_ms and x_camera_monotonic_ms.isdigit() else None,
+        "laptop_received_at": received, "width": width, "height": height,
+        "bytes": len(image_bytes), "sha256": hashlib.sha256(image_bytes).hexdigest(),
+    }
+    manager.camera_preview_saved(meta, final_path)
+    return {"ok": True, **meta}
+
+
 @app.get("/api/camera/latest")
 def camera_latest():
     with manager.lock:
         s = manager.session
         frame = s.get("latest_frame_id") if s else None
-        if not s or not frame:
-            raise HTTPException(404, "No camera frame received")
-        path = s["dir"] / "camera" / "frames" / f"{frame}.jpg"
-        if not path.exists():
-            raise HTTPException(404, "Latest camera frame missing from disk")
+        if s and frame:
+            path = s["dir"] / "camera" / "frames" / f"{frame}.jpg"
+        else:
+            path = manager.camera_preview_path
+        if not path or not Path(path).exists():
+            raise HTTPException(404, "No camera preview/frame received yet")
         return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
