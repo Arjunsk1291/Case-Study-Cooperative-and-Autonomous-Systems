@@ -92,6 +92,12 @@ canvas{display:block;margin:0 auto;max-width:100%;}
  </div>
  <div id='cameraStatus' class='label' style='margin-top:8px'>Waiting for camera heartbeat…</div>
 </div>
+<div class='card' id='navPlanCard'>
+ <div class='sectionTitle'>Offline navigation instructions · import compact plan</div>
+ <div class='label'>After you export the sensor log and camera JPEGs, have the route analysed offline. Paste the resulting small CAS-R04 navigation plan here. The main ESP32 stores the plan only; motion remains inhibited until indoor localization and route execution are implemented and field-validated.</div>
+ <textarea id='navPlanJson' rows='5' spellcheck='false' style='box-sizing:border-box;width:100%;margin-top:10px;padding:10px;border-radius:8px;background:#0b0f17;color:#e7edf5;border:1px solid rgba(255,255,255,.15)' placeholder='Paste CAS-R04-NAV-CMD-1 JSON here'></textarea>
+ <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'><button id='navPlanLoad' class='btnTiny'>Send small plan to main ESP32</button><span id='navPlanStatus' class='label'>No plan loaded</span></div>
+</div>
 <div class='card'><div class='sectionTitle'>Indoor scan / route data logger</div>
  <div class='label'>Records sensor snapshots in this browser at the dashboard update rate. Mark physical locations such as A, corridor turn, and B. Download the CSV before closing or refreshing this page.</div>
  <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'>
@@ -144,6 +150,22 @@ $('cameraCapture').onclick=async()=>{
   refreshCameraStatus();
 };
 refreshCameraStatus();setInterval(refreshCameraStatus,1500);
+
+// ---- Import an offline-generated compact route draft. It is never executed by this firmware.
+$('navPlanLoad').onclick=async()=>{
+  const btn=$('navPlanLoad');btn.disabled=true;
+  try{
+    const p=JSON.parse($('navPlanJson').value);
+    if(p.schema!=='CAS-R04-NAV-CMD-1'||p.mode!=='route_pending'||!Array.isArray(p.waypoints)||p.waypoints.length<1||p.waypoints.length>12)throw new Error('Expected CAS-R04-NAV-CMD-1, mode route_pending and 1–12 waypoints');
+    const r=await fetch('/navigation/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    const j=await r.json();if(!r.ok)throw new Error(j.reason||'Main ESP32 rejected plan');
+    $('navPlanStatus').textContent='Plan received by main ESP32 · STORED ONLY · motion disabled';
+  }catch(e){$('navPlanStatus').textContent='Plan not accepted: '+e.message;}
+  btn.disabled=false;
+};
+fetch('/navigation/plan',{cache:'no-store'}).then(r=>r.json()).then(j=>{
+  if(j.received){$('navPlanJson').value=JSON.stringify(j.plan,null,2);$('navPlanStatus').textContent='Plan already stored · STORED ONLY · motion disabled';}
+}).catch(()=>{});
 
 // ---- "Dev" view toggle
 let dev=false;
@@ -507,6 +529,14 @@ static uint8_t gCameraRequestedFrames = 0;
 static uint32_t gCameraLastSeenMs = 0, gCameraStoredImages = 0, gCameraFrameSequence = 0;
 static uint32_t gCameraEventCounter = 0;
 
+// Small offline-generated route package mailbox. This is stored only as a draft;
+// Navigation remains stopped until a validated localization/execution layer exists.
+static portMUX_TYPE gPlanMux = portMUX_INITIALIZER_UNLOCKED;
+static char gNavigationPlanJson[1200] = "";
+static bool gNavigationPlanReceived = false;
+static char gPlanUploadBuffer[1200] = "";
+static size_t gPlanUploadLength = 0;
+
 // ---------------------------------------------------------------------------------------------
 
 // Takes the mutex; creates it on first use (always in setup(), before the server task runs).
@@ -605,6 +635,50 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
     portEXIT_CRITICAL(&gCameraMux);
     req->send(matched ? 200 : 409, "application/json", matched ? "{\"ok\":true}" : "{\"ok\":false}");
   });
+  // Offline navigation plan mailbox: bounded JSON only, never a live motor command.
+  _server->on("/navigation/plan", HTTP_GET, [](AsyncWebServerRequest* req) {
+    char plan[sizeof(gNavigationPlanJson)]; bool received;
+    portENTER_CRITICAL(&gPlanMux);
+    memcpy(plan, gNavigationPlanJson, sizeof(plan)); received = gNavigationPlanReceived;
+    portEXIT_CRITICAL(&gPlanMux);
+    String out = "{\"received\":" + String(received ? "true" : "false") +
+      ",\"execution_enabled\":false,\"reason\":\"indoor_localization_not_validated\",\"plan\":";
+    out += received ? String(plan) : String("null"); out += '}';
+    req->send(200, "application/json", out);
+  }, this);
+  _server->on("/navigation/plan", HTTP_POST,
+    [](AsyncWebServerRequest* req) {
+      // Body is handled incrementally below; this callback is used for empty requests only.
+      if (req->_tempObject) { delete (String*)req->_tempObject; req->_tempObject = nullptr; }
+    }, nullptr,
+    [](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
+      if (total == 0 || total >= sizeof(gPlanUploadBuffer)) {
+        req->send(413, "application/json", "{\"ok\":false,\"reason\":\"plan_too_large_max_1199_bytes\"}"); return;
+      }
+      if (index == 0) gPlanUploadLength = 0;
+      if (index != gPlanUploadLength || index + len > sizeof(gPlanUploadBuffer) - 1) {
+        req->send(400, "application/json", "{\"ok\":false,\"reason\":\"invalid_body_sequence\"}"); return;
+      }
+      memcpy(gPlanUploadBuffer + index, data, len);
+      gPlanUploadLength = index + len;
+      if (gPlanUploadLength != total) return;
+      gPlanUploadBuffer[total] = '\0';
+      String body(gPlanUploadBuffer); body.trim();
+      bool balanced = body.startsWith("{") && body.endsWith("}");
+      const bool schemaOk = body.indexOf("\\"schema\\":\\"CAS-R04-NAV-CMD-1\\"") >= 0;
+      const bool modeOk = body.indexOf("\\"mode\\":\\"route_pending\\"") >= 0;
+      const bool forbidden = body.indexOf("\\"execute\\":true") >= 0 || body.indexOf("\\"motor") >= 0 || body.indexOf("\\"drive") >= 0;
+      uint8_t waypoints = 0; int pos = 0;
+      while ((pos = body.indexOf("\\"id\\":\\"", pos)) >= 0) { ++waypoints; pos += 6; }
+      if (!balanced || !schemaOk || !modeOk || forbidden || waypoints < 1 || waypoints > 12) {
+        req->send(400, "application/json", "{\"ok\":false,\"reason\":\"invalid_schema_or_waypoint_count\"}"); return;
+      }
+      portENTER_CRITICAL(&gPlanMux);
+      strlcpy(gNavigationPlanJson, body.c_str(), sizeof(gNavigationPlanJson));
+      gNavigationPlanReceived = true;
+      portEXIT_CRITICAL(&gPlanMux);
+      req->send(200, "application/json", "{\"ok\":true,\"stored_only\":true,\"execution_enabled\":false}");
+    });
   _server->on("/clock", HTTP_GET, [](AsyncWebServerRequest* req) {
     const uint32_t deviceMs = millis();
     req->send(200, "application/json", String("{\"device_ms\":") + String(deviceMs) + "}");
