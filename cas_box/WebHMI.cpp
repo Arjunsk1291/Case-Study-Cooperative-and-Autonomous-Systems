@@ -83,6 +83,15 @@ canvas{display:block;margin:0 auto;max-width:100%;}
  <div id='invStatus' class='label' style='margin-top:8px'>Investigation idle</div>
  <div class='label' style='margin-top:8px'>Safety and data limits: do not let the rover autonomously spin. This workflow records sensor frames and travel snapshots, not reliable distance or a finished SLAM map. LiDAR scan matching can help estimate relative motion, but it cannot guarantee return to the same place until scan matching/localization is implemented and validated.</div>
 </div>
+<div class='card' id='cameraCard'>
+ <div class='sectionTitle'>R04 camera · event-based image capture</div>
+ <div class='label'>The camera joins CAS-Box-04. Original JPEGs are saved on the camera board's microSD card; the main ESP32 receives only status and capture metadata. The laptop is not part of live operation.</div>
+ <div style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px'>
+  <button id='cameraCapture' class='btnTiny' disabled>Capture 3 JPEG frames</button>
+  <a id='cameraArchive' href='#' target='_blank' rel='noopener' class='btnTiny' style='text-decoration:none;display:inline-block;opacity:.5;pointer-events:none'>Open camera archive</a>
+ </div>
+ <div id='cameraStatus' class='label' style='margin-top:8px'>Waiting for camera heartbeat…</div>
+</div>
 <div class='card'><div class='sectionTitle'>Indoor scan / route data logger</div>
  <div class='label'>Records sensor snapshots in this browser at the dashboard update rate. Mark physical locations such as A, corridor turn, and B. Download the CSV before closing or refreshing this page.</div>
  <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'>
@@ -112,6 +121,29 @@ canvas{display:block;margin:0 auto;max-width:100%;}
 const MAX_SPEED=%MAXSPD%, ENV_MAX_CM=300;
 const $=id=>document.getElementById(id);
 const esc=s=>(''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+// ---- camera status and event capture. The camera stores JPEGs locally on microSD.
+async function refreshCameraStatus(){
+  try{
+    const r=await fetch('/camera/state',{cache:'no-store'});const c=await r.json();
+    const ready=!!c.online&&!!c.camera_ready&&!!c.sd_ready;
+    $('cameraCapture').disabled=!ready;
+    $('cameraStatus').textContent=!c.online?'Camera offline · check power and CAS-Box-04 Wi-Fi':(!c.camera_ready?'Camera sensor not ready':(!c.sd_ready?'Camera microSD unavailable':'Camera ready · '+c.stored_images+' JPEGs stored · IP '+c.ip));
+    const a=$('cameraArchive');
+    if(c.online&&c.ip){a.href='http://'+c.ip+':81/';a.style.opacity='1';a.style.pointerEvents='auto';}
+    else{a.href='#';a.style.opacity='.5';a.style.pointerEvents='none';}
+  }catch(e){$('cameraCapture').disabled=true;$('cameraStatus').textContent='Camera status unavailable';}
+}
+$('cameraCapture').onclick=async()=>{
+  $('cameraCapture').disabled=true;
+  try{
+    const r=await fetch('/camera/capture?frames=3',{method:'POST',cache:'no-store'});
+    const j=await r.json();
+    $('cameraStatus').textContent=r.ok?('Capture requested · event '+j.event_id+' · 3 original JPEGs will be saved on camera microSD'):('Capture rejected · '+(j.reason||'camera not ready'));
+  }catch(e){$('cameraStatus').textContent='Capture request failed · check Wi-Fi';}
+  refreshCameraStatus();
+};
+refreshCameraStatus();setInterval(refreshCameraStatus,1500);
 
 // ---- "Dev" view toggle
 let dev=false;
@@ -465,6 +497,16 @@ static void jsonEscape(String& out, const char* s) {
   }
 }
 
+// Camera node status and one outstanding capture request. JPEG bytes are never handled here.
+static portMUX_TYPE gCameraMux = portMUX_INITIALIZER_UNLOCKED;
+static char gCameraIp[16] = "";
+static char gCameraError[48] = "not_seen";
+static char gCameraEventId[40] = "";
+static bool gCameraReady = false, gCameraSdReady = false, gCameraCapturePending = false;
+static uint8_t gCameraRequestedFrames = 0;
+static uint32_t gCameraLastSeenMs = 0, gCameraStoredImages = 0, gCameraFrameSequence = 0;
+static uint32_t gCameraEventCounter = 0;
+
 // ---------------------------------------------------------------------------------------------
 
 // Takes the mutex; creates it on first use (always in setup(), before the server task runs).
@@ -493,6 +535,74 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
   });
   _server->on("/values", HTTP_GET, [this](AsyncWebServerRequest* req) {
     req->send(200, "application/json", _buildJson());
+  });
+  // Camera link: metadata/control only. JPEG files stay on the AI-Thinker camera microSD.
+  _server->on("/camera/heartbeat", HTTP_GET, [](AsyncWebServerRequest* req) {
+    const bool ready = req->hasParam("ready") && req->getParam("ready")->value() == "1";
+    const bool sdReady = req->hasParam("sd") && req->getParam("sd")->value() == "1";
+    const String ip = req->hasParam("ip") ? req->getParam("ip")->value() : String("");
+    const String err = req->hasParam("err") ? req->getParam("err")->value() : String("none");
+    const uint32_t frames = req->hasParam("frames") ? strtoul(req->getParam("frames")->value().c_str(), nullptr, 10) : 0;
+    const uint32_t seq = req->hasParam("seq") ? strtoul(req->getParam("seq")->value().c_str(), nullptr, 10) : 0;
+    portENTER_CRITICAL(&gCameraMux);
+    gCameraReady = ready; gCameraSdReady = sdReady;
+    if (ip.length() < sizeof(gCameraIp)) strlcpy(gCameraIp, ip.c_str(), sizeof(gCameraIp));
+    strlcpy(gCameraError, err.c_str(), sizeof(gCameraError));
+    gCameraStoredImages = frames; gCameraFrameSequence = seq; gCameraLastSeenMs = millis();
+    portEXIT_CRITICAL(&gCameraMux);
+    req->send(200, "application/json", "{\\"ok\\":true}");
+  });
+  _server->on("/camera/state", HTTP_GET, [](AsyncWebServerRequest* req) {
+    char ip[16], err[48]; bool ready, sd; uint32_t last, frames, seq;
+    portENTER_CRITICAL(&gCameraMux);
+    strlcpy(ip, gCameraIp, sizeof(ip)); strlcpy(err, gCameraError, sizeof(err));
+    ready = gCameraReady; sd = gCameraSdReady; last = gCameraLastSeenMs;
+    frames = gCameraStoredImages; seq = gCameraFrameSequence;
+    portEXIT_CRITICAL(&gCameraMux);
+    const bool online = last != 0 && (uint32_t)(millis() - last) < 5000;
+    String out = "{\\"online\\":" + String(online ? "true" : "false") +
+      ",\\"camera_ready\\":" + String(ready ? "true" : "false") +
+      ",\\"sd_ready\\":" + String(sd ? "true" : "false") +
+      ",\\"ip\\":\\"" + String(ip) + "\\",\\"stored_images\\":" + String(frames) +
+      ",\\"frame_sequence\\":" + String(seq) + ",\\"last_error\\":\\"" + String(err) + "\\"}";
+    req->send(200, "application/json", out);
+  });
+  _server->on("/camera/capture", HTTP_POST, [](AsyncWebServerRequest* req) {
+    char eventId[40]; uint8_t frames = 3; bool online, sd;
+    if (req->hasParam("frames")) frames = (uint8_t)constrain(req->getParam("frames")->value().toInt(), 1, 5);
+    portENTER_CRITICAL(&gCameraMux);
+    online = gCameraLastSeenMs != 0 && (uint32_t)(millis() - gCameraLastSeenMs) < 5000;
+    sd = gCameraSdReady;
+    if (online && sd && !gCameraCapturePending) {
+      ++gCameraEventCounter;
+      snprintf(gCameraEventId, sizeof(gCameraEventId), "R04E_%lu_%lu", (unsigned long)millis(), (unsigned long)gCameraEventCounter);
+      gCameraRequestedFrames = frames; gCameraCapturePending = true;
+    }
+    strlcpy(eventId, gCameraEventId, sizeof(eventId));
+    portEXIT_CRITICAL(&gCameraMux);
+    if (!online || !sd) { req->send(503, "application/json", "{\\"ok\\":false,\\"reason\\":\\"camera_or_microSD_not_ready\\"}"); return; }
+    if (eventId[0] == '\\0') { req->send(409, "application/json", "{\\"ok\\":false,\\"reason\\":\\"capture_already_pending\\"}"); return; }
+    String out = "{\\"ok\\":true,\\"event_id\\":\\"" + String(eventId) + "\\",\\"frames\\":" + String(frames) + "}";
+    req->send(200, "application/json", out);
+  });
+  _server->on("/camera/command", HTTP_GET, [](AsyncWebServerRequest* req) {
+    char eventId[40]; uint8_t frames; bool pending;
+    portENTER_CRITICAL(&gCameraMux);
+    pending = gCameraCapturePending; strlcpy(eventId, gCameraEventId, sizeof(eventId)); frames = gCameraRequestedFrames;
+    portEXIT_CRITICAL(&gCameraMux);
+    if (!pending) { req->send(200, "application/json", "{\\"capture\\":false}"); return; }
+    String out = "{\\"capture\\":true,\\"event_id\\":\\"" + String(eventId) + "\\",\\"frames\\":" + String(frames) + "}";
+    req->send(200, "application/json", out);
+  });
+  _server->on("/camera/ack", HTTP_GET, [](AsyncWebServerRequest* req) {
+    const String ack = req->hasParam("event_id") ? req->getParam("event_id")->value() : String("");
+    bool matched = false;
+    portENTER_CRITICAL(&gCameraMux);
+    if (gCameraCapturePending && ack == gCameraEventId) {
+      gCameraCapturePending = false; gCameraRequestedFrames = 0; gCameraEventId[0] = '\\0'; matched = true;
+    }
+    portEXIT_CRITICAL(&gCameraMux);
+    req->send(matched ? 200 : 409, "application/json", matched ? "{\\"ok\\":true}" : "{\\"ok\\":false}");
   });
   _server->on("/clock", HTTP_GET, [](AsyncWebServerRequest* req) {
     const uint32_t deviceMs = millis();
