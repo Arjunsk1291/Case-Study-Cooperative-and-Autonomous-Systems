@@ -103,7 +103,7 @@ function renderCamera(){
  const c=st?.camera||{};const b=c.board||{};setText("cameraState",c.online?(b.camera_ready?"Camera ready":"Camera heartbeat · init pending"):"Camera offline");
  setText("cameraAge",c.last_heartbeat_age_s===null?"No heartbeat":"heartbeat "+c.last_heartbeat_age_s+"s · last JPEG "+(c.last_frame_age_s===null?"none":c.last_frame_age_s+"s")+" · "+(c.frames_received_total||0)+" frames · "+(c.transfer_errors||0)+" errors");
  setText("cameraConfig",b.board_id?b.board_id+" · "+b.width+"×"+b.height+" JPEG · RSSI "+b.wifi_rssi+" dBm · free heap "+b.free_heap+" B · largest block "+b.largest_free_block+" B · PSRAM "+(b.psram_detected?"yes":"no"):"Awaiting camera heartbeat");
- if(c.last_frame_at&&st?.session?.session_id)$("camera").src="/api/camera/latest?t="+Date.now();
+ if(c.last_frame_at)$("camera").src="/api/camera/latest?t="+Date.now();
  const q=st?.last_vision;setText("visionResult",q?(q.classification||"Vision")+" · detected "+q.detected+" · conf "+(q.confidence??"—")+" · offset "+(q.lateral_offset_normalized??"—")+" · latency "+(q.processing_latency_ms??"—")+" ms · non-actuating":"No CV result yet.");
 }
 let busy=false;
