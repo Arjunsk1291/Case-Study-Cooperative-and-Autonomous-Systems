@@ -157,7 +157,7 @@ def detect_tactile_strip_jpeg(jpeg_bytes: bytes) -> dict[str, Any]:
     data = np.frombuffer(jpeg_bytes, dtype=np.uint8)
     image = cv2.imdecode(data, cv2.IMREAD_COLOR)
     if image is None:
-        return {"available": True, "valid": False, "reason": "JPEG decode failed"}
+        return {"available": True, "valid": False, "classification": "invalid_image", "detected": False, "confidence": 0.0, "reason": "JPEG decode failed", "motion_authorized": False}
     height, width = image.shape[:2]
     y0, y1 = int(height * 0.42), int(height * 0.96)
     roi = image[y0:y1, :]
