@@ -53,6 +53,7 @@
 
 // ---- YOUR KIT ------------------------------------------------------------------------------
 const int BOX_ID = 7;                      // Team B3 / Rover R07 kit number
+#define CAS_BOX_FIRMWARE_VERSION "survey-2026.10.30-1"
 
 // ---- settings --------------------------------------------------------------------------------
 const float MAX_SPEED = 0.5f;             // drive pad maximum; 0.5 = full rover speed (100 % PWM)
@@ -163,6 +164,7 @@ void loop() {
     hmi.showValue("rover.rtt_ms", rover.rttMs());
     hmi.showValue("rover.ok", (double)rover.okCount());
     hmi.showValue("rover.fail", (double)rover.failCount());
+    hmi.showValue("sys.firmware", CAS_BOX_FIRMWARE_VERSION);
     hmi.showValue("sys.heap_kB", ESP.getFreeHeap() / 1024.0);
     hmi.showValue("sys.min_heap_kB", ESP.getMinFreeHeap() / 1024.0);
     hmi.showValue("sys.uptime_s", millis() / 1000.0);
