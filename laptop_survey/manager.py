@@ -547,6 +547,31 @@ class SurveyManager:
             if decision=="capture": self.capture_requests.append({"event_id":rec["event_id"],"frames_remaining":3,"requested_at":rec["timestamp"]})
             return rec
 
+    def camera_online(self):
+        return bool(self.camera_last_heartbeat_mono and (time.monotonic()-self.camera_last_heartbeat_mono) < 5.0)
+
+    def camera_heartbeat(self, body):
+        with self.lock:
+            self.camera_last_heartbeat_at=now_iso()
+            self.camera_last_heartbeat_mono=time.monotonic()
+            self.camera_board_status={
+                "board_id":str(body.get("board_id","AI_THINKER_ESP32CAM_R04")),
+                "firmware":str(body.get("firmware","unknown")),
+                "camera_ready":bool(body.get("camera_ready",False)),
+                "width":body.get("width"),"height":body.get("height"),
+                "jpeg_quality":body.get("jpeg_quality"),"xclk_hz":body.get("xclk_hz"),
+                "psram_detected":body.get("psram_detected"),
+                "free_heap":body.get("free_heap"),"min_free_heap":body.get("min_free_heap"),
+                "largest_free_block":body.get("largest_free_block"),
+                "wifi_rssi":body.get("wifi_rssi"),"wifi_ip":body.get("wifi_ip"),
+                "frame_sequence":body.get("frame_sequence"),"last_error":body.get("last_error"),
+            }
+            if self.session and self.session.get("state")=="active":
+                write_jsonl(self.session["dir"]/"telemetry"/"camera_diagnostics.jsonl",{
+                    "timestamp":self.camera_last_heartbeat_at,**self.camera_board_status
+                })
+            return {"ok":True,"server_time":self.camera_last_heartbeat_at,"session":self.camera_session()}
+
     def camera_session(self):
         with self.lock:
             s=self.session
