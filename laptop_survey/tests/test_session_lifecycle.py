@@ -54,7 +54,8 @@ def fake_payload(seq=10):
             {"name": "sys.heap_kB", "value": "180"},
             {"name": "sys.min_heap_kB", "value": "160"},
             {"name": "wifi.ap_clients", "value": "2"},
-            {"name": "rover.ip", "value": "192.168.17.2"},
+            {"name": "rover.ip", "value": "192.168.14.2"},
+            {"name": "rover.connected", "value": "true"},
             {"name": "rover.voltage_V", "value": "11.5"},
             {"name": "rover.rtt_ms", "value": "90"},
             {"name": "drive.command_l", "value": "0"},
@@ -67,6 +68,8 @@ def fake_payload(seq=10):
 def test_survey_stop_keeps_logging_and_finalize_builds_verified_zip(tmp_path: Path):
     manager = SurveyManager("http://127.0.0.1:1", tmp_path, "test-token")
     manager.read_values = lambda: fake_payload(10)
+    manager.camera_heartbeat({"board_id": "AI_THINKER_ESP32CAM_R04", "firmware": "R04-CAM-1.0.0", "camera_ready": True, "width": 320, "height": 240, "jpeg_quality": 12, "xclk_hz": 20000000, "psram_detected": False, "free_heap": 249544, "min_free_heap": 246372, "largest_free_block": 110580, "wifi_rssi": -45, "wifi_ip": "192.168.14.3", "frame_sequence": 0})
+    assert manager.camera_online() is True
     manager.box_request = lambda method, path, params=None, timeout=0.8: FakeResponse(
         200, {"ok": True, "drive_inhibited": True}
     )
