@@ -152,7 +152,7 @@ def detect_tactile_strip_jpeg(jpeg_bytes: bytes) -> dict[str, Any]:
     try:
         import cv2
     except Exception as exc:
-        return {"available": False, "valid": False, "reason": f"OpenCV unavailable: {exc}"}
+        return {"available": False, "valid": False, "classification": "vision_unavailable", "detected": False, "confidence": 0.0, "reason": f"OpenCV unavailable: {exc}", "motion_authorized": False}
 
     data = np.frombuffer(jpeg_bytes, dtype=np.uint8)
     image = cv2.imdecode(data, cv2.IMREAD_COLOR)
