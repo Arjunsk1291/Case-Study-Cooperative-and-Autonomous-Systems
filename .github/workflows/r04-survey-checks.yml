@@ -100,7 +100,10 @@ jobs:
           - Main ESP32 firmware: esp32:esp32:esp32, ESP32 Arduino core 3.3.1
           - AI-Thinker ESP32-CAM: esp32:esp32:esp32cam, ESP32 Arduino core 3.3.1
           - Laptop backend syntax checks and pytest suite
-          Physical flash, Wi-Fi association, camera image upload and rover operation still require hardware verification.
+          Physical flashing, AP association, microSD writes/downloads and rover operation still require hardware verification.
+          Camera JPEG payloads are stored on the camera microSD; no JPEG payload is sent to the main ESP32.
+          The laptop utility is an offline file packager, not a live collector or robot controller.
+          The imported navigation plan is a RAM-only draft; execution is explicitly disabled.
           EOF
           zip -qr CAS_Box_B3_R04_Upload_Kit.zip CAS_Box_B3_R04_Upload_Kit
       - uses: actions/upload-artifact@v4
