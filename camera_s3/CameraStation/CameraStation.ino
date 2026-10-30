@@ -287,12 +287,10 @@ static void sendHeartbeat() {
 
 static void acknowledgeEvent() {
   if (activeEventId.isEmpty()) return;
-  String path = "/camera/ack?event_id=" + activeEventId;
+  const String path = "/camera/ack?event_id=" + activeEventId;
   boxGet(path);
-  Serial.printf("[capture] event %s complete; %u frames requested/attempted\n",
-                activeEventId.c_str(), (unsigned)0);
-  activeEventId = "";
-  Serial.printf(", saved=%u/%u\\n", (unsigned)activeSavedFrames, (unsigned)activeRequestedFrames);
+  Serial.printf("[capture] event %s complete; saved=%u/%u\n",
+                activeEventId.c_str(), (unsigned)activeSavedFrames, (unsigned)activeRequestedFrames);
   activeEventId = "";
   framesRemaining = 0;
   activeRequestedFrames = activeSavedFrames = 0;
