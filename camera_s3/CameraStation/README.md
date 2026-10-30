@@ -2,7 +2,7 @@
 
 Open CameraStation.ino in Arduino IDE. The sketch uses the confirmed AI-Thinker ESP32-CAM / OV2640 GPIO map directly.
 
-Before compiling, edit camera_user_config.h:
+Before compiling, copy camera_user_config.example.h to camera_user_config.h, then edit the local camera_user_config.h:
 - CAS_CAMERA_LAPTOP_HOST: laptop's IPv4 address while joined to CAS-Box-04.
 - CAS_CAMERA_TOKEN: exactly the same random token exported as CAS_CAMERA_TOKEN in the laptop terminal.
 - SSID/password are already set for R04: CAS-Box-04 / CASbox04.
