@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CAS B3 R07 Survey</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1018;--panel:#151e2b;--line:#293647;--muted:#a0adbd;--txt:#edf3f9;--blue:#60aafc;--green:#48cf9b;--red:#fa666c;--amber:#ffc15b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,Segoe UI,Arial,sans-serif}main{max-width:1200px;margin:auto;padding:18px}
+h1{font-size:21px;margin:0}.sub,.small{color:var(--muted);font-size:12px}.top,.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{padding:5px 10px;border:1px solid var(--line);border-radius:99px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-top:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:14px;min-width:0}
+.s6{grid-column:span 6}.s12{grid-column:span 12}@media(max-width:820px){.s6{grid-column:span 12}}
+h2{font-size:15px;margin:0 0 10px}button,input,select,textarea{font:inherit}button{border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:#202d3d;color:var(--txt);font-weight:650;cursor:pointer}button:disabled{opacity:.38;cursor:not-allowed}
+.primary{background:#174f7c}.good{background:#14553f}.danger{background:#a5313c;color:white}.warn{background:#5b431b}
+input,select,textarea{background:#0b131d;border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:9px;max-width:100%}textarea{width:100%}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.tile{background:#0f1722;border:1px solid var(--line);padding:9px;border-radius:10px}.tile small{display:block;color:var(--muted)}.tile b{overflow-wrap:anywhere}
+.drive{display:grid;grid-template-columns:repeat(3,76px);grid-template-rows:repeat(3,62px);gap:8px;justify-content:center;margin:12px auto}.drive button{font-size:22px;touch-action:none;user-select:none}.drive .active{outline:3px solid var(--blue)}
+#camera{width:100%;max-height:350px;object-fit:contain;background:#070b11;border-radius:10px}.prompt{border:1px solid #765d2b;background:#3a2e19;border-radius:10px;padding:12px;margin-top:8px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:3px;font-size:12px}.kv div{padding:4px;border-bottom:1px solid #253244;overflow-wrap:anywhere}
+.scroll{max-height:180px;overflow:auto;white-space:pre-wrap}.hidden{display:none!important}.success{color:#6de0b0}.error{color:#ff898d}
+</style></head><body><main>
+<div class="top"><div><h1>CAS Box B3 / R07 — Survey Console</h1><div class="sub">Manual Block B → Block H · laptop-owned logging</div></div><div class="row"><span class="badge" id="connection">Connecting…</span><span class="badge" id="sessionState">No session</span></div></div>
+<div class="grid">
+<section class="card s12"><h2>Safety controls</h2><div class="row"><button class="danger" id="stopRover">STOP ROVER / SAFETY LATCH</button><button class="good" id="enableManual" disabled>Enable manual driving</button><span class="small" id="safetyText">Drive latched until survey starts and operator enables manual drive.</span></div><p class="small">Laptop stop is a software command over Wi-Fi, not a physical mushroom E-stop. Keep a physical stop/power disconnect accessible. Camera is not involved in this stop path.</p></section>
+<section class="card s6"><h2>Investigation lifecycle</h2><div class="row"><label class="small">Operator <input id="operator" maxlength="80" placeholder="Initials"></label></div><textarea id="sessionNotes" rows="2" placeholder="Survey notes"></textarea><div class="row" style="margin-top:8px"><button class="primary" id="startSession">Start Investigation</button><button id="capture" disabled>Investigation Capture</button></div><p class="small" id="sessionInfo">Starting a survey latches the rover stopped. No movement occurs until manual drive is explicitly enabled.</p><div class="tiles"><div class="tile"><small>Session ID</small><b id="sessionId">—</b></div><div class="tile"><small>Elapsed</small><b id="elapsed">—</b></div><div class="tile"><small>Sensor samples</small><b id="sampleCount">0</b></div><div class="tile"><small>Camera images</small><b id="imageCount">0</b></div></div></section>
+<section class="card s6"><h2>Stop investigation & export</h2><p class="small">Only this action ends logging. Stop Rover alone leaves investigation logging active. Camera failure does not block finalization.</p><div class="row"><button class="danger" id="finalize" disabled>Stop Investigation &amp; Finalize Dataset</button><a id="download" class="hidden" href="#">Download Survey ZIP</a></div><p class="small" id="finalStatus">No dataset finalized.</p></section>
+<section class="card s6"><h2>Manual drive — hold direction</h2><p class="small">Command limited to ±0.25; release sends zero. RoverLink retains its own 500 ms deadman.</p><div class="drive" id="drivePad"><span></span><button data-drive="forward">▲</button><span></span><button data-drive="left">◀</button><button class="danger" data-drive="stop">■</button><button data-drive="right">▶</button><span></span><button data-drive="backward">▼</button><span></span></div><div class="row"><label class="small">Speed <input id="speed" type="range" min="0.05" max="0.25" step="0.025" value="0.12"></label><b id="speedValue">0.12</b></div><p class="small" id="driveStatus">Manual drive disabled.</p></section>
+<section class="card s6"><h2>Live sensor & system health</h2><div class="tiles"><div class="tile"><small>Rover link</small><b id="roverLink">—</b></div><div class="tile"><small>LiDAR</small><b id="lidarState">—</b></div><div class="tile"><small>IMU</small><b id="imuState">—</b></div><div class="tile"><small>GPS</small><b id="gpsState">—</b></div><div class="tile"><small>Ultrasonic fresh</small><b id="usState">—</b></div><div class="tile"><small>LiDAR age</small><b id="lidarAge">—</b></div><div class="tile"><small>Min heap</small><b id="heapState">—</b></div><div class="tile"><small>Box receive age</small><b id="boxAge">—</b></div></div><div id="sensorNotes" class="small">No live snapshot.</div></section>
+<section class="card s6"><h2>Camera · ESP32-S3 to laptop</h2><div class="row"><span class="badge" id="cameraState">Waiting</span><span class="small" id="cameraAge">No frames yet</span></div><img id="camera" alt="Latest camera image will appear here"><p id="visionResult" class="small">Classical tactile-strip candidate analysis is observational only; no steering.</p><p class="small">Camera must join CAS-Box-07 and POST JPEG directly to laptop. Its exact board/pin map is not in this repository.</p></section>
+<section class="card s6"><h2>Route segments</h2><div class="row"><input id="segmentName" value="Part B" placeholder="Segment name"><button id="segmentStart" disabled>Start new</button><button id="segmentEnd" disabled>End active</button></div><div class="row" style="margin-top:8px"><select id="segmentSelect"></select><input id="segmentRename" placeholder="New name"><button id="segmentRenameBtn" disabled>Rename</button><button id="segmentSplit" disabled>Split</button></div><div class="row" style="margin-top:8px"><select id="mergeA"></select><select id="mergeB"></select><button id="segmentMerge" disabled>Merge</button></div><div id="segments" class="scroll small">No segments.</div></section>
+<section class="card s6"><h2>Environment annotation</h2><div class="row"><select id="objectType"><option value="">Object</option><option>pillar</option><option>wall</option><option>column</option><option>pedestrian</option><option>drain</option><option>store</option><option>ramp</option><option>steps</option><option>other</option></select><select id="objectSide"><option value="">Side</option><option>left</option><option>right</option><option>ahead</option><option>behind</option><option>both</option><option>unknown</option></select></div><div class="row" style="margin-top:7px"><select id="opposite"><option value="">Opposite context</option><option>wall</option><option>open area</option><option>another object</option><option>unknown</option></select><select id="pillarReliable"><option value="">Pillar count reliable?</option><option value="yes">Yes</option><option value="no">No</option><option value="unknown">Unknown</option></select></div><p class="small">Tags</p><div class="tiles" id="tagList"></div><textarea id="annotationNotes" rows="2" placeholder="Observed condition / decision"></textarea><div class="row"><label class="small"><input type="checkbox" id="visionReview"> Flag for vision review</label><button id="saveAnnotation" disabled>Save annotation</button></div></section>
+<section class="card s6"><h2>Possible wall prompt</h2><div id="wallPrompt" class="small">No possible wall prompt.</div><div class="row"><button id="wallApprove" disabled>Approve (record only)</button><button id="wallIgnore" disabled>Ignore</button><button id="wallCapture" disabled>Investigate / capture</button></div><p class="small">Wall-following motion remains disabled until physically calibrated and tested. Approving records operator intent only.</p><hr><h2>Open-area / centreline suggestion</h2><div id="centrelinePrompt" class="small">No suggestion.</div><div class="row"><button id="centreConfirm" disabled>Confirm direction (metadata)</button><button id="centreReject" disabled>Reject</button><button id="centreCapture" disabled>Capture</button><button id="centreManual" disabled>Continue manually</button></div></section>
+<section class="card s12"><h2>Latest telemetry detail</h2><div id="liveTelemetry" class="kv"><div class="small">Waiting</div><div>—</div></div><p class="small">Sensors are not hardware-synchronized. Device timestamps are ESP32 millis since boot; laptop UTC and monotonic receive times are stored separately. 300 cm ultrasonic may indicate no echo/out of range.</p></section>
+</div></main>
+<script>
+const $=id=>document.getElementById(id);let st=null,driveTimer=null,driveVector=null,activeBtn=null;
+const tags=[["tactile_guidance_visible","Strip visible"],["tactile_guidance_partial","Strip partial"],["tactile_guidance_missing","Strip missing"],["tactile_guidance_junction","Strip junction"],["open_paved_area","Open paved area"],["possible_wall_left","Wall left"],["possible_wall_right","Wall right"],["narrow_passage","Narrow passage"],["pillar_or_column","Pillar / column"],["obstacle","Obstacle"],["cobblestone_rough_paving","Cobblestone"],["tile_surface_transition","Tile transition"],["ramp","Ramp"],["steps","Steps"],["drainage_feature","Drainage"],["pedestrian_present","Pedestrian"],["store_or_landmark","Store / landmark"],["unknown_needs_review","Unknown / review"],["wet_surface","Wet surface"],["raised_threshold","Raised threshold"],["tactile_warning_dots","Warning dots"],["covered_colonnade","Colonnade"]];
+$("tagList").innerHTML=tags.map(x=>'<label class="tile"><input type="checkbox" value="'+x[0]+'"> '+x[1]+'</label>').join("");
+function call(path,body){return fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})}).then(async r=>{let j={};try{j=await r.json()}catch{}if(!r.ok)throw Error(j.detail||j.message||("HTTP "+r.status));return j;});}
+function setText(id,v){$(id).textContent=v===undefined||v===null?"—":String(v);}
+function age(ms){return ms===undefined||ms===null||ms<0?"never":ms<1000?ms+" ms":(ms/1000).toFixed(1)+" s";}
+function elapsed(ms){let x=Math.floor((ms||0)/1000);return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0");}
+function err(e){setText("sessionInfo",e.message||String(e));$("sessionInfo").className="small error";}
+function info(s){setText("sessionInfo",s);$("sessionInfo").className="small success";}
+function active(){return !!(st&&st.session_active);}
+function postAction(path,body){return async()=>{try{await call(path,body);await poll();}catch(e){err(e);}}}
+function render(){
+ if(!st)return;
+ const s=st.session,p=st.latest||{},x=p.sensors||{},v={};(p.values||[]).forEach(z=>v[z.name]=z.value);
+ setText("connection",st.box_online?"Box online":"Box offline");setText("sessionState",s?"Session "+s.state:"No session");
+ setText("sessionId",s?s.session_id:"—");setText("sampleCount",s?s.samples:0);setText("imageCount",s?s.images:0);
+ setText("elapsed",s?elapsed(Date.now()-Date.parse(s.started_at)):"—");
+ setText("boxAge",st.box_last_receive_at?age(Date.now()-Date.parse(st.box_last_receive_at)):"—");
+ setText("safetyText",st.estop_latched?"STOP LATCHED · drive disabled":st.drive_enabled?"Manual drive enabled":"Drive disabled");
+ setText("driveStatus",st.estop_latched?"Drive interlock latched":st.drive_enabled?"Manual drive enabled":"Manual drive disabled");
+ $("startSession").disabled=active()||!st.box_online;$("enableManual").disabled=!active()||!st.estop_latched;
+ $("capture").disabled=!active();$("finalize").disabled=!active();$("saveAnnotation").disabled=!active();
+ $("stopRover").disabled=false;
+ setText("roverLink",v["rover.ip"]||"searching");
+ const L=x.lidar||{},I=x.imu||{},G=x.gps||{},U=x.usValid||[];
+ setText("lidarState",L.ok?L.pps+" pkt/s · CRC "+L.crc+"%":"unhealthy");
+ setText("imuState",I.ok?"yaw "+I.yaw+"° · cal "+(I.cal||[]).join("/"):"unavailable");
+ setText("gpsState",G.fix?G.sats+" sats · HDOP "+G.hdop:"no fix");setText("usState",U.filter(Boolean).length+"/5 fresh");
+ setText("lidarAge",age(L.age_ms));setText("heapState",v["sys.min_heap_kB"]?v["sys.min_heap_kB"]+" kB":"—");
+ setText("sensorNotes","Box state: "+(p.state||"—")+" · seq "+(x.snapshot_seq??"—")+" · device ms "+(x.snapshot_device_ms??"—")+" · IMU age "+age(I.age_ms)+" · GPS age "+age(G.age_ms));
+ const rows=[["Drive mode",v["nav.mode"]],["Command L/R",(v["drive.command_l"]||"—")+" / "+(v["drive.command_r"]||"—")],
+ ["LiDAR valid bins",(L.d||[]).filter(n=>n>0).length+"/90"],["Ultrasonic cm",(x.us||[]).join(" / ")],
+ ["IMU accel",(I.accel_m_s2||[]).join(", ")],["IMU gyro",(I.gyro_rad_s||[]).join(", ")],["IMU mag",(I.mag_uT||[]).join(", ")],
+ ["GPS lat/lon",G.fix?G.lat+", "+G.lon:"no fix"],["GPS altitude",G.altitude_valid?G.altitude_m+" m":"unavailable"],
+ ["GPS speed",G.speed_valid?G.speed_kmph+" km/h":"unavailable"],["GPS course",G.course_valid?G.course_deg+"°":"unavailable"],
+ ["Loop avg/max ms",p.cycle?p.cycle.avg+" / "+p.cycle.max:"—"]];
+ $("liveTelemetry").innerHTML=rows.map(z=>'<div class="small">'+z[0]+'</div><div>'+(z[1]??"—")+'</div>').join("");
+ if(s&&s.state==="ready"){ $("download").href=s.download_url;$("download").classList.remove("hidden");setText("finalStatus","ZIP validated · "+s.archive_bytes+" bytes · "+s.samples+" samples · "+s.images+" images");$("finalStatus").className="small success";}
+ else{$("download").classList.add("hidden");if(s&&["finalizing"].includes(s.state))setText("finalStatus","Finalizing: stopping, flushing, checksumming and validating ZIP…");
+ else if(s&&["finalize_error","storage_error"].includes(s.state)){setText("finalStatus","ERROR: "+s.error+" Raw files are retained.");$("finalStatus").className="small error";}else setText("finalStatus","No validated ZIP yet.");}
+ renderSegments();renderPrompts();renderCamera();
+ if(s)info("State: "+s.state+" · sensor samples "+s.samples+" · camera images "+s.images+(s.error?" · "+s.error:""));
+}
+function renderSegments(){
+ const arr=st?.session?.segments||[];const opts=arr.map(q=>'<option value="'+q.segment_id+'">'+q.name+" · "+q.status+'</option>').join("");
+ ["segmentSelect","mergeA","mergeB"].forEach(id=>$(id).innerHTML=opts);
+ setText("segments",arr.map(q=>q.name+" · "+q.status+" · "+q.start_at+" → "+(q.end_at||"active")).join("\n")||"No segments yet.");
+ ["segmentStart","segmentEnd","segmentRenameBtn","segmentSplit","segmentMerge"].forEach(id=>$(id).disabled=!active());
+}
+function renderPrompts(){
+ const w=st?.pending_wall_prompt;setText("wallPrompt",w?w.message+" Side: "+w.side+" · confidence "+w.confidence+" · "+JSON.stringify(w.evidence):"No possible wall prompt.");
+ ["wallApprove","wallIgnore","wallCapture"].forEach(id=>$(id).disabled=!active()||!w);
+ const c=st?.centreline_suggestion;setText("centrelinePrompt",c?(c.message||c.kind)+" · confidence "+(c.confidence??"unknown")+" · "+JSON.stringify(c):"No suggestion.");
+ ["centreConfirm","centreReject","centreCapture","centreManual"].forEach(id=>$(id).disabled=!active()||!c);
+}
+function renderCamera(){
+ const c=st?.camera||{};setText("cameraState",c.online?"Camera online":"Camera offline");
+ setText("cameraAge",c.last_frame_age_s===null?"No frames":"last "+c.last_frame_age_s+"s · "+c.frames_received_total+" total · "+c.transfer_errors+" errors");
+ if(c.last_frame_at&&st?.session?.session_id)$("camera").src="/api/camera/latest?t="+Date.now();
+ const q=st?.last_vision;setText("visionResult",q?(q.classification||"Vision")+" · detected "+q.detected+" · conf "+(q.confidence??"—")+" · offset "+(q.lateral_offset_normalized??"—")+" · latency "+(q.processing_latency_ms??"—")+" ms · non-actuating":"No CV result yet.");
+}
+let busy=false;
+async function poll(){if(busy)return;busy=true;try{const r=await fetch("/api/status",{cache:"no-store"});if(!r.ok)throw Error("Survey service offline");st=await r.json();render();}catch(e){setText("connection","Service offline");}finally{busy=false;}}
+$("startSession").onclick=async()=>{try{await call("/api/session/start",{operator:$("operator").value,notes:$("sessionNotes").value});info("Started. Rover remains stopped.");await poll();}catch(e){err(e);}};
+$("enableManual").onclick=async()=>{try{await call("/api/session/enable-manual",{});info("Manual drive enabled. No motion until a key is held.");await poll();}catch(e){err(e);}};
+$("stopRover").onclick=async()=>{stopPad();try{const r=await call("/api/session/stop-rover",{reason:"operator_stop_button"});if(!r.ok)throw Error(r.message);info("STOP LATCHED. Investigation logging continues.");await poll();}catch(e){err(e);}};
+$("capture").onclick=async()=>{try{const note=prompt("Capture note (optional):","")||"";const r=await call("/api/capture",{notes:note});info("Capture event "+r.event_id+" recorded; requested camera burst.");await poll();}catch(e){err(e);}};
+$("finalize").onclick=async()=>{if(!confirm("Stop the rover, end logging and finalize the survey ZIP?"))return;stopPad();$("finalize").disabled=true;try{await call("/api/session/finalize",{});await poll();}catch(e){setText("finalStatus","Finalization failed: "+e.message+" Raw records retained.");$("finalStatus").className="small error";await poll();}};
+const dirs={forward:[1,1],backward:[-1,-1],left:[-1,1],right:[1,-1]};
+async function sendDrive(v){try{await call("/api/drive",{left:v[0],right:v[1]});}catch(e){setText("driveStatus",e.message);stopPad(false);}}
+function stopPad(sendZero=true){if(driveTimer){clearInterval(driveTimer);driveTimer=null;}driveVector=null;if(activeBtn){activeBtn.classList.remove("active");activeBtn=null;}if(sendZero&&st?.drive_enabled)call("/api/drive",{left:0,right:0}).catch(()=>{});}
+document.querySelectorAll("#drivePad button").forEach(b=>{
+ b.addEventListener("pointerdown",e=>{e.preventDefault();if(b.dataset.drive==="stop"){stopPad();$("stopRover").click();return;}if(!st?.drive_enabled||st.estop_latched)return;stopPad();b.setPointerCapture(e.pointerId);activeBtn=b;b.classList.add("active");const s=Number($("speed").value),v=dirs[b.dataset.drive];driveVector=[v[0]*s,v[1]*s];sendDrive(driveVector);driveTimer=setInterval(()=>{if(driveVector)sendDrive(driveVector);},140);});
+ ["pointerup","pointercancel","lostpointercapture"].forEach(ev=>b.addEventListener(ev,()=>{if(activeBtn===b)stopPad();}));
+});
+window.addEventListener("blur",()=>stopPad());document.addEventListener("visibilitychange",()=>{if(document.hidden)stopPad();});
+$("speed").oninput=()=>setText("speedValue",Number($("speed").value).toFixed(3));
+$("segmentStart").onclick=()=>postAction("/api/segments/action",{action:"start",name:$("segmentName").value});
+async function postAction(path,b){try{await call(path,b);await poll();}catch(e){err(e);}}
+$("segmentEnd").onclick=()=>postAction("/api/segments/action",{action:"end"});
+$("segmentRenameBtn").onclick=()=>postAction("/api/segments/action",{action:"rename",segment_id:$("segmentSelect").value,name:$("segmentRename").value});
+$("segmentSplit").onclick=()=>postAction("/api/segments/action",{action:"split",name:$("segmentName").value});
+$("segmentMerge").onclick=()=>postAction("/api/segments/action",{action:"merge",segment_ids:[$("mergeA").value,$("mergeB").value]});
+$("saveAnnotation").onclick=()=>postAction("/api/annotations",{
+ tags:[...document.querySelectorAll("#tagList input:checked")].map(x=>x.value),
+ object_type:$("objectType").value||null,object_side:$("objectSide").value||null,
+ opposite_context:$("opposite").value||null,pillar_count_reliable:$("pillarReliable").value||null,
+ vision_review_requested:$("visionReview").checked,notes:$("annotationNotes").value});
+$("wallApprove").onclick=()=>postAction("/api/wall/decision",{decision:"approve"});
+$("wallIgnore").onclick=()=>postAction("/api/wall/decision",{decision:"ignore"});
+$("wallCapture").onclick=()=>postAction("/api/wall/decision",{decision:"capture"});
+$("centreConfirm").onclick=()=>postAction("/api/centreline/decision",{decision:"confirm"});
+$("centreReject").onclick=()=>postAction("/api/centreline/decision",{decision:"reject"});
+$("centreCapture").onclick=()=>postAction("/api/centreline/decision",{decision:"capture"});
+$("centreManual").onclick=()=>postAction("/api/centreline/decision",{decision:"manual_continue"});
+poll();setInterval(poll,500);
+</script></body></html>
