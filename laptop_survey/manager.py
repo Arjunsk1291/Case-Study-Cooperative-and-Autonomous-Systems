@@ -75,6 +75,9 @@ class SurveyManager:
         self.camera_last_frame_mono=0.0
         self.last_vision=None
         self.capture_requests=[]
+        self.camera_accepting=True
+        self.camera_uploads_inflight=0
+        self.camera_upload_condition=threading.Condition(self.lock)
         self._mark_interrupted_sessions()
 
     def start_worker(self):
@@ -341,6 +344,7 @@ class SurveyManager:
           "box_clock":"millis since boot; sample_device_ms","laptop_wall":"UTC","laptop_monotonic":"monotonic_ns",
           "clock_sync_samples":[],"warning":"Box millis is not UTC. Per-sensor samples have independent source ages and are not hardware-synchronized."},indent=2))
         self.session=session; self.estop_latched=True; self.drive_enabled=False
+        self.camera_accepting=True; self.camera_uploads_inflight=0
         self.last_snapshot_seq=None; self.pending_prompt=None; self.open_area_suggestion=None
         self.last_wall_key=None; self.last_wall_prompt_mono=0; self.capture_requests=[]
         self._new_segment("Part A")
@@ -538,9 +542,23 @@ class SurveyManager:
     def camera_session(self):
         with self.lock:
             s=self.session
-            if not s or s["state"]!="active": return {"active":False,"session_id":None,"capture":None}
+            if not s or s["state"]!="active" or not self.camera_accepting:
+                return {"active":False,"session_id":None,"capture":None}
             cap=self.capture_requests[0] if self.capture_requests else None
             return {"active":True,"session_id":s["id"],"capture":cap}
+
+    def begin_camera_upload(self, session_id):
+        with self.camera_upload_condition:
+            if (not self.camera_accepting or not self.session or
+                self.session.get("state")!="active" or self.session.get("id")!=session_id):
+                return False
+            self.camera_uploads_inflight += 1
+            return True
+
+    def end_camera_upload(self):
+        with self.camera_upload_condition:
+            self.camera_uploads_inflight=max(0,self.camera_uploads_inflight-1)
+            self.camera_upload_condition.notify_all()
 
     def camera_saved(self,meta,path):
         with self.lock:
@@ -586,11 +604,30 @@ class SurveyManager:
     def finalize(self):
         # Stop rover first; camera is not awaited.
         stop=self.stop_rover("investigation_finalize")
-        with self.lock:
+        with self.camera_upload_condition:
             s=self.session
             if not s: raise RuntimeError("No investigation to finalize")
             if s["state"]=="ready": return self.status()
             if s["state"] not in {"active","finalize_error","storage_error"}: raise RuntimeError(f"Cannot finalize from {s['state']}")
+            self.camera_accepting=False
+            deadline=time.monotonic()+2.5
+            while self.camera_uploads_inflight>0 and time.monotonic()<deadline:
+                self.camera_upload_condition.wait(timeout=max(0.01,deadline-time.monotonic()))
+            pending_uploads=self.camera_uploads_inflight
+            s["quality"]["camera_uploads_inflight_at_finalize"]=pending_uploads
+            if pending_uploads:
+                s["quality"]["camera_uploads_not_completed_at_finalize"]=pending_uploads
+                write_jsonl(s["dir"]/"telemetry"/"connection_events.jsonl",{
+                  "event_id":str(uuid.uuid4()),"type":"CAMERA_UPLOAD_DRAIN_TIMEOUT","timestamp":now_iso(),
+                  "inflight_uploads":pending_uploads,"note":"Upload not committed before finalization timeout."})
+            if self.capture_requests:
+                s["quality"]["camera_capture_bursts_incomplete"]=len(self.capture_requests)
+                for pending in self.capture_requests:
+                    write_jsonl(s["dir"]/"annotations"/"investigation_events.jsonl",{
+                      "event_id":str(uuid.uuid4()),"type":"CAMERA_CAPTURE_INCOMPLETE_AT_FINALIZE",
+                      "timestamp":now_iso(),"capture_event_id":pending.get("event_id"),
+                      "frames_remaining":pending.get("frames_remaining")})
+                self.capture_requests=[]
             s["state"]="finalizing"; s["finalize_stop_acknowledged"]=stop["ok"]
             stamp=now_iso()
             write_jsonl(s["dir"]/"annotations"/"investigation_events.jsonl",{
