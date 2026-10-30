@@ -117,11 +117,6 @@ void loop() {
   if (safetyStopped) {
     wasAuto = false;
     l = r = 0;
-    hmi.setStateText("SAFETY STOP LATCHED · drive commands blocked");
-    hmi.showValue("nav.mode", "SAFETY_STOP");
-    hmi.showValue("nav.follow_side", navigation.sideName());
-    hmi.showValue("nav.command_l", 0.0);
-    hmi.showValue("nav.command_r", 0.0);
   } else if (autoRequested) {
     if (!wasAuto) navigation.reset();
     wasAuto = true;
@@ -161,7 +156,8 @@ void loop() {
   }
   if (now - lastUi >= 500) {  // status line + values in the "Dev" view
     lastUi = now;
-    if (!hmi.autonomyEnabled()) hmi.setStateText(rover.statusText());
+    if (hmi.driveInhibited()) hmi.setStateText("SAFETY STOP LATCHED · drive commands blocked");
+    else if (!hmi.autonomyEnabled()) hmi.setStateText(rover.statusText());
     hmi.showValue("rover.ip", rover.ip().toString());
     hmi.showValue("rover.voltage_V", rover.voltage());
     hmi.showValue("rover.rtt_ms", rover.rttMs());
