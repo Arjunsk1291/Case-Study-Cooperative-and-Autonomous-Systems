@@ -600,7 +600,7 @@ class SurveyManager:
             self.camera_preview_path=Path(path)
             self.camera_last_frame_at=meta["laptop_received_at"]
             self.camera_last_frame_mono=time.monotonic()
-            return {"ok":True,"frame_id":meta["frame_id"]}
+            return {"ok":True,"frame_id":meta.get("frame_id")}
 
     def camera_saved(self,meta,path):
         with self.lock:
