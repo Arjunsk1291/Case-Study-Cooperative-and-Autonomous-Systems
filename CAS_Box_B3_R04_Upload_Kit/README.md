@@ -6,7 +6,7 @@ This branch contains the **R04 manual survey implementation** alongside the exis
 
 - Main ESP32 box controller: cas_box/cas_box.ino, with BOX_ID = 4.
 - AI-Thinker ESP32-CAM / OV2640: camera_s3/CameraStation/CameraStation.ino.
-- Laptop survey receiver and Web HMI: laptop_survey/app.py.
+- Phone Web HMI and IndexedDB recorder: served by the main ESP32.
 
 ## Quick links
 
@@ -18,9 +18,9 @@ This branch contains the **R04 manual survey implementation** alongside the exis
 
 ## R04 network path
 
-The main ESP32 starts CAS-Box-04 (password CASbox04) at 192.168.14.1. The R04 rover, laptop,
-and camera join that AP. The laptop investigation service persistently records telemetry and
-camera JPEGs during the investigation; the main ESP32 remains the rover controller and safety authority.
+The main ESP32 starts CAS-Box-04 (password CASbox04) at 192.168.14.1. The R04 rover and camera
+join that AP, and the phone joins it for the dashboard. The phone persistently records telemetry
+and camera JPEGs during the investigation; the main ESP32 remains the rover controller and safety authority.
 
 The Web HMI waits for three independent readiness states: box telemetry online, rover connected over RoverLink, and AI-Thinker camera heartbeat/camera-ready. It then enables Start Investigation. The rover is initially stopped, and manual driving requires explicit enable.
 
