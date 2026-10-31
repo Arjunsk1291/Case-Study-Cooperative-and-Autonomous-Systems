@@ -5,8 +5,8 @@
  * Camera joins CAS-Box-04 as a Wi-Fi station. The main ESP32 is the only live hub;
  * it requests and relays bounded JPEG snapshots to the phone. The laptop is offline-only.
  *
- * Idle: 1 FPS preview to laptop.
- * Investigation active: 2 FPS JPEG survey upload, plus camera heartbeat.
+ * The phone requests individual snapshots through the main ESP32. No laptop upload
+ * or continuous camera upload runs on this board.
  *
  * Low-RAM configuration based on the measured board diagnostics:
  * QVGA 320x240, JPEG quality 12, 20 MHz XCLK, one frame buffer in internal DRAM.
@@ -21,8 +21,8 @@
 #include <esp_heap_caps.h>
 #include "camera_user_config.h"
 
-#if !defined(CAS_CAMERA_LAPTOP_HOST) || !defined(CAS_CAMERA_TOKEN)
-#error "Set CAS_CAMERA_LAPTOP_HOST and CAS_CAMERA_TOKEN in camera_user_config.h."
+#if !defined(CAS_BOX_IP)
+#error "Set CAS_BOX_IP in camera_user_config.h."
 #endif
 
 // AI-Thinker ESP32-CAM / OV2640 wiring — do not reuse camera GPIOs.
@@ -43,20 +43,27 @@
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
 
-static constexpr uint16_t LAPTOP_PORT = 8000;
 static constexpr uint32_t WIFI_RETRY_MS = 5000;
 static constexpr uint32_t HEARTBEAT_MS = 1000;
-static constexpr uint32_t SESSION_POLL_MS = 750;
-static constexpr uint32_t PREVIEW_INTERVAL_MS = 1000; // 1 FPS while no survey is running
-static constexpr uint32_t SURVEY_INTERVAL_MS = 500;   // 2 FPS during an investigation
-static constexpr uint32_t HTTP_TIMEOUT_MS = 2500;
 static constexpr size_t MAX_JPEG_BYTES = 300 * 1024;
 static WebServer cameraServer(80);
 static bool cameraReady = false;
 
-static String baseUrl() {
-  return String("http://") + CAS_CAMERA_LAPTOP_HOST + ":" + String(LAPTOP_PORT);
-}
+// camera_fb_t is normal RAM. WebServer::send_P() expects PROGMEM and corrupts
+// RAM JPEGs; use the stream overload with an explicit byte count instead.
+class FrameBufferStream : public Stream {
+public:
+  FrameBufferStream(const uint8_t* data, size_t length) : _data(data), _length(length) {}
+  int available() override { return _position < _length ? (int)(_length - _position) : 0; }
+  int read() override { return _position < _length ? _data[_position++] : -1; }
+  int peek() override { return _position < _length ? _data[_position] : -1; }
+  size_t write(uint8_t) override { return 0; }
+  void flush() override {}
+private:
+  const uint8_t* _data;
+  size_t _length;
+  size_t _position = 0;
+};
 
 static void cameraSnapshot() {
   camera_fb_t* fb = esp_camera_fb_get();
@@ -67,7 +74,8 @@ static void cameraSnapshot() {
   }
   cameraServer.sendHeader("X-Camera-Board-Id", CAS_CAMERA_BOARD_ID);
   cameraServer.sendHeader("X-Frame-Sequence", String(millis()));
-  cameraServer.send_P(200, "image/jpeg", (const char*)fb->buf, fb->len);
+  FrameBufferStream stream(fb->buf, fb->len);
+  cameraServer.send(200, "image/jpeg", stream, fb->len);
   esp_camera_fb_return(fb);
 }
 
@@ -86,6 +94,7 @@ static void registerWithMainBox() {
   if (http.begin(url)) { http.GET(); http.end(); }
 }
 
+/* Legacy laptop JSON/upload helpers removed: camera is a snapshot server only.
 static String jsonString(const String& body, const char* key) {
   const String needle = String("\"") + key + "\":";
   int p = body.indexOf(needle);
@@ -115,6 +124,8 @@ static bool jsonBool(const String& body, const char* key) {
   return body.startsWith("true", p);
 }
 
+*/
+
 static bool connectBox() {
   if (WiFi.status() == WL_CONNECTED) return true;
   WiFi.mode(WIFI_STA);
@@ -127,8 +138,8 @@ static bool connectBox() {
     delay(150); // camera board only; main ESP32/motor loop is unaffected
   }
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("[wifi] connected to %s | camera IP %s | laptop %s\n",
-                  CAS_BOX_SSID, WiFi.localIP().toString().c_str(), baseUrl().c_str());
+    Serial.printf("[wifi] connected to %s | camera IP %s | box %s\n",
+                  CAS_BOX_SSID, WiFi.localIP().toString().c_str(), CAS_BOX_IP);
     return true;
   }
   Serial.printf("[wifi] cannot join %s; retrying in %lu ms\n",
@@ -136,6 +147,7 @@ static bool connectBox() {
   return false;
 }
 
+/* Removed legacy laptop heartbeat/session/JPEG upload path.
 static bool postHeartbeat(bool cameraReady, const char* lastError, uint32_t frameSeq) {
   if (WiFi.status() != WL_CONNECTED) return false;
 
@@ -240,6 +252,8 @@ static bool postJpeg(camera_fb_t* fb, bool preview, const String& sessionId,
   return code == 200;
 }
 
+*/
+
 static bool initCamera() {
   camera_config_t config = {};
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -264,9 +278,10 @@ static bool initCamera() {
   config.pixel_format = PIXFORMAT_JPEG;
   config.frame_size = FRAMESIZE_QVGA;
   config.jpeg_quality = 12;
-  config.fb_count = 1;
-  config.fb_location = CAMERA_FB_IN_DRAM;
-  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+  const bool hasPsram = psramFound();
+  config.fb_count = hasPsram ? 2 : 1;
+  config.fb_location = hasPsram ? CAMERA_FB_IN_PSRAM : CAMERA_FB_IN_DRAM;
+  config.grab_mode = hasPsram ? CAMERA_GRAB_LATEST : CAMERA_GRAB_WHEN_EMPTY;
 
   const esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
@@ -277,6 +292,15 @@ static bool initCamera() {
   if (sensor) {
     sensor->set_framesize(sensor, FRAMESIZE_QVGA);
     sensor->set_quality(sensor, 12);
+    sensor->set_exposure_ctrl(sensor, 1);
+    sensor->set_gain_ctrl(sensor, 1);
+    sensor->set_aec2(sensor, 1);
+  }
+  // Discard initial frames while exposure and gain settle.
+  for (uint8_t i = 0; i < 3; ++i) {
+    camera_fb_t* warm = esp_camera_fb_get();
+    if (warm) esp_camera_fb_return(warm);
+    delay(40);
   }
   Serial.printf("[camera] initialized AI-Thinker OV2640 | QVGA | JPEG q12 | XCLK 20 MHz | PSRAM %s\n",
                 psramFound() ? "yes" : "no");
@@ -308,17 +332,7 @@ void setup() {
 
 void loop() {
   static uint32_t nextWifiRetry = 0;
-  static uint32_t nextCameraInitTry = 0;
-  static uint32_t lastHeartbeat = 0;
-  static uint32_t lastSessionPoll = 0;
-  static uint32_t lastFrame = 0;
-  static uint32_t lastMemoryLog = 0;
   static uint32_t lastRegistration = 0;
-  static uint32_t frameSequence = 0;
-  static String activeSession;
-  static String captureEventId;
-  static int captureFramesRemaining = 0;
-  static char lastError[80] = "none";
 
   const uint32_t now = millis();
 
@@ -332,77 +346,7 @@ void loop() {
   }
 
   // Phone-led operation: serve on-demand snapshots and register with the main ESP32.
-  // The legacy laptop upload code below remains unreachable for source compatibility.
   cameraServer.handleClient();
   if (now - lastRegistration >= 5000) { lastRegistration = now; registerWithMainBox(); }
-  delay(2);
-  return;
-
-  if (now - lastHeartbeat >= HEARTBEAT_MS) {
-    lastHeartbeat = now;
-    if (!postHeartbeat(cameraReady, lastError, frameSequence)) {
-      Serial.println("[heartbeat] laptop receiver not responding; retrying");
-    }
-  }
-
-  if (!cameraReady && now >= nextCameraInitTry) {
-    nextCameraInitTry = now + 5000;
-    cameraReady = initCamera();
-    if (!cameraReady) {
-      strncpy(lastError, "camera_init_failed", sizeof(lastError)-1);
-    } else {
-      strncpy(lastError, "none", sizeof(lastError)-1);
-    }
-  }
-  if (!cameraReady) {
-    delay(10);
-    return;
-  }
-
-  if (now - lastSessionPoll >= SESSION_POLL_MS) {
-    lastSessionPoll = now;
-    String sessionId, eventId;
-    int remaining = 0;
-    if (pollSurveySession(sessionId, eventId, remaining)) {
-      activeSession = sessionId;
-      if (!eventId.isEmpty()) {
-        captureEventId = eventId;
-        captureFramesRemaining = remaining;
-      }
-    } else {
-      strncpy(lastError, "session_poll_failed", sizeof(lastError)-1);
-    }
-  }
-
-  const bool surveyActive = !activeSession.isEmpty();
-  const uint32_t interval = surveyActive ? SURVEY_INTERVAL_MS : PREVIEW_INTERVAL_MS;
-  if (now - lastFrame >= interval) {
-    lastFrame = now;
-    camera_fb_t* fb = esp_camera_fb_get();
-    if (!fb) {
-      strncpy(lastError, "frame_capture_failed", sizeof(lastError)-1);
-      Serial.println("[capture] esp_camera_fb_get failed");
-    } else {
-      ++frameSequence;
-      const bool uploaded = postJpeg(fb, !surveyActive, activeSession, captureEventId, frameSequence);
-      esp_camera_fb_return(fb); // always release framebuffer after upload attempt
-      if (!uploaded) strncpy(lastError, "frame_upload_failed", sizeof(lastError)-1);
-      else strncpy(lastError, "none", sizeof(lastError)-1);
-      if (uploaded && surveyActive && captureFramesRemaining > 0) {
-        --captureFramesRemaining;
-        if (captureFramesRemaining == 0) captureEventId = "";
-      }
-    }
-  }
-
-  if (now - lastMemoryLog >= 10000) {
-    lastMemoryLog = now;
-    Serial.printf("[memory] free=%lu min=%lu largest=%lu psram=%s wifi_rssi=%d frames=%lu\n",
-                  (unsigned long)ESP.getFreeHeap(),
-                  (unsigned long)ESP.getMinFreeHeap(),
-                  (unsigned long)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT),
-                  psramFound() ? "yes" : "no", WiFi.RSSI(),
-                  (unsigned long)frameSequence);
-  }
   delay(2);
 }
