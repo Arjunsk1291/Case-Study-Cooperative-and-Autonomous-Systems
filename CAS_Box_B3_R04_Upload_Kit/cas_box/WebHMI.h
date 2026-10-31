@@ -16,6 +16,7 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <HTTPClient.h>
+#include <freertos/task.h>
 
 class WebHMI {
 public:
@@ -52,6 +53,9 @@ private:
   void _setValue(const char* name, const String& text);
   String _buildPage() const;
   String _buildJson() const;
+  void _startCameraFetch();
+  void _cameraFetchTask();
+  static void _cameraFetchTaskEntry(void* arg);
 
   AsyncWebServer* _server = nullptr;
   String _title = "CAS Box";
@@ -72,6 +76,13 @@ private:
   volatile uint32_t _autonomyHeartbeatMs = 0;
   String _cameraIp;
   uint32_t _cameraLastSeenMs = 0;
+  uint8_t* _cameraJpeg = nullptr;
+  size_t _cameraJpegLength = 0;
+  uint32_t _cameraFrameMs = 0;
+  volatile bool _cameraFetchBusy = false;
+  volatile bool _cameraFrameReady = false;
+  volatile int _cameraLastCode = 0;
+  TaskHandle_t _cameraTask = nullptr;
   volatile bool _driveInhibited = false;
 
   // loop time statistics, loop() only

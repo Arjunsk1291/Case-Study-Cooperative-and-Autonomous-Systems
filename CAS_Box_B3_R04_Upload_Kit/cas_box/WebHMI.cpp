@@ -473,9 +473,52 @@ void WebHMI::_lock() {
   xSemaphoreTake(_mtx, portMAX_DELAY);
 }
 
+void WebHMI::_cameraFetchTaskEntry(void* arg) {
+  static_cast<WebHMI*>(arg)->_cameraFetchTask();
+  vTaskDelete(nullptr);
+}
+
+void WebHMI::_startCameraFetch() {
+  if (_cameraFetchBusy || _cameraIp.isEmpty() || !_cameraJpeg) return;
+  _cameraFetchBusy = true;
+  _cameraFrameReady = false;
+  if (xTaskCreatePinnedToCore(_cameraFetchTaskEntry, "cam_fetch", 6144, this, 1, &_cameraTask, 0) != pdPASS) {
+    _cameraFetchBusy = false;
+    _cameraLastCode = -1;
+  }
+}
+
+void WebHMI::_cameraFetchTask() {
+  String ip = _cameraIp;
+  HTTPClient http;
+  http.setTimeout(1200);
+  size_t received = 0;
+  bool valid = false;
+  int code = -1;
+  if (http.begin(String("http://") + ip + "/snapshot")) {
+    code = http.GET();
+    const int length = http.getSize();
+    if (code == 200 && length > 4 && length <= 64 * 1024) {
+      WiFiClient* stream = http.getStreamPtr();
+      received = stream->readBytes(_cameraJpeg, (size_t)length);
+      valid = received >= 4 && _cameraJpeg[0] == 0xff && _cameraJpeg[1] == 0xd8 &&
+              _cameraJpeg[received - 2] == 0xff && _cameraJpeg[received - 1] == 0xd9;
+    }
+    http.end();
+  }
+  _cameraLastCode = code;
+  if (valid) {
+    _cameraJpegLength = received;
+    _cameraFrameMs = millis();
+    _cameraFrameReady = true;
+  }
+  _cameraFetchBusy = false;
+}
+
 void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t channel) {
   _lock();  // make sure the mutex exists before the server starts
   xSemaphoreGive(_mtx);
+  _cameraJpeg = static_cast<uint8_t*>(malloc(64 * 1024));
 
   WiFi.mode(WIFI_AP);
   WiFi.setSleep(false);                                  // no Wi-Fi power save on the box
@@ -506,28 +549,35 @@ void WebHMI::begin(const char* ssid, const char* pass, IPAddress ip, uint8_t cha
   _server->on("/camera/status", HTTP_GET, [this](AsyncWebServerRequest* req) {
     const bool online = !_cameraIp.isEmpty() && millis() - _cameraLastSeenMs < 15000;
     String out = "{\"online\":" + String(online ? "true" : "false") + ",\"ip\":\"" + _cameraIp +
-      "\",\"age_ms\":" + String(_cameraIp.isEmpty() ? 0 : millis() - _cameraLastSeenMs) + "}";
+      "\",\"age_ms\":" + String(_cameraIp.isEmpty() ? 0 : millis() - _cameraLastSeenMs) +
+      ",\"frame_ready\":" + String(_cameraFrameReady ? "true" : "false") +
+      ",\"frame_age_ms\":" + String(_cameraFrameMs ? millis() - _cameraFrameMs : 0) +
+      ",\"busy\":" + String(_cameraFetchBusy ? "true" : "false") +
+      ",\"last_http\":" + String(_cameraLastCode) + "}";
     req->send(200, "application/json", out);
   });
   _server->on("/camera/snapshot", HTTP_GET, [this](AsyncWebServerRequest* req) {
     if (_cameraIp.isEmpty() || millis() - _cameraLastSeenMs >= 15000) {
       req->send(503, "application/json", "{\"ok\":false,\"reason\":\"camera_offline\"}"); return;
     }
-    HTTPClient http; http.setTimeout(1800);
-    if (!http.begin(String("http://") + _cameraIp + "/snapshot")) {
-      req->send(502, "application/json", "{\"ok\":false,\"reason\":\"camera_connect_failed\"}"); return;
+    if (!_cameraJpeg) { req->send(503, "application/json", "{\"ok\":false,\"reason\":\"camera_buffer_unavailable\"}"); return; }
+    if (!_cameraFetchBusy) _startCameraFetch();
+    req->send(202, "application/json", "{\"ok\":true,\"state\":\"capturing\"}");
+  });
+  _server->on("/camera/frame", HTTP_GET, [this](AsyncWebServerRequest* req) {
+    if (!_cameraFrameReady || _cameraFetchBusy || !_cameraJpegLength) {
+      req->send(202, "application/json", "{\"ok\":false,\"state\":\"not_ready\"}"); return;
     }
-    const int code = http.GET(); const int length = http.getSize();
-    if (code != 200 || length <= 0 || length > 64 * 1024) {
-      http.end(); req->send(502, "application/json", "{\"ok\":false,\"reason\":\"invalid_camera_frame\"}"); return;
-    }
-    String jpeg = http.getString(); http.end();
-    if (jpeg.length() < 4 || (uint8_t)jpeg[0] != 0xff || (uint8_t)jpeg[1] != 0xd8 ||
-        (uint8_t)jpeg[jpeg.length()-2] != 0xff || (uint8_t)jpeg[jpeg.length()-1] != 0xd9) {
-      req->send(502, "application/json", "{\"ok\":false,\"reason\":\"invalid_jpeg\"}"); return;
-    }
-    AsyncWebServerResponse* response = req->beginResponse(200, "image/jpeg", jpeg);
-    response->addHeader("Cache-Control", "no-store"); response->addHeader("X-Image-Source", "camera-relay");
+    const size_t length = _cameraJpegLength;
+    AsyncWebServerResponse* response = req->beginResponse("image/jpeg", length,
+      [this](uint8_t* buffer, size_t maxLen, size_t index) -> size_t {
+        if (!_cameraJpeg || index >= _cameraJpegLength) return 0;
+        const size_t count = min(maxLen, _cameraJpegLength - index);
+        memcpy(buffer, _cameraJpeg + index, count);
+        return count;
+      });
+    response->addHeader("Cache-Control", "no-store");
+    response->addHeader("X-Image-Source", "camera-relay-cache");
     req->send(response);
   });
   _server->on("/navigation/instructions", HTTP_GET, [this](AsyncWebServerRequest* req) {
@@ -743,9 +793,12 @@ function crc32(a){let c=~0;for(const b of a){c^=b;for(let i=0;i<8;i++)c=(c>>>1)^
 function u16(n){return new Uint8Array([n&255,n>>>8&255])}function u32(n){return new Uint8Array([n&255,n>>>8&255,n>>>16&255,n>>>24&255])}
 async function makeZip(entries){let out=[],central=[],offset=0;const enc=new TextEncoder();for(const e of entries){const n=enc.encode(e.name),d=typeof e.data==='string'?enc.encode(e.data):new Uint8Array(await e.data.arrayBuffer()),c=crc32(d),h=new Uint8Array([...new Uint8Array([80,75,3,4]),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(c),...u32(d.length),...u32(d.length),...u16(n.length),...u16(0),...n]);out.push(h,d);central.push({n,d,c,offset});offset+=h.length+d.length}const start=offset;for(const x of central){const h=new Uint8Array([...new Uint8Array([80,75,1,2]),...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(x.c),...u32(x.d.length),...u32(x.d.length),...u16(x.n.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(x.offset),...x.n]);out.push(h);offset+=h.length}const size=offset-start;out.push(new Uint8Array([...new Uint8Array([80,75,5,6]),...u16(0),...u16(0),...u16(central.length),...u16(central.length),...u32(size),...u32(start),...u16(0)]));return new Blob(out,{type:'application/zip'})}
 $('finish').onclick=async()=>{if(!logging)return;stop();event('ROUTE_FINISH');event('INVESTIGATION_FINALIZATION_STARTED');$('logState').textContent='Finalizing phone dataset…';const items=await all(),events=items.filter(x=>x.kind==='event').map(x=>x.value),telemetry=items.filter(x=>x.kind==='telemetry').map(x=>x.value),images=items.filter(x=>x.kind==='image');const frameRows=['frame_id,filename,capture_timestamp,bytes,sensor_record_sequence'];const entries=[{name:'README.txt',data:'CAS B3/R04 phone investigation dataset\nOriginal JPEGs and sensor records captured by the phone.\n'}, {name:'events.jsonl',data:events.map(JSON.stringify).join('\n')+'\n'},{name:'telemetry.jsonl',data:telemetry.map(JSON.stringify).join('\n')+'\n'}];for(const im of images){entries.push({name:'camera/frames/'+im.value.filename,data:im.blob});frameRows.push([im.value.frame_id,im.value.filename,im.value.timestamp,im.blob.size,im.value.sensor_sequence].map(x=>'"'+String(x??'').replaceAll('"','""')+'"').join(','))}entries.push({name:'camera/frames.csv',data:frameRows.join('\n')+'\n'},{name:'manifest.json',data:JSON.stringify({schema_version:'CAS-B3-R04-phone-investigation-1.0',investigation_id:$('route').value||'unnamed',finalized_at:new Date().toISOString(),event_count:events.length,telemetry_count:telemetry.length,image_count:images.length,storage:'phone IndexedDB',timestamp_alignment:'phone wall-clock capture time; ESP32 device timestamps retained in telemetry'},null,2)});const zip=await makeZip(entries);download('CAS_B3_R04_'+($('route').value||'investigation')+'.zip',zip,'application/zip');logging=false;$('start').disabled=false;$('logState').textContent='ZIP generated and downloaded to phone'};
-$('capture').onclick=async()=>{if(!logging){$('captureState').textContent='Start Investigation first';return}const stamp=new Date().toISOString(),sensor=last;event('IMAGE_CAPTURE_REQUESTED',{sensor});try{const r=await fetch('/camera/snapshot?ts='+Date.now()),blob=await r.blob();if(!r.ok||blob.type.indexOf('image')<0)throw Error('camera capture failed');const id='frame_'+String(seq).padStart(6,'0');const filename=id+'.jpg';await put({kind:'image',blob,value:{frame_id:id,filename,timestamp:stamp,sensor_sequence:seq,sensor_snapshot:sensor}});event('IMAGE_SAVED',{frame_id:id,filename,timestamp:stamp});$('captureState').textContent=filename+' saved on phone'}catch(e){event('IMAGE_MISSING',{reason:e.message,timestamp:stamp});$('captureState').textContent='Capture failed; missing image recorded'}};
+$('capture').onclick=async()=>{if(!logging){$('captureState').textContent='Start Investigation first';return}const stamp=new Date().toISOString(),sensor=last;event('IMAGE_CAPTURE_REQUESTED',{sensor});try{const request=await fetch('/camera/snapshot?ts='+Date.now());if(!request.ok&&request.status!==202)throw Error('camera request failed');let blob=null;for(let i=0;i<12;i++){await new Promise(r=>setTimeout(r,250));const r=await fetch('/camera/frame?ts='+Date.now());if(r.ok&&r.headers.get('content-type')?.includes('image')){blob=await r.blob();break}}if(!blob||blob.size<4)throw Error('camera frame timeout');const bytes=new Uint8Array(await blob.slice(0,2).arrayBuffer());if(bytes[0]!==255||bytes[1]!==216)throw Error('invalid JPEG');const id='frame_'+String(seq).padStart(6,'0');const filename=id+'.jpg';await put({kind:'image',blob,value:{frame_id:id,filename,timestamp:stamp,sensor_sequence:seq,sensor_snapshot:sensor}});event('IMAGE_SAVED',{frame_id:id,filename,timestamp:stamp});$('captureState').textContent=filename+' saved on phone'}catch(e){event('IMAGE_MISSING',{reason:e.message,timestamp:stamp});$('captureState').textContent='Capture failed; missing image recorded'}};
 const dirs={f:[.15,.15],b:[-.15,-.15],l:[-.15,.15],r:[.15,-.15]};document.querySelectorAll('[data-v]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();if(b.dataset.v==='s'){stop();return}stop();const d=dirs[b.dataset.v],v=Number($('speed').value);drive(d[0]/.15*v,d[1]/.15*v);timer=setInterval(()=>drive(d[0]/.15*v,d[1]/.15*v),150)};['pointerup','pointercancel','lostpointercapture'].forEach(x=>b.addEventListener(x,stop))});$('speed').oninput=()=>{$('speedValue').textContent=Number($('speed').value).toFixed(2)};
-async function poll(){try{const j=await (await fetch('/values',{cache:'no-store'})).json();last=j.sensors;$('state').textContent=j.state||'Connected';const s=j.sensors||{};$('lidar').textContent=s.lidar?.ok?'OK':'Unavailable';$('front').textContent=s.usFiltered?.[0]??'—';$('yaw').textContent=s.imu?.yaw!=null?Number(s.imu.yaw).toFixed(1)+'°':'—';$('gps').textContent=s.gps?.fix?'Fix':'No fix';$('rover').textContent=(j.values||[]).some(x=>x.name==='rover.ok')?'Connected':'Checking';const c=await (await fetch('/camera/status')).json();$('camera').textContent=c.online?'Ready':'Offline';if(logging&&last){const rec={timestamp:new Date().toISOString(),device:j,sequence:seq};await put({kind:'telemetry',value:rec});$('logState').textContent='Recording · phone storage'}}catch(e){$('state').textContent='Box connection lost'}}setInterval(poll,500);poll();
+async function poll(){try{const j=await (await fetch('/values',{cache:'no-store'})).json();last=j.sensors;$('state').textContent=j.state||'Connected';const s=j.sensors||{};$('lidar').textContent=s.lidar?.ok?'OK':'Unavailable';$('front').textContent=s.usFiltered?.[0]??'—';$('yaw').textContent=s.imu?.yaw!=null?Number(s.imu.yaw).toFixed(1)+'°':'—';$('gps').textContent=s.gps?.fix?'Fix':'No fix';$('rover').textContent=(j.values||[]).some(x=>x.name==='rover.ok')?'Connected':'Checking';if(logging&&last){const rec={timestamp:new Date().toISOString(),device:j,sequence:seq};await put({kind:'telemetry',value:rec});$('logState').textContent='Recording · phone storage'}}catch(e){$('state').textContent='Box connection lost'}}
+async function pollCamera(){try{const c=await (await fetch('/camera/status',{cache:'no-store'})).json();$('camera').textContent=c.online?(c.frame_ready?'Ready':'Connected'):'Offline'}catch(e){$('camera').textContent='Offline'}}
+async function heartbeat(){try{await fetch('/autonomy?hb=1',{cache:'no-store'})}catch(e){}}
+setInterval(poll,500);setInterval(pollCamera,3000);setInterval(heartbeat,500);poll();pollCamera();
 </script></body></html>)compact";
 
 String WebHMI::_buildPage() const {
