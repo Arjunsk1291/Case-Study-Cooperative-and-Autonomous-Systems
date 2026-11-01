@@ -1,2 +1,3 @@
 # Arduino CLI build products are reproducible with CAS_Box_B3_R04_Upload_Kit/tools/build_r04.sh.
 CAS_Box_B3_R04_Upload_Kit/build/
+**/__pycache__/
