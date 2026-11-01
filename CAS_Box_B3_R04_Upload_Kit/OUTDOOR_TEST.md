@@ -2,6 +2,22 @@
 
 This branch is for outdoor data collection. It preserves the verified indoor firmware and does not enable unsupervised turning, pillar counting, or camera image processing.
 
+## Flash files
+
+Download these two files from this branch:
+
+- `flash/R04_main_box_esp32_merged.bin` — flash to the main CAS Box ESP32.
+- `flash/R04_camera_ai_thinker_merged.bin` — flash to the AI-Thinker ESP32-CAM.
+
+Using `esptool` with the board connected:
+
+```bash
+python3 -m esptool --chip esp32 --port /dev/ttyUSB0 --baud 460800 write_flash 0x0 flash/R04_main_box_esp32_merged.bin
+python3 -m esptool --chip esp32 --port /dev/ttyUSB1 --baud 460800 write_flash 0x0 flash/R04_camera_ai_thinker_merged.bin
+```
+
+Replace the ports with the values shown by `arduino-cli board list`. Flash only the first file to the main box and only the second file to the camera. Do not flash the rover board.
+
 ## Before the run
 
 - Flash the main ESP32 and ESP32-CAM from `build/box` and `build/camera`.
@@ -10,6 +26,7 @@ This branch is for outdoor data collection. It preserves the verified indoor fir
 - Confirm rover connection, fresh LiDAR, valid IMU calibration, camera readiness, battery voltage, and a clear safety latch.
 - Enable the phone screen wake lock and keep the dashboard visible.
 - Record lighting, surface type, weather, route description, and operator ground truth.
+- GPS is recorded inside every phone telemetry snapshot from the main ESP32 as `sensors.gps`, including `fix`, `sats`, `hdop`, `lat`, `lon`, `age_ms`, and validity flags. A missing fix remains invalid; it is never replaced with coordinates of zero.
 
 ## Outdoor sequence
 
