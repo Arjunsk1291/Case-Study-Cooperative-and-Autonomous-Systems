@@ -11,11 +11,13 @@ mkdir -p "$OUT/box" "$OUT/camera"
 
 "$CLI" compile --config-file "$CONFIG" --jobs 4 \
   --fqbn esp32:esp32:esp32 \
+  --build-property build.flash_freq=40m \
   --build-path "$OUT/box" \
   "$ROOT/cas_box"
 
 "$CLI" compile --config-file "$CONFIG" --jobs 4 \
   --fqbn esp32:esp32:esp32cam \
+  --build-property build.flash_freq=40m \
   --build-path "$OUT/camera" \
   "$ROOT/camera_s3/CameraStation"
 
