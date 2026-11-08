@@ -1,0 +1,51 @@
+ok = turn within +-0.5 m of the clean turn; early = > 2 m early (WRONG pillar); late = no structure chosen when the log ends
+scenario                                      cases |   v9 ok  early  late |   v8 ok  early  late
+1 standing person near the turn pillar         1232 |   97.1%      0    28 |   15.4%      0   870
+group of 2 across near the turn pillar          147 |   84.4%      0     6 |   17.0%      0    92
+group of 2 along near the turn pillar           147 |   88.4%      0    11 |   15.6%      0   104
+group of 3 across near the turn pillar          147 |   74.8%      0     9 |   16.3%      1    81
+group of 3 along near the turn pillar           147 |   85.7%      0    14 |   15.6%      0   104
+group of 5 across near the turn pillar          147 |   73.5%      1     1 |   16.3%      1    81
+group of 5 along near the turn pillar           147 |   82.3%      0    19 |   17.0%      0   108
+1 standing person near the pillar before       1232 |   98.9%      8     5 |   13.6%     59   828
+group of 2 across near the pillar before        147 |   93.2%      9     1 |    8.8%     64    48
+group of 2 along near the pillar before         147 |   95.2%      5     2 |   12.2%     19    89
+group of 3 across near the pillar before        147 |   92.5%     10     1 |    6.1%     89    31
+group of 3 along near the pillar before         147 |   93.9%      6     3 |   11.6%     24    85
+group of 5 across near the pillar before        147 |   89.8%     14     1 |    6.1%     91    29
+group of 5 along near the pillar before         147 |   85.0%      7    12 |   10.9%     26    82
+group BEYOND the turn pillar (open area)        315 |   85.7%      0     4 |   14.3%      0   228
+person walking along WITH the rover             210 |   96.2%      2     3 |   14.3%     16   137
+2 people walking along with the rover            42 |   92.9%      0     1 |   14.3%      0    30
+person walking towards the rover                126 |  100.0%      0     0 |   14.3%      0    90
+person walking slowly ahead of the rover         42 |   83.3%      1     5 |   16.7%      0    29
+FOLLOWER behind-right (log8 case)                35 |   97.1%      0     0 |   11.4%      5    21
+person crossing (walks across)                  252 |  100.0%      0     0 |   14.3%      0   180
+crowd of 8 (half walking)                       420 |   95.5%      3    10 |   14.0%     26   277
+TOTAL v9: 5670 cases, turn within +-0.5 m: 93.5 %, WRONG (earlier) pillar: 66, late/none: 136
+TOTAL v8: 5670 cases, turn within +-0.5 m: 13.9 %, WRONG (earlier) pillar: 421, late/none: 3624
+   (99, 'test2', 'person walking slowly ahead of the rover', None, [(-8.0, 0.9, None)])
+   (99, 'test2', 'group of 5 along near the turn pillar', None, [(-1.1, 1.5, None), (-0.6, 1.5, None), (-0.1, 1.5, None)])
+   (99, 'test2', 'group of 5 along near the turn pillar', None, [(-1.6, 1.5, None), (-1.1, 1.5, None), (-0.6, 1.5, None)])
+   (99, 'test2', 'group of 5 along near the turn pillar', None, [(-2.6, 1.5, None), (-2.1, 1.5, None), (-1.6, 1.5, None)])
+   (99, 'test2', 'group of 5 along near the pillar before', None, [(-3.4, 0.7, None), (-2.9, 0.7, None), (-2.4, 0.7, None)])
+   (99, 'test2', 'group of 3 along near the turn pillar', None, [(-1.1, 1.5, None), (-0.6, 1.5, None), (-0.1, 1.5, None)])
+   (99, 'test2', 'group of 3 along near the turn pillar', None, [(-1.6, 1.5, None), (-1.1, 1.5, None), (-0.6, 1.5, None)])
+   (99, 'test2', 'group of 3 across near the turn pillar', None, [(-1.1, 0.7, None), (-1.1, 1.2, None), (-1.1, 1.7, None)])
+   (99, 'test2', 'group of 2 along near the turn pillar', None, [(-1.1, 1.5, None), (-0.6, 1.5, None)])
+   (99, 'test2', 'group of 2 along near the turn pillar', None, [(-1.6, 1.5, None), (-1.1, 1.5, None)])
+   (99, 'test2', '1 standing person near the turn pillar', None, [(-0.6, 2.0, None)])
+   (99, 'test2', '1 standing person near the turn pillar', None, [(-1.1, 1.5, None)])
+   (99, 'test1', 'group of 5 along near the pillar before', None, [(-3.4, 0.7, None), (-2.9, 0.7, None), (-2.4, 0.7, None)])
+   (99, 'test1', 'group of 2 across near the turn pillar', None, [(-1.6, 0.7, None), (-1.6, 1.2, None)])
+   (99, 'log8', 'person walking slowly ahead of the rover', None, [(-8.0, 1.5, None)])
+   (99, 'log8', 'person walking slowly ahead of the rover', None, [(-8.0, 0.9, None)])
+   (99, 'log8', 'person walking along WITH the rover', None, [(-21.8, 0, (2.0, 0.9))])
+   (99, 'log8', 'person walking along WITH the rover', None, [(-21.8, 0, (2.0, 0.6))])
+   (99, 'log8', 'person walking along WITH the rover', None, [(-21.8, 0, (1.0, 0.6))])
+   (99, 'log8', 'group of 5 along near the turn pillar', None, [(-1.1, 1.5, None), (-0.6, 1.5, None), (-0.1, 1.5, None)])
+   (99, 'log8', 'group of 5 along near the turn pillar', None, [(-1.6, 1.5, None), (-1.1, 1.5, None), (-0.6, 1.5, None)])
+   (99, 'log8', 'group of 5 along near the turn pillar', None, [(-2.6, 1.5, None), (-2.1, 1.5, None), (-1.6, 1.5, None)])
+   (99, 'log8', 'group of 5 along near the turn pillar', None, [(-2.6, 0.7, None), (-2.1, 0.7, None), (-1.6, 0.7, None)])
+   (99, 'log8', 'group of 5 along near the pillar before', None, [(-3.4, 1.5, None), (-2.9, 1.5, None), (-2.4, 1.5, None)])
+   (99, 'log8', 'group of 5 along near the pillar before', None, [(-3.4, 0.7, None), (-2.9, 0.7, None), (-2.4, 0.7, None)])
