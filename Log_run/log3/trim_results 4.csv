@@ -1,0 +1,14 @@
+run,speed,kind,trim_start,trim_end,trim_mean,drift_deg_s,resid_deg,gyro_bias_deg_s,measured_s,dist_m_est,battery_v,end
+7,0.25,AUTO,0.0000,-0.0051,-0.0027,0.363,0.08,0.000,4.0,1.73,12.22,"done"
+8,0.25,FIXED,-0.0064,-0.0064,-0.0064,nan,nan,-0.000,0.0,0.24,12.18,"phone page lost (screen off / other app"
+9,0.25,FIXED,-0.0064,-0.0064,-0.0064,0.304,0.07,0.000,3.9,1.74,12.19,"done"
+10,0.25,FIXED,0.0105,0.0105,0.0105,0.492,0.09,-0.000,4.1,1.73,12.17,"done"
+11,0.25,VERIFY,-0.0354,-0.0354,-0.0354,-0.023,0.07,0.000,4.0,1.73,12.21,"done"
+12,0.25,VERIFY,-0.0336,-0.0336,-0.0336,0.246,0.06,0.000,4.0,1.74,12.16,"done"
+
+# summary
+speed,suggested_trim,from_runs,fitted,verify_drift_deg_s,verify_trim,saved_trim
+0.20,,0,no,,,
+0.25,-0.0469,5,yes,0.246,-0.0336,
+# reset reason: power on
+# rover T:139 reply: 

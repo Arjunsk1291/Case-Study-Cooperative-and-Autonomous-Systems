@@ -1,0 +1,16 @@
+run,speed,kind,trim_start,trim_end,trim_mean,drift_deg_s,resid_deg,gyro_bias_deg_s,measured_s,dist_m_est,battery_v,end
+1,0.25,AUTO,0.0000,-0.0029,-0.0015,0.195,0.06,0.000,3.9,1.73,12.20,"done"
+2,0.25,AUTO,-0.0029,-0.0033,-0.0031,0.147,0.07,0.000,0.9,0.88,12.19,"obstacle closer than 0.40 m"
+3,0.25,AUTO,-0.0029,-0.0042,-0.0036,0.161,0.07,0.000,1.8,1.06,12.19,"reached the end of the free space"
+4,0.25,FIXED,-0.0053,-0.0053,-0.0053,nan,nan,0.000,0.0,0.70,12.16,"reached the end of the free space"
+5,0.25,FIXED,-0.0053,-0.0053,-0.0053,nan,nan,-0.000,0.0,0.23,12.18,"reached the end of the free space"
+6,0.25,FIXED,-0.0053,-0.0053,-0.0053,0.195,0.05,-0.000,4.0,1.74,12.17,"done"
+7,0.25,FIXED,0.0027,0.0027,0.0027,nan,nan,0.000,0.0,0.01,12.19,"reached the end of the free space"
+8,0.25,FIXED,0.0027,0.0027,0.0027,nan,nan,0.000,0.0,0.00,12.19,"phone page lost (screen off / other app"
+
+# summary
+speed,suggested_trim,from_runs,fitted,verify_drift_deg_s,verify_trim,saved_trim
+0.20,,0,no,,,
+0.25,-0.0073,3,no,,,
+# reset reason: power on
+# rover T:139 reply: 
