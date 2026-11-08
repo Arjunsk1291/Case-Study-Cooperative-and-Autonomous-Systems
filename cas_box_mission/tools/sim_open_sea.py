@@ -58,21 +58,22 @@ def scan(x, y, th, segs, rng):
     return env_noise(L, rng) if ENV else L
 
 
-def world(rng, rowoff=6.65, people=3, missing=0.0, wobble=0.0, rot=0.0):
+def world(rng, rowoff=6.65, people=3, missing=0.0, wobble=0.0, rot=0.0, fake=None, nobwall=False, rowgap=None):
     """rover crosses SOUTH from y=0 along x=0; LEFT of a south-going rover = +x. rot (deg, + = the strip turns to the
     rover's LEFT): the strip, the row, the building and the end wall are rotated against the B wall (campus_6: ~+3..+5)"""
-    base = [((-25, 0), (-3, 0)), ((-1.5, 0), (25, 0))]
+    base = [] if nobwall else [((-25, 0), (-3, 0)), ((-1.5, 0), (25, 0))]
     for x in (-12, -7.5, 6, 10.5): base.append(((x - 0.25, -2.6), (x + 0.25, -2.6)))
     segs = []
     y = -9.5
     while y > -24:
         xo = rowoff + rng.uniform(-wobble, wobble)                       # irregular row (planters not in line)
-        if rng.random() >= missing:
+        if rng.random() >= missing and not (rowgap and rowgap[0] <= -y <= rowgap[1]):
             segs.append(((xo, y + 0.6), (xo, y - 0.6)))
             for dx, dy in ((0.6, 0), (0.95, 0.2), (0.3, 0.25)):
                 segs.append(((xo + dx - 0.08, y + dy), (xo + dx + 0.08, y + dy)))
         if rng.random() >= missing: segs.append(((xo - 0.05, y - 2.0), (xo + 0.05, y - 2.0)))
         y -= 4.0
+    if fake: segs.append(((fake[0], fake[1]), (fake[0], fake[2])))      # a false straight line (bike rack, parked cars, hoarding)
     segs.append(((3.0, -28), (3.0, -37)))
     segs.append(((-8, -40), (8, -40)))
     for _ in range(people):
@@ -82,7 +83,7 @@ def world(rng, rowoff=6.65, people=3, missing=0.0, wobble=0.0, rot=0.0):
     return base + [(R(a), R(b)) for a, b in segs]
 
 
-def run(seed, preset, bias_dpm=0.0, turn_err=4.0, x0=0.0, slide=0.0, blind=0.3, rowoff_true=6.65, rot=0.0, **wk):
+def run(seed, preset, bias_dpm=0.0, turn_err=4.0, x0=0.0, slide=0.0, blind=0.3, rowoff_true=6.65, rot=0.0, jump=None, **wk):
     rng = random.Random(seed); segs = world(rng, rowoff=rowoff_true, rot=rot, **wk)
     ux, uy = math.sin(math.radians(rot)), -math.cos(math.radians(rot))   # strip direction (south rotated by rot)
     lat = lambda x, y: x * uy - y * ux                                     # signed distance from the strip
@@ -97,6 +98,7 @@ def run(seed, preset, bias_dpm=0.0, turn_err=4.0, x0=0.0, slide=0.0, blind=0.3, 
             tgt = C.step(L, yaw(), d2, 0.25)
         e = w180(tgt - yaw()); th += math.radians(max(-3, min(3, 0.8 * e)) * dt)
         drift += bias_dpm / 60 * dt
+        if jump and abs(t - jump[0]) < dt / 2: drift += jump[1]            # IMU glitch: sudden heading jump (magnetic spot / reset)
         x += v * math.cos(th) * dt + slide * v * math.cos(th - math.pi / 2) * dt
         y += v * math.sin(th) * dt + slide * v * math.sin(th - math.pi / 2) * dt
         d2 += v * dt; t += dt
@@ -270,6 +272,23 @@ if __name__ == "__main__":
         for name, kw in CASES:
             for tag, P in (("V6", F.OpenSea.V6), ("V7", F.OpenSea.V7)):
                 print(batch(f"{tag} {name}", P, **kw), flush=True)
+        sys.exit()
+    if "--faults" in sys.argv:
+        FAULTS = [("nominal", {}),
+                  ("row missing completely (trees/poles hidden)", dict(missing=1.0)),
+                  ("row gap 14-20 m (cars / a stall in front)", dict(rowgap=(14, 20))),
+                  ("row 0.7 m closer than taught (6.0 m)", dict(rowoff_true=6.0)),
+                  ("row 0.7 m farther than taught (7.3 m)", dict(rowoff_true=7.3)),
+                  ("false line 4.5 m left, 12-22 m (bike rack)", dict(fake=(4.5, -12, -22))),
+                  ("false line 8.5 m left, 10-24 m (hoarding)", dict(fake=(8.5, -10, -24))),
+                  ("B wall behind hidden (people at the sign)", dict(nobwall=True)),
+                  ("heading glitch +10 deg at 10 s", dict(jump=(10, 10))),
+                  ("heading glitch -15 deg at 30 s", dict(jump=(30, -15))),
+                  ("gyro +6/min and row gone", dict(bias_dpm=6, missing=1.0)),
+                  ("worst: bias -6, glitch, slide, wobble, row gap", dict(bias_dpm=-6, jump=(20, 8), slide=0.03, wobble=0.4, rowgap=(12, 18)))]
+        for name, kw in FAULTS:
+            for tag, P in ((("V7", F.OpenSea.V7),) if "--v7only" in sys.argv else (("V6", F.OpenSea.V6), ("V7", F.OpenSea.V7))):
+                print(batch(f"{tag} {name}", P, n=20, **kw), flush=True)
         sys.exit()
     if "--env" in sys.argv: env_table(); sys.exit()
     if "--crowd" in sys.argv: crowd_table(); sys.exit()

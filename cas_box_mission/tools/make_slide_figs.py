@@ -47,10 +47,12 @@ def fig_sea():
     def ring(cx, cy, w, h, label, lx, ly, ha='center'):
         ax.add_patch(Ellipse((cx, cy), w, h, fill=False, ec=BL, lw=2.0))
         ax.text(lx, ly, label, color=BL, ha=ha, va='center', fontsize=9, fontweight='bold', bbox=BOX)
-    ring(10.6, 4.1, 3.6, 3.2, 'tree + structure', 10.4, 6.3)
+    ring(10.6, 4.1, 3.6, 3.2, 'tree + structure 1', 9.4, 5.9)
     ring(14.8, 2.2, 1.5, 1.4, 'store pole 1', 15.4, 3.9)
     ring(22.6, 2.1, 1.6, 1.4, 'store pole 2', 22.6, 3.9)
-    ring(28.6, 3.2, 4.6, 3.2, 'pole group (store front)', 28.6, 6.3)
+    ring(28.6, 3.2, 4.6, 3.2, 'tree + structure 2', 28.6, 5.9)
+    ax.annotate('', xy=(12.6, 7.3), xytext=(24.6, 7.3), arrowprops=dict(arrowstyle='<->', color=OR, lw=1.4))
+    ax.text(20.5, 8.5, 'store front (U-shape) 6.65 m = PID reference', color=OR, ha='center', fontsize=9, fontweight='bold', bbox=BOX)
     ax.axvline(0, c=BL, lw=2.2, ymin=0.0, ymax=1.0, alpha=0.9); ax.text(0.6, 9.4, 'B wall behind\n(straight, always there)', color=BL, fontsize=9, fontweight='bold', bbox=BOX, va='top')
     ax.axvline(end + 1.2, c=BL, lw=2.2); ax.text(end + 0.9, 9.4, 'end wall ahead\n(straight)', color=BL, fontsize=9, fontweight='bold', bbox=BOX, ha='right', va='top')
     ax.set_xlim(-3, end + 3); ax.set_ylim(-3.2, 10.2); ax.set_aspect('equal')
@@ -194,5 +196,51 @@ def fig_tools():
     fig.subplots_adjust(left=0.13, right=0.98, top=0.97, bottom=0.17); fig.savefig(OUT + 'fig_tools.png'); plt.close(fig)
 
 
+def fig_ghost():
+    """daylight LiDAR ghosts in the logs recorded before the 350 mm filter (campus_2/3/5, campus_4)"""
+    import glob
+    runs = [('campus_2', 'campus_2/mis_001 3.bin'), ('campus_2 (2nd)', 'campus_2/mis_002.bin'), ('campus_3', 'campus_3/mis_001 4.bin'), ('campus_5', 'campus5/mis_001 8.bin'), ('campus_4', 'campus4/mis_001 5.bin')]
+    share, allr = [], []
+    for name, f in runs:
+        R = D.decode(LOG(f)); sc = 0
+        for r in R:
+            g = [r['lidar_%03d' % (i * 4)] for i in range(90) if 0 < r['lidar_%03d' % (i * 4)] < 35]
+            if g: sc += 1; allr += g
+        share.append(100 * sc / len(R))
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(7.2, 3.2), dpi=220, gridspec_kw={'width_ratios': [1.1, 1]})
+    a1.hist(allr, bins=range(15, 36), color=BL); a1.axvline(35, c=OR, lw=2); a1.text(34.6, a1.get_ylim()[1] * 0.92, 'min range\n35 cm', color=OR, ha='right', fontsize=9, fontweight='bold')
+    a1.set_xlabel('range of the false returns (cm)'); a1.set_ylabel('beams')
+    a2.barh(range(len(runs))[::-1], share, color=BL); a2.set_yticks(range(len(runs))[::-1]); a2.set_yticklabels([r[0] for r in runs], fontsize=9)
+    for y, v in zip(range(len(runs))[::-1], share): a2.text(v + 0.2, y, f'{v:.1f} %', va='center', fontsize=9, color=BL, fontweight='bold')
+    a2.set_xlabel('scans with a false return < 35 cm (%)'); a2.set_xlim(0, 10)
+    for a in (a1, a2):
+        for s_ in ('top', 'right'): a.spines[s_].set_visible(False)
+    fig.subplots_adjust(left=0.09, right=0.98, top=0.97, bottom=0.18, wspace=0.55); fig.savefig(OUT + 'fig_ghost.png'); plt.close(fig)
+
+
+def fig_faults():
+    """Open Sea fault simulation: side error at the end wall (median of 20 runs), V6 / V7 (old gate) / v10.1 (gate +-1.0 m)"""
+    import re
+    rd = lambda f: {m.group(1) + ' ' + m.group(2).strip(): float(m.group(3)) for m in (re.match(r'^(V\d) (.*?)\s+24 m: .*end: med ([\d.]+)', l) for l in open(OUT + f)) if m}
+    b, n = rd('open_sea_faults_before.txt'), rd('open_sea_faults_v10_1.txt')
+    names = ['row missing completely (trees/poles hidden)', 'row gap 14-20 m (cars / a stall in front)', 'false line 4.5 m left, 12-22 m (bike rack)',
+             'false line 8.5 m left, 10-24 m (hoarding)', 'B wall behind hidden (people at the sign)', 'heading glitch +10 deg at 10 s',
+             'worst: bias -6, glitch, slide, wobble, row gap', 'gyro +6/min and row gone']
+    lab = ['row missing completely', 'row gap 14-20 m (stall, cars)', 'false line 4.5 m (bike rack)', 'false line 8.5 m (hoarding)', 'B wall behind hidden',
+           'heading glitch +10 deg', 'worst mix of 5 faults', 'gyro +6 deg/min, row gone']
+    fig, ax = plt.subplots(figsize=(7.6, 3.5), dpi=220); y = list(range(len(names)))[::-1]
+    for yy, k in zip(y, names):
+        v6, v7, v10 = b['V6 ' + k], b['V7 ' + k], n['V7 ' + k]
+        ax.barh(yy + 0.27, v6, height=0.24, color='#C9D1D9'); ax.barh(yy, v7, height=0.24, color='#E9B27A'); ax.barh(yy - 0.27, v10, height=0.24, color=BL)
+        ax.text(max(v10, 0) + 0.04, yy - 0.27, f'{v10:.2f}', va='center', fontsize=8, color=BL, fontweight='bold')
+        if v7 > 0.5: ax.text(v7 + 0.04, yy, f'{v7:.2f}', va='center', fontsize=8, color=ORANGE_T if False else '#C0620C')
+    ax.set_yticks(y); ax.set_yticklabels(lab, fontsize=9); ax.set_xlim(0, 2.4); ax.set_xlabel('side error at the end wall (m), median of 20 runs  -  lower is better', fontsize=9)
+    from matplotlib.patches import Patch
+    ax.legend(handles=[Patch(color='#C9D1D9', label='V6 (row only as heading)'), Patch(color='#E9B27A', label='V7 (PID, gate 4.0-9.5 m)'), Patch(color=BL, label='v10.1 (PID, gate +-1.0 m)')],
+              loc='lower center', bbox_to_anchor=(0.45, 1.0), ncol=3, frameon=False, fontsize=8.5)
+    for s_ in ('top', 'right'): ax.spines[s_].set_visible(False)
+    fig.subplots_adjust(left=0.27, right=0.985, top=0.9, bottom=0.14); fig.savefig(OUT + 'fig_faults.png'); plt.close(fig)
+
+
 if __name__ == '__main__':
-    fig_sea(); fig_blockI(); fig_people(); fig_turn(); fig_tools()
+    fig_sea(); fig_blockI(); fig_people(); fig_turn(); fig_tools(); fig_ghost(); fig_faults()

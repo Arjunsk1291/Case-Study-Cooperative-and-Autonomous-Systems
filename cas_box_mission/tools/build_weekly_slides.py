@@ -157,42 +157,44 @@ def build(N):
     # ================================================================ slide 1: landmark corridor
     s = frame_slide(prs, 'OPEN SEA · LANDMARK CORRIDOR', 'Landmark proximity corridor for the Open Sea', 'Landmark corridor', 'Arjun')
     picture(s, ASSETS + 'fig_sea.png', 0.889, 1.86, 7.8)
-    chain(s, 0.889, 4.93, [('B wall behind', 'heading ⟂ · 0–14 m'), ('Tree + poles', 'side 6.65 m · 10–24.5 m'),
-                           ('Store front', 'side 3.0 m · 26–40 m'), ('End wall ahead', 'heading ⟂ · stop 1.5 m')], 1.72, 0.30, 0.74)
+    chain(s, 0.889, 4.93, [('B wall behind', 'heading ⟂ · 0–14 m'), ('Store front + poles', 'side 6.65 m · 10–24.5 m'),
+                           ('Building front', 'side 3.0 m · 26–40 m'), ('End wall ahead', 'heading ⟂ · stop 1.5 m')], 1.72, 0.30, 0.74)
     box(s, 0.889, 5.88, 7.8, 0.82, BLUE, radius=0.08)
     text(s, 1.05, 5.95, 7.5, 0.7, [[('Why landmarks: ', {'bold': True, 'color': INK}),
                                      ('in the Open Sea there are no walls to match. The gyro drifts by about ±2°/min at random, GPS was 6–15 m off (log_010). '
-                                      'The tree, the two campus-store poles and the store front are fixed objects, so they give the side position directly.', {})]],
+                                      'The U-shaped store front (with its two poles and two trees in front) is a fixed line, so it gives the side position directly.', {})]],
          size=12, line=15.5)
-    card(s, 9.0, 1.86, 3.85, 1.38, 'Proximity PID on the poles', [
-        'e = measured pole distance − 6.65 m',
+    card(s, 9.0, 1.86, 3.85, 1.38, 'Proximity PID on the store front', [
+        'e = measured line distance − 6.65 m',
         'turn = kp·e + ki·∫e + kd·ė  (10 / 1.5 / 20, ±8°)',
-        'poles give side position only; direction from the walls'], size=12)
+        'gate ±1.0 m (v10.1): false lines are rejected'], size=12)
     card(s, 9.0, 3.32, 3.85, 1.46, 'Measured in 9 logs', [
-        f'pole-line distance {N["row_lo"]}–{N["row_hi"]} m in 5 of 9 runs; teach run 6.67 m',
+        f'store-front distance {N["row_lo"]}–{N["row_hi"]} m in 5 of 9 runs; teach run 6.67 m',
         'seen on 39–56 % of the scans',
         'B wall behind: ⟂ within ±1.3° in 6 runs'], size=12)
     card(s, 9.0, 4.88, 3.85, 1.82, 'Result', [
         'log8, campus_9: wall to wall, no hold, pause or failsafe',
         'heading changed 5.6° over 49 m and 5.8° over 42 m',
-        N['sim1']], edge=ORANGE, size=11)
+        'fault sim: false line 1.6–2.0 m off → 0.01–0.03 m'], edge=ORANGE, size=11)
     set_notes(s, notes_text(0), NOTE_BODY)
 
-    # ================================================================ slide 2: people simulation
-    s = frame_slide(prs, 'SIMULATION · PEOPLE AND CROWDS', 'People simulation: wrong turns 7.4 % → 1.2 %', 'People simulation', 'Kamal')
-    chain(s, 0.889, 1.86, [('Real scans', '7 recorded runs, leg 1'), ('Add people', 'circles r 0.15–0.30 m'),
-                           ('Hide what is behind', 'ray-cast into 90 beams'), ('Replay the logic', 'same rules as the box'),
-                           ('Compare', 'turn vs. clean scan')], 2.0, 0.40, 0.78)
-    picture(s, ASSETS + 'fig_people.png', 0.889, 2.84, 7.6)
-    card(s, 8.75, 2.84, 4.1, 1.50, 'Scenarios · 5,670 cases', [
-        'people 0.5–4 m right of the track, ±3 m along it',
-        'standing, walking along / towards / across, follower',
-        'groups of 2–5, crowd of 8 (half walking)'], size=12)
-    card(s, 8.75, 4.42, 4.1, 1.2, 'Open sea · end wall', N['open_lines'], size=11)
-    card(s, 8.75, 5.7, 4.1, 1.0, 'Still open', [
-        'groups of 3–5 at the pillar before: 6 % wrong',
-        'replay only, not driven with crowds yet'], edge=ORANGE, size=11)
-    text(s, 0.889, 6.3, 7.6, 0.45, [N['bar_note']], size=11, color=GREY, line=14)
+    # ================================================================ slide 2: Open Sea simulation
+    s = frame_slide(prs, 'SIMULATION · OPEN SEA', 'Open Sea simulation: crowds, weather and faults', 'Open Sea simulation', 'Kamal')
+    chain(s, 0.889, 1.86, [('World model', 'B wall, store front, building, end wall'), ('Scanner', '90 beams, 2 cm noise, 12 % drops'),
+                           ('Rover model', '0.22 m/s, slide, gyro bias'), ('Firmware mirror', 'same rules, 0.25 s step'),
+                           ('Metrics', 'side error, false end, holds')], 2.0, 0.40, 0.78)
+    picture(s, ASSETS + 'fig_faults.png', 0.889, 2.84, 7.4)
+    text(s, 0.889, 6.3, 7.6, 0.45, ['tools/sim_open_sea.py + tools/fwmirror.py (class OpenSea). 20 random starts per case, 12 for weather. v10.1 = row gate ±1.0 m.'], size=11, color=GREY, line=14)
+    card(s, 8.75, 2.84, 4.1, 1.5, 'Crowds (20 starts each)', [
+        'one person in the path: false end wall 18 → 0',
+        'group of 3: 20 → 0; walking crowd of 20: 13 → 0',
+        'rover stops and waits, never swerves'], size=11.5)
+    card(s, 8.75, 4.42, 4.1, 1.2, 'Weather (12 starts)', [
+        'ghosts, low sun, light rain: 12 / 12',
+        'heavy rain / snow 10 / 12; worst mix 7 / 12'], size=11)
+    card(s, 8.75, 5.7, 4.1, 1.0, 'Found and open', [
+        'false line pulled it 1.6–2.0 m: fixed (gate)',
+        'open: −15° glitch late, gyro bias with no landmark'], edge=ORANGE, size=10.5)
     set_notes(s, notes_text(1), NOTE_BODY)
 
     # ================================================================ slide 3: Block I
@@ -215,22 +217,21 @@ def build(N):
         'edge assist at the cobble edge; any hold near the end finishes the route'], edge=ORANGE, size=10.5)
     set_notes(s, notes_text(2), NOTE_BODY)
 
-    # ================================================================ slide 4: replay + benchmark toolchain
-    s = frame_slide(prs, 'TOOLING · REPLAY AND BENCHMARK', 'Log replay and benchmark toolchain', 'Replay toolchain', '[name to be added]')
-    chain(s, 0.889, 1.86, [('Drive log', 'mis_NNN.bin'), ('Decoder', 'table + events'), ('Narrate', 'what the box thought'),
-                           ('Benchmark', '9 logs, one DB'), ('Replay', 'Python copy of rules'), ('Simulate', 'people, weather, slip')], 1.14, 0.19, 0.78, last_edge=ORANGE)
-    picture(s, ASSETS + 'fig_tools.png', 0.889, 2.84, 7.2)
-    text(s, 0.889, 6.28, 7.6, 0.5, ['Replay of the turn rule on 7 recorded runs. log8 turned one pillar early in the field (18.2 m with the v8 rule, 21.8 m with v10).'], size=11, color=GREY, line=14)
-    card(s, 8.75, 2.84, 4.1, 1.5, 'What it answers', [
-        'which rule caused a bad turn, record by record',
-        'does a change keep the good runs the same?',
-        'what do people, rain, slip and drift do to it?'], size=12)
-    card(s, 8.75, 4.42, 4.1, 1.2, 'Start-shift sweep', [
-        'start moved by −8…+8 m: turn moves 0.00–0.13 m',
-        'campus_9 (started 7.7 m earlier) now turns right'], size=11)
-    card(s, 8.75, 5.7, 4.1, 1.0, 'Limits', [
-        'a Python copy: must be kept in sync with the C++',
-        'distances are commanded, no wheel encoders'], edge=ORANGE, size=11)
+    # ================================================================ slide 4: daylight ghost filter
+    s = frame_slide(prs, 'SENSORS · DAYLIGHT GHOSTS', 'Daylight ghost filter: LiDAR and ultrasonic cross-check', 'Ghost filter', '[name to be added]')
+    chain(s, 0.889, 1.86, [('LiDAR beam', 'ghosts 20–34 cm in sun'), ('Min range', 'drop < 35 cm'), ('Confirm', '≥ 4 beams or ultrasonic'),
+                           ('Mask', 'floor echo 50–90 cm'), ('Act', 'gentle stop if real')], 2.0, 0.40, 0.78, last_edge=ORANGE)
+    picture(s, ASSETS + 'fig_ghost.png', 0.889, 2.84, 7.4)
+    text(s, 0.889, 6.3, 7.6, 0.45, ['Returns below 35 cm in the daytime logs recorded before the filter (campus_2, _3, _4, _5). Later logs contain none.'], size=11, color=GREY, line=14)
+    card(s, 8.75, 2.84, 4.1, 1.5, 'From the datasheets', [
+        'LD19 family: 0.02–12 m, 4,500 Hz, 30 klux ambient light',
+        'HC-SR04: 2–400 cm, ~15° cone, ≥ 60 ms per ping'], size=11.5)
+    card(s, 8.75, 4.42, 4.1, 1.2, 'Rule in the box', [
+        'near obstacle: ≥ 4 valid beams, or front ultrasonic < 50 cm and ≤ LiDAR + 15 cm',
+        'replay: 27 of 28 ghost events dropped'], size=10.5)
+    card(s, 8.75, 5.7, 4.1, 1.0, 'Price', [
+        'LiDAR is blind below 35 cm (bollard, campus_9)',
+        'covered by ultrasonic stop at 35 cm + hold rule'], edge=ORANGE, size=10.5)
     set_notes(s, notes_text(3), NOTE_BODY)
     prs.save(OUT)
     print('saved', OUT)

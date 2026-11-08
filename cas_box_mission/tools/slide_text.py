@@ -10,40 +10,42 @@ N = dict(
 
 # each: speaker, title, minutes, script (paragraphs), understand (paragraphs / bullets starting with '- '), questions [(q, a)]
 S = []
-S.append(dict(speaker='Arjun', title='Landmark proximity corridor for the Open Sea', secs=90,
+S.append(dict(speaker='Arjun', title='Landmark proximity corridor for the Open Sea', secs=100,
  script=[
- "The Open Sea is the big empty square after the right turn, about 40 metres long. There is no wall next to the rover, so our wall-following has nothing to hold on to. GPS was 6 to 15 metres off here, and the gyro slowly drifts, so a rover that only trusts those two would wander.",
- "So we steer on things that do not move. Two of them are plain walls: the B wall behind us and the end wall ahead. In the middle are the landmarks: a tree with its structure, the two poles of the campus store, and the store front. In the picture, the grey dots are what the LiDAR saw, and the blue circles are those landmarks.",
- "The rover measures how far the poles are to its left and keeps that distance, using a small controller we call the proximity PID. The distance to keep, 6.65 metres, comes from the teaching run. Later, the store front at 3.0 metres takes over. The B wall behind and the end wall ahead keep the heading straight.",
- "It works: in two full runs, log 8 and campus 9, the rover crossed from wall to wall with no hold, no pause and no failsafe, and its heading changed by under 6 degrees over more than 40 metres. In simulation the worst case is 0.41 metres off, before it was 1.02. Still open: a strong gyro drift gives about 0.4 metres of error at the end."],
+ "After the right turn the rover crosses about 40 metres of open ground with no wall beside it, so LiDAR wall matching has nothing to match, GPS was 6 to 15 metres off here, and the gyro drifts. We therefore steer on fixed landmarks that the 90-beam LiDAR scan can see.",
+ "Two straight walls give the direction: the B wall behind us, used for the first 14 metres, and the end wall ahead. In between, the landmark is the U-shaped store front on the left, with the two campus-store poles and two trees with their structures in front of it. The box fits a straight line through the store-front points, a RANSAC fit with 0.25 metre tolerance, at least 5 points over 4 metres, and measures its distance. A PID keeps that distance at 6.65 metres, the value from the teaching run. After 24.5 metres the building front at 3.0 metres takes over.",
+ "The new part in version 10.1: the line is only accepted if it is within plus or minus 1.0 metre of the taught distance. Before, the gate was 4 to 9.5 metres, and in simulation a false straight line, like a bike rack or a hoarding, pulled the rover 1.6 to 2 metres off. Now the error is 0.01 to 0.03 metres.",
+ "Results: two real autonomous crossings, log 8 and campus 9, with no hold or failsafe and under 6 degrees heading change over more than 40 metres. Limit: with a gyro bias of 6 degrees per minute and no landmark at all, the end error is about 0.75 metres."],
  understand=[
- "Why landmarks: in the Open Sea the LiDAR map matching has no walls to match. A landmark is a fixed object we can measure our side distance to, so every scan corrects the position by itself. It does not depend on GPS or on how long we have been driving.",
- "- The blue circles are the LiDAR points of the tree and its structure, the two campus-store poles and the store front. The LiDAR sees shapes, not names, so the box fits a straight line through the points it sees there and measures the distance to that line.",
- "- The proximity PID: error = measured distance minus the target (6.65 m). The correction is kp·error + ki·sum of errors + kd·change of error, with 10, 1.5 and 20, limited to ±8 degrees and changed slowly (0.5 degrees per scan), so the heading failsafe never sees a jump.",
- "- The poles give only the side position. Their direction wobbles by about ±6 degrees, so the heading comes from the straight walls (B wall behind within ±1.3 degrees in six runs).",
- "- Nine logs were measured with the same functions as the firmware: the pole-line distance was 6.5 to 6.8 m in five runs (teach run 6.67 m) and was seen in 39 to 56 percent of the scans."],
+ "Why landmarks: a fixed object gives the side position directly, from every scan, without GPS and without trusting how long we have driven. The walls give the heading, the store front gives the side position.",
+ "- Code: RouteMission.cpp, case L2_GO, reference order: left row (10 to 24.5 m), left building (26 to 40 m), rear B wall (0 to 14 m), front end wall (after half the crossing). The first reference that fits wins. The same logic is mirrored in tools/fwmirror.py (class OpenSea) so it can be simulated.",
+ "- PID: e = measured distance − 6.65 m. Output = kp·e + ki·∫e + kd·ė with 10, 1.5 and 20 degrees per metre, limited to ±8 degrees, and moved by at most 0.5 degrees per scan so the heading failsafe never sees a jump. ė comes from the heading relative to the line: −0.22 m/s · sin(angle). The integral is kept after the row ends, so a constant sideways pull is not lost.",
+ "- Line fit: LineRef::rowFit on the 270 degree sector ±70, range 1.5 to 11 m. The line direction must be within 8 degrees of the path direction. The line gives only the side position, because its direction wobbled by ±6 degrees in campus_6.",
+ "- Measured with tools/landmark_benchmark.py on nine logs: line distance 6.5 to 6.8 m in five runs (teach run 6.67 m), seen on 39 to 56 percent of the scans, B wall behind within ±1.3 degrees in six runs.",
+ "- The circles on the slide are our reading of the LiDAR dots together with the walk-through video; the box itself only sees points and a fitted line."],
  questions=[
- ("Why not use GPS?", "In log 10 the GPS was 6 to 15 metres off next to the buildings, even with good satellite numbers. Walls and poles do not move."),
- ("What if a person stands in front of a pole?", "The box only uses the line when enough points fit it. If not, it keeps the last good heading for a while. The people simulation (next slide) covers crowds."),
- ("Is it tested on the real rover?", "Two real autonomous crossings (log 8, campus 9) and a closed-loop simulation. Version 10 has not been driven yet.")]))
+ ("Why not use GPS?", "In log 10 the GPS was 6 to 15 metres off next to the buildings, even with good satellite numbers. Walls and store fronts do not move."),
+ ("What if the line is wrong or missing?", "Missing: it holds the heading with the gyro (simulated: 0.01 m error). Wrong, like a bike rack: the ±1.0 m gate rejects it. A real line farther than 1 m from the teaching distance is also rejected."),
+ ("Is it tested on the real rover?", "Two real autonomous crossings (log 8, campus 9) and the closed-loop simulation on the next slide. Version 10.1 has not been driven yet.")]))
 
-S.append(dict(speaker='Kamal', title='People simulation: wrong turns 7.4 % → 1.2 %', secs=90,
+S.append(dict(speaker='Kamal', title='Open Sea simulation: crowds, weather and faults', secs=100,
  script=[
- "In log 8 the rover turned one pillar too early. A person walking behind the rover looked, to the LiDAR, like the pillar we search for. We cannot tell people to stay away, so we built a simulation that adds people to the real recordings.",
- "The method is on top of the slide. We take real LiDAR scans, add people as small circles, hide what is behind them, replay the same rules as the box, and compare the turn with the turn on the clean scan. We did this for 5,670 cases: people standing, walking along, towards and across, a follower, groups of two to five, and a crowd of eight.",
- "The result is in the chart. With the old rule, 421 cases, 7.4 percent, turned at the wrong pillar. With version 10, which looks for the black sign structure beside the turn pillar, only 66, 1.2 percent. In 93.5 percent of cases the turn is within half a metre of the clean turn.",
- "In the Open Sea the same idea: one person standing in the path made a false end wall in 18 of 20 runs; now in 0. A group of three, 20 to 0. A walking crowd, 13 to 0. Rain, snow and low sun cause no false stops. Still open: groups of three to five at the pillar before the sign, about 6 percent wrong turns, and this is simulation only."],
+ "We cannot test every crowd, every weather and every fault outdoors, so we built a closed-loop simulation of the Open Sea. The world is a set of line segments: the B wall, the store-front row with its stakes, the building front, the end wall and random people. A ray-casting scanner makes 90 beams of 4 degrees with 2 centimetre noise, 12 percent dropouts and the real 35 centimetre minimum range. A rover model drives at 0.22 metres per second with limited turn rate, slide and gyro bias. The box logic itself is a Python mirror of the firmware, the same rules, stepped every 0.25 seconds.",
+ "Crowds first. One person standing in the path caused a false end wall in 18 of 20 runs; now in 0. A group of three: 20 to 0. A walking crowd of 20: 13 to 0. The rover still stops and waits for people and never steers around them.",
+ "Weather: daylight ghosts, low sun and light rain are fine, 12 of 12. Heavy rain or snow 10 of 12, with no false stop. Snow plus slip plus drift plus sun together: 7 of 12.",
+ "Faults, the chart. Row missing, row gap, B wall hidden, heading glitch: fine. But a false straight line, like a bike rack or a hoarding, pulled the rover 1.6 to 2 metres off. We found it, tightened the landmark gate to plus or minus 1 metre, and the error is now 0.01 to 0.03 metres. Still open: a 15 degree heading glitch late in the crossing, and gyro bias with no landmark."],
  understand=[
- "The idea: we cannot walk a crowd through every pillar, so we make the crowd in the computer and test our rules on it. This is a test of the rule, not a prediction of real crowds.",
- "- The old rule looked for a pillar-like object. Every person standing near a pillar can look like one. The new rule needs the structure of the sign: it reaches from the pillar line to more than 2.3 m to the right, and it has to be seen several times from different positions.",
- "- The turn also uses the place where the wall behind the pillars comes back after the gap (the 'B gap') and adds 5.35 m. This does not depend on where the run started.",
- "- If nothing is found, the rover stops and asks instead of turning blindly.",
- "- 'On target' means within ±0.5 m of where the clean scan turns. 'Wrong pillar' means more than 2 m too early. We show wrong turns in the chart because they are the dangerous ones; the old rule mostly turned late or not at all, which looks bad on 'on target' but is not as risky.",
- "- Open Sea: 20 random starts per case, 12 for weather cases. The end wall must now be wide (≥ 1.1 m on both sides of the nearest surface), only after 85 percent of the crossing."],
+ "Files: tools/sim_open_sea.py is the simulator (world(), scan(), run(), crowd(), env_noise()); tools/fwmirror.py class OpenSea is the mirror of the firmware logic in RouteMission.cpp. Run it with python3 sim_open_sea.py --crowd, --env or --faults. Results are saved in PPT/new_slides_assets/open_sea_faults_*.txt.",
+ "- Metrics: side error at 24 m and at the end wall, whether the end wall was reached, false end walls, false holds, waiting time. 20 random starts per case, 12 for the weather cases.",
+ "- People: 0.4 m squares standing, walking or bouncing; the rover rule is: something within 0.6 m and ±16 degrees for 0.5 s means stop and wait, go on after 2 s clear. It never swerves.",
+ "- End wall: it must be wide (at least 1.1 m on both sides of the nearest surface, so one person is not a wall), only after 85 percent of the crossing, and a leaky counter (+2 for a good scan, −1 for a bad one, trigger 6). A bug we found in the simulation: the median front distance could land on the far wall behind a person.",
+ "- Weather model: daylight ghosts (20 percent of scans, beams at 20 to 34 cm), a 40 degree blind wedge for low sun, random near returns for rain and snow (3 to 8 percent of beams, 10 to 25 percent dropouts), slide up to 8 percent sideways, gyro bias ±6 degrees per minute.",
+ "- Fault list: row missing, row gap 14 to 20 m, row 0.7 m off the taught distance, false line 4.5 m and 8.5 m, B wall hidden, heading glitch +10 and −15 degrees, gyro bias with no row, and a mix of five faults.",
+ "- Limits: it is a simulation with our own world model, not the real campus. The row 0.7 m off the taught distance gives 0.3 to 1.1 m error because the box cannot tell it from a start offset; in the logs the row was within ±0.15 m."],
  questions=[
- ("Are the people realistic?", "Circles of 0.15 to 0.30 m, speeds 0.8 to 1.6 m/s, placed 0.5 to 4 m from the track. Real people are less regular, so we also tested groups and a crowd."),
- ("Does the rover swerve around people?", "No. People in front: it stops and waits. It never steers around them."),
- ("What is still wrong?", "Groups of 3 to 5 at the pillar before the sign (about 6 percent wrong turns) and eight people shoulder to shoulder at the end wall.")]))
+ ("How do you know the simulation is realistic?", "The ghost, dropout and noise numbers come from the logs, the row distance from nine logs, and the crowd rule is the firmware rule. It still is a model; the real test is the field run."),
+ ("What did the simulation change in the code?", "The end wall check (wide, nearest surface, 85 percent, leaky counter) and the landmark gate of plus or minus 1.0 m."),
+ ("What is still wrong?", "A 15 degree heading glitch late in the crossing (8 m error), gyro bias of 6 degrees per minute with no landmark (0.75 m), and eight people shoulder to shoulder at the end wall.")]))
 
 S.append(dict(speaker='[name to be added]', title='Last leg to Block I: corridor, entrance, stop', secs=90,
  script=[
@@ -60,6 +62,7 @@ S.append(dict(speaker='[name to be added]', title='Last leg to Block I: corridor
  "- Corridor: right railing line 0.35 to 1.3 m, left facade 1.4 to 2.6 m, total width 2.4 to 3.3 m, for 1 second. Found at 35.6 m in campus 9 and 40.0 m in log 8, never earlier.",
  "- Entrance: the facade steps back by 0.2 m or more and the glass drops LiDAR beams. The stop is 1.5 m later.",
  "- Edge assist: in log 8 the rover stood 60 s at the cobble-to-interlock edge. Now it pushes with more power, backs up 0.25 m and pushes again, but only when nothing is closer than 1.2 m ahead, so it never pushes against an obstacle.",
+ "- Code: RouteMission.cpp, _l4Walk() for walkway, corridor and entrance, _edgeAssist() for the edge, _leg4Wall() for the wall part. The railing line is a RANSAC fit (LineRef::rowFit, 90 degrees ±40, 0.3 to 1.8 m, tolerance 0.08 m, at least 4 points). The entrance needs at least 3 missing and 4 valid beams in bins 60 to 74 on three scans in a row, and only after 3 m inside the corridor.",
  "- Hold rule: an obstacle that vanishes closer than 0.45 m without being seen moving away is still there. It is released only when several beams see more than 1 m free, or the ultrasonic reads more than 1 m."],
  questions=[
  ("Does it keep out of the grass?", "It tries to: it keeps the distance to the left edge when it sees a line there, otherwise it holds the heading of the wall. In campus 9 the line was found in only about 10 percent of scans, so this is a weak point; the video of the run is the check."),
@@ -67,19 +70,20 @@ S.append(dict(speaker='[name to be added]', title='Last leg to Block I: corridor
  ("Will it stop at the right door?", "Replay says 48.5 m, the entrance is at 47.0 m. It must be checked outdoors."),
  ("What if a person stands at the entrance?", "It holds and finishes the route there. It never drives into or around people.")]))
 
-S.append(dict(speaker='[name to be added]', title='Log replay and benchmark toolchain', secs=90,
+S.append(dict(speaker='[name to be added]', title='Daylight ghost filter: LiDAR and ultrasonic cross-check', secs=100,
  script=[
- "This slide is how we test changes without driving again. Every run writes a log. A decoder turns it into a table, a narrator prints what the rover was thinking at each moment, and a Python copy of the firmware rules replays the log. So a change can be tried on old runs before we flash it.",
- "Two more tools sit on top. The landmark benchmark measures the same landmarks in nine logs and keeps them in one file, so we know which numbers are normal. The simulators add people, weather and slip to real scans.",
- "Here is what it did this week. The chart shows where the replay turns on seven runs. The old rule turned too early in log 8, at 18.2 metres; the new one turns at 21.8. On the others it stays where the good runs turned. If we shift the start of a run by up to 8 metres, the turn moves by at most 0.13 metres.",
- "It also found the cause of the three failures: the follower in log 8, the start-dependent window in campus 9, and the hold that was released too early. The limit: it is a copy of the firmware, so it has to be kept in sync, and distances are commanded, not measured, because we have no wheel encoders."],
+ "In daylight the LiDAR sometimes reports objects at 20 to 34 centimetres that are not there. In the older logs, 3 to 8 percent of the scans had such a beam. If the rover believed them it would stop for nothing.",
+ "The fix has three layers. The LiDAR ignores everything below 35 centimetres. A nearer obstacle only counts if at least four beams agree, or if the front ultrasonic sensor agrees within 15 centimetres. And the downward-angled ultrasonic sensor sees the floor at 50 to 90 centimetres, so that echo is ignored.",
+ "The numbers come from the datasheets: the LD19 family is rated for 30 kilolux of ambient light, so direct sun is at its limit, and the HC-SR04 measures 2 to 400 centimetres in a cone of about 15 degrees, one ping every 60 milliseconds. We use each sensor where it is strong.",
+ "The price: a real obstacle closer than 35 centimetres is invisible to the LiDAR, as the bollard in campus 9 was. So the ultrasonic stop distance is 35 centimetres, and an obstacle that vanishes from closer than 45 centimetres counts as still there."],
  understand=[
- "The pipeline: log file (.bin from the box) → decoder (table) → narrate_run (plain-language story of the run) → landmark_benchmark (numbers per log) → fwmirror (Python copy of the rules) → replay_turn / sweep_start / simulators → results → firmware → flash.",
- "- Why a copy: the real firmware runs on the ESP32. The copy runs the same rules on the laptop in seconds, on every old log, so we see the effect of a change before it can break the rover.",
- "- Start-shift sweep: we cut or pad the start of each log by −8 to +8 m. A good rule turns at the same place; ours moved by 0.00 to 0.13 m.",
- "- Benchmark: nine logs, same functions as the firmware. It showed, for example, the pole-line distance 6.5 to 6.8 m in five runs, and a B wall behind within ±1.3 degrees in six.",
- "- We do not tune to bad runs: a drifted run is used to find a cause, not to set a number."],
+ "Where the filter lives: LidarScan.h (minimum range 350 mm) and RouteMission.cpp, _front() and _usMed(): the verification uses the median of the front ultrasonic readings and the count of valid beams.",
+ "- The chart: left, the range of beams below 35 cm in the daytime logs of campus_2, campus_3 and campus_5 (mostly 20 to 34 cm, nothing in the real world was that close); right, the share of scans with such a beam in each log (1 to 8 percent). Logs from campus_6 on contain none because the filter was already in the firmware.",
+ "- Rule: a near obstacle is accepted if at least 4 valid beams agree, or if the front ultrasonic median is below 50 cm and not more than 15 cm above the LiDAR. In replay 27 of 28 ghost events were dropped.",
+ "- Ultrasonic floor echo: one front sensor is angled 45 degrees down, so the floor at 50 to 90 cm gives false near readings; they are masked.",
+ "- Datasheet facts, checked online: LD19 0.02 to 12 m, 4,500 samples per second, 30 klux; the LD20 datasheet was not found, so the LD19 values are used. HC-SR04 2 to 400 cm, about 15 degrees, more than 60 ms per measurement.",
+ "- Tilt and the ramp are handled separately; this slide is only about false near obstacles."],
  questions=[
- ("Does the replay match the real rover?", "It uses the same rules and logged sensor data, but it is a Python copy. A change in the C++ code has to be copied over; we check the numbers against the logs."),
- ("Why not just drive again?", "Every outdoor run costs time and risk to the rover. Replay tells us in seconds which change is worth driving."),
- ("What is not covered?", "Real crowds, real weather and wheel slip are simulated, not measured. Distances are commanded, not from encoders.")]))
+ ("Why not just lower the LiDAR sensitivity?", "The ghosts are real returns from sunlight at the sensor, not noise we can threshold. Cross-checking with a different physical principle (ultrasound) is more robust."),
+ ("What does the filter cost?", "Anything closer than 35 cm is invisible to the LiDAR. The ultrasonic stop at 35 cm and the hold rule for vanished obstacles cover that."),
+ ("Is it tested?", "Replayed on the logs (27 of 28 ghosts dropped) and in the Open Sea simulation with ghosts in 20 percent of scans: 12 of 12 runs reach the end wall.")]))

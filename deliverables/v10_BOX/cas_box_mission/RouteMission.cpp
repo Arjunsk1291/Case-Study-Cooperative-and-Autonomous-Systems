@@ -1100,7 +1100,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
         if (useRows && _dist2 >= 10.0f && _dist2 <= 24.5f &&
             LineRef::rowFit(s, 270, 70, 1.5f, 11.0f, 0.25f, 5, 4.0f, 1.0f, ang, dist, npt) && dist < 0) {
           const float d = rowDir(ang), off = -dist;
-          if (fabsf(wrap180(d - _base)) <= 8.0f && off >= 4.0f && off <= 9.5f) {
+          if (fabsf(wrap180(d - _base)) <= 8.0f && fabsf(off - rowOffsetM) <= 1.0f) {      // v10.1: gate +-1.0 m around the taught distance (was 4.0-9.5 m: a false line at 4.5 / 8.5 m pulled the rover 1.6-2 m off in simulation)
             // v7: the row gives the SIDE position only (its direction wobbled +-6 deg in campus_6 and a wrong row
             // direction kept after the row was the worst simulated failure). Cross-track PID on the distance:
             const float e = off - rowOffsetM;                                 // + = too far from the row -> turn left
