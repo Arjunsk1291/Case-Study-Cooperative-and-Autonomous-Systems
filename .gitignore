@@ -1,3 +1,9 @@
 # Arduino CLI build products are reproducible with CAS_Box_B3_R04_Upload_Kit/tools/build_r04.sh.
 CAS_Box_B3_R04_Upload_Kit/build/
 **/__pycache__/
+
+# videos over GitHub's 100 MB file limit (keep locally)
+Log_run/campus5/run.mp4
+Log_run/campus_6/campus_6_log.mp4
+Log_run/log8/vdo after lifitng and placing on turning pillar.MOV
+**/.~lock.*
