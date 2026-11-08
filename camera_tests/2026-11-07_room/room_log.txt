@@ -1,0 +1,77 @@
+ets Jul 29 2019 12:21:46
+rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:4876
+ho 0 tail 12 room 4
+load:0x40078000,len:16532
+load:0x40080400,len:3500
+entry 0x400805b4
+[cam] strip bench + diagnostics, NO Wi-Fi. reset reason 1 (1=power on, 15=brownout)
+[diag] PSRAM: FOUND, size 4096 kB | heap 302 kB | flash 4096 kB | CPU 240 MHz
+[diag] control bus: device at 0x30 (OV2640 camera)
+[diag] camera init at XCLK 20 MHz: OK (0x0), heap 262 kB
+[diag] sensor id: PID 0x26 (0x26 = OV2640, 0x36 = OV3660, 0x56 = OV5640)
+[diag] camera READY - send 'f' for a frame
+{"seq":1,"ok":0,"rows":4,"resid":0.9,"off_px":13.4,"ang_deg":-1.4,"conf":0.00,"w":[18,18,18,18],"bright":149,"t_cap_us":20021,"t_proc_us":482,"heap_kB":262,"psram_kB":4056}
+{"seq":2,"ok":1,"rows":4,"resid":1.3,"off_px":13.3,"ang_deg":-1.9,"conf":1.00,"w":[18,18,18,18],"bright":151,"t_cap_us":54,"t_proc_us":464,"heap_kB":262,"psram_kB":4056}
+{"seq":3,"ok":1,"rows":4,"resid":1.3,"off_px":13.3,"ang_deg":-1.9,"conf":1.00,"w":[18,18,18,18],"bright":150,"t_cap_us":2,"t_proc_us":429,"heap_kB":262,"psram_kB":4056}
+{"seq":4,"ok":1,"rows":4,"resid":0.7,"off_px":13.0,"ang_deg":-0.5,"conf":1.00,"w":[18,18,18,18],"bright":151,"t_cap_us":2,"t_proc_us":528,"heap_kB":262,"psram_kB":4056}
+{"seq":5,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":149,"t_cap_us":2,"t_proc_us":457,"heap_kB":262,"psram_kB":4056}
+{"seq":6,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":148,"t_cap_us":2,"t_proc_us":433,"heap_kB":262,"psram_kB":4056}
+{"seq":7,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":150,"t_cap_us":2,"t_proc_us":458,"heap_kB":262,"psram_kB":4056}
+{"seq":8,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":146,"t_cap_us":2,"t_proc_us":441,"heap_kB":262,"psram_kB":4056}
+{"seq":9,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":146,"t_cap_us":2,"t_proc_us":557,"heap_kB":262,"psram_kB":4056}
+{"seq":10,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":143,"t_cap_us":2,"t_proc_us":431,"heap_kB":262,"psram_kB":4056}
+{"seq":11,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":139,"t_cap_us":2,"t_proc_us":431,"heap_kB":262,"psram_kB":4056}
+{"seq":12,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":139,"t_cap_us":2,"t_proc_us":537,"heap_kB":262,"psram_kB":4056}
+{"seq":13,"ok":1,"rows":4,"resid":1.0,"off_px":13.0,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":135,"t_cap_us":2,"t_proc_us":534,"heap_kB":262,"psram_kB":4056}
+{"seq":14,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":131,"t_cap_us":2,"t_proc_us":436,"heap_kB":262,"psram_kB":4056}
+{"seq":15,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":130,"t_cap_us":2,"t_proc_us":538,"heap_kB":262,"psram_kB":4056}
+{"seq":16,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":126,"t_cap_us":2,"t_proc_us":447,"heap_kB":262,"psram_kB":4056}
+{"seq":17,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":126,"t_cap_us":2,"t_proc_us":597,"heap_kB":262,"psram_kB":4056}
+{"seq":18,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":125,"t_cap_us":2,"t_proc_us":429,"heap_kB":262,"psram_kB":4056}
+{"seq":19,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":124,"t_cap_us":2,"t_proc_us":430,"heap_kB":262,"psram_kB":4056}
+{"seq":20,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":123,"t_cap_us":2,"t_proc_us":556,"heap_kB":262,"psram_kB":4056}
+{"seq":21,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":127,"t_cap_us":2,"t_proc_us":573,"heap_kB":262,"psram_kB":4056}
+{"seq":22,"ok":1,"rows":4,"resid":0.9,"off_px":13.4,"ang_deg":-1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":439,"heap_kB":262,"psram_kB":4056}
+{"seq":23,"ok":1,"rows":4,"resid":1.0,"off_px":13.0,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":548,"heap_kB":262,"psram_kB":4056}
+{"seq":24,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":128,"t_cap_us":2,"t_proc_us":446,"heap_kB":262,"psram_kB":4056}
+{"seq":25,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":127,"t_cap_us":2,"t_proc_us":442,"heap_kB":262,"psram_kB":4056}
+{"seq":26,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":126,"t_cap_us":2,"t_proc_us":426,"heap_kB":262,"psram_kB":4056}
+{"seq":27,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":126,"t_cap_us":2,"t_proc_us":448,"heap_kB":262,"psram_kB":4056}
+{"seq":28,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":125,"t_cap_us":2,"t_proc_us":555,"heap_kB":262,"psram_kB":4056}
+{"seq":29,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":124,"t_cap_us":2,"t_proc_us":453,"heap_kB":262,"psram_kB":4056}
+{"seq":30,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":123,"t_cap_us":2,"t_proc_us":433,"heap_kB":262,"psram_kB":4056}
+{"seq":31,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":122,"t_cap_us":2,"t_proc_us":542,"heap_kB":262,"psram_kB":4056}
+{"seq":84,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":464,"heap_kB":262,"psram_kB":4056}
+{"seq":85,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":550,"heap_kB":262,"psram_kB":4056}
+{"seq":86,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":434,"heap_kB":262,"psram_kB":4056}
+{"seq":87,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":436,"heap_kB":262,"psram_kB":4056}
+{"seq":88,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":546,"heap_kB":262,"psram_kB":4056}
+{"seq":89,"ok":1,"rows":4,"resid":1.0,"off_px":13.0,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":596,"heap_kB":262,"psram_kB":4056}
+{"seq":90,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":436,"heap_kB":262,"psram_kB":4056}
+{"seq":91,"ok":1,"rows":4,"resid":1.0,"off_px":13.0,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":541,"heap_kB":262,"psram_kB":4056}
+{"seq":92,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":453,"heap_kB":262,"psram_kB":4056}
+{"seq":93,"ok":1,"rows":4,"resid":1.0,"off_px":13.0,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":605,"heap_kB":262,"psram_kB":4056}
+{"seq":94,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":519,"heap_kB":262,"psram_kB":4056}
+{"seq":95,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":459,"heap_kB":262,"psram_kB":4056}
+{"seq":96,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":562,"heap_kB":262,"psram_kB":4056}
+{"seq":97,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":701,"heap_kB":262,"psram_kB":4056}
+{"seq":98,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":459,"heap_kB":262,"psram_kB":4056}
+{"seq":99,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":444,"heap_kB":262,"psram_kB":4056}
+{"seq":100,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":552,"heap_kB":262,"psram_kB":4056}
+{"seq":101,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":447,"heap_kB":262,"psram_kB":4056}
+{"seq":102,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":456,"heap_kB":262,"psram_kB":4056}
+{"seq":103,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":552,"heap_kB":262,"psram_kB":4056}
+{"seq":104,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":3,"t_proc_us":603,"heap_kB":262,"psram_kB":4056}
+{"seq":105,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":431,"heap_kB":262,"psram_kB":4056}
+{"seq":106,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":466,"heap_kB":262,"psram_kB":4056}
+{"seq":107,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":449,"heap_kB":262,"psram_kB":4056}
+{"seq":108,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":552,"heap_kB":262,"psram_kB":4056}
+{"seq":109,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":446,"heap_kB":262,"psram_kB":4056}
+{"seq":110,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":130,"t_cap_us":2,"t_proc_us":435,"heap_kB":262,"psram_kB":4056}
+{"seq":111,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":547,"heap_kB":262,"psram_kB":4056}
+{"seq":112,"ok":1,"rows":4,"resid":0.5,"off_px":12.5,"ang_deg":-0.0,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":587,"heap_kB":262,"psram_kB":4056}
+{"seq":113,"ok":1,"rows":4,"resid":0.9,"off_px":12.1,"ang_deg":1.4,"conf":1.00,"w":[18,18,18,18],"bright":129,"t_cap_us":2,"t_proc_us":431,"heap_kB":262,"psram_kB":4056}

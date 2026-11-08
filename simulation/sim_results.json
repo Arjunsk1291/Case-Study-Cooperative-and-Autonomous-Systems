@@ -1,0 +1,321 @@
+{
+ "hand": {
+  "A gyro only, no camera at all": {
+   "cost": 9.154992857334788,
+   "indoor_2m": {
+    "success": 0.125,
+    "yend_med": 0.377,
+    "yend_p90": 0.646,
+    "snaps": 1.0
+   },
+   "plaza1_36m": {
+    "success": 0.043,
+    "yend_med": 6.118,
+    "yend_p90": 14.796,
+    "snaps": 1.0
+   },
+   "grooved_24m": {
+    "success": 0.083,
+    "yend_med": 4.245,
+    "yend_p90": 9.673,
+    "snaps": 1.0
+   }
+  },
+  "B align once (1 snap) + straight": {
+   "cost": 7.745769178308802,
+   "indoor_2m": {
+    "success": 0.385,
+    "yend_med": 0.145,
+    "yend_p90": 0.632,
+    "snaps": 1.0
+   },
+   "plaza1_36m": {
+    "success": 0.05,
+    "yend_med": 5.129,
+    "yend_p90": 13.051,
+    "snaps": 1.0
+   },
+   "grooved_24m": {
+    "success": 0.092,
+    "yend_med": 3.81,
+    "yend_p90": 9.899,
+    "snaps": 1.0
+   }
+  },
+  "C align (3 snaps, median) + verify + straight": {
+   "cost": 7.152535249674498,
+   "indoor_2m": {
+    "success": 0.573,
+    "yend_med": 0.083,
+    "yend_p90": 0.618,
+    "snaps": 6.0
+   },
+   "plaza1_36m": {
+    "success": 0.043,
+    "yend_med": 4.782,
+    "yend_p90": 11.523,
+    "snaps": 6.0
+   },
+   "grooved_24m": {
+    "success": 0.065,
+    "yend_med": 3.945,
+    "yend_p90": 9.552,
+    "snaps": 6.0
+   }
+  },
+  "D C + check every 2 m": {
+   "cost": 7.145521901275847,
+   "indoor_2m": {
+    "success": 0.573,
+    "yend_med": 0.083,
+    "yend_p90": 0.618,
+    "snaps": 6.0
+   },
+   "plaza1_36m": {
+    "success": 0.125,
+    "yend_med": 4.527,
+    "yend_p90": 11.523,
+    "snaps": 23.0
+   },
+   "grooved_24m": {
+    "success": 0.072,
+    "yend_med": 4.347,
+    "yend_p90": 10.025,
+    "snaps": 17.0
+   }
+  },
+  "E C + check every 5 m, 3 snaps/check": {
+   "cost": 7.235302890374021,
+   "indoor_2m": {
+    "success": 0.573,
+    "yend_med": 0.083,
+    "yend_p90": 0.618,
+    "snaps": 6.0
+   },
+   "plaza1_36m": {
+    "success": 0.05,
+    "yend_med": 4.82,
+    "yend_p90": 11.523,
+    "snaps": 27.0
+   },
+   "grooved_24m": {
+    "success": 0.06,
+    "yend_med": 3.919,
+    "yend_p90": 9.279,
+    "snaps": 18.0
+   }
+  },
+  "F C + measured crab prior, no checks": {
+   "cost": 6.340184633545718,
+   "indoor_2m": {
+    "success": 0.573,
+    "yend_med": 0.083,
+    "yend_p90": 0.618,
+    "snaps": 6.0
+   },
+   "plaza1_36m": {
+    "success": 0.09,
+    "yend_med": 2.947,
+    "yend_p90": 11.368,
+    "snaps": 6.0
+   },
+   "grooved_24m": {
+    "success": 0.072,
+    "yend_med": 3.831,
+    "yend_p90": 9.525,
+    "snaps": 6.0
+   }
+  },
+  "G F + check every 2 m + crab learning": {
+   "cost": 6.406236103052131,
+   "indoor_2m": {
+    "success": 0.573,
+    "yend_med": 0.083,
+    "yend_p90": 0.618,
+    "snaps": 6.0
+   },
+   "plaza1_36m": {
+    "success": 0.142,
+    "yend_med": 3.277,
+    "yend_p90": 11.522,
+    "snaps": 23.0
+   },
+   "grooved_24m": {
+    "success": 0.062,
+    "yend_med": 3.579,
+    "yend_p90": 9.534,
+    "snaps": 17.0
+   }
+  }
+ },
+ "best": {
+  "n_align": 4,
+  "verify": 1,
+  "D_merge": 1.3880988614033476,
+  "check_every": 2.5720475905503637,
+  "n_check": 2,
+  "gA": 0.09680074174642735,
+  "gO": 0.40036903211875285,
+  "max_corr": 7.789048810322571,
+  "ang_tol": 18.42556561142004,
+  "off_tol": 0.7093854835685248,
+  "use_prior": 1,
+  "crab_k": 0.34530306282614076
+ },
+ "cem": [
+  5.5948745603954695,
+  6.038054201115743,
+  6.110917959349195,
+  6.209289441342979,
+  6.236187242413806,
+  6.054211338957996,
+  5.957582591815811,
+  5.746086860192045,
+  5.785055207421447,
+  5.962442750382626,
+  5.569733376208831,
+  5.1456329877560885
+ ],
+ "stress": {
+  "None": {
+   "indoor_2m": {
+    "success": 0.606,
+    "yend_med": 0.076,
+    "yend_p90": 0.54,
+    "snaps": 8.0
+   },
+   "plaza1_36m": {
+    "success": 0.35,
+    "yend_med": 2.12,
+    "yend_p90": 11.266,
+    "snaps": 34.0
+   },
+   "grooved_24m": {
+    "success": 0.105,
+    "yend_med": 3.372,
+    "yend_p90": 8.679,
+    "snaps": 26.0
+   }
+  },
+  "camera_dead": {
+   "indoor_2m": {
+    "success": 0.153,
+    "yend_med": 0.34,
+    "yend_p90": 0.638,
+    "snaps": 8.0
+   },
+   "plaza1_36m": {
+    "success": 0.036,
+    "yend_med": 6.426,
+    "yend_p90": 14.491,
+    "snaps": 34.0
+   },
+   "grooved_24m": {
+    "success": 0.064,
+    "yend_med": 4.258,
+    "yend_p90": 9.756,
+    "snaps": 26.0
+   }
+  },
+  "link_50pct": {
+   "indoor_2m": {
+    "success": 0.464,
+    "yend_med": 0.113,
+    "yend_p90": 0.58,
+    "snaps": 8.0
+   },
+   "plaza1_36m": {
+    "success": 0.191,
+    "yend_med": 3.037,
+    "yend_p90": 12.728,
+    "snaps": 34.0
+   },
+   "grooved_24m": {
+    "success": 0.089,
+    "yend_med": 3.707,
+    "yend_p90": 9.377,
+    "snaps": 26.0
+   }
+  },
+  "bad_scale": {
+   "indoor_2m": {
+    "success": 0.509,
+    "yend_med": 0.097,
+    "yend_p90": 0.557,
+    "snaps": 8.0
+   },
+   "plaza1_36m": {
+    "success": 0.175,
+    "yend_med": 2.803,
+    "yend_p90": 10.305,
+    "snaps": 34.0
+   },
+   "grooved_24m": {
+    "success": 0.078,
+    "yend_med": 3.383,
+    "yend_p90": 8.57,
+    "snaps": 26.0
+   }
+  },
+  "mount_8deg": {
+   "indoor_2m": {
+    "success": 0.124,
+    "yend_med": 0.197,
+    "yend_p90": 0.557,
+    "snaps": 8.0
+   },
+   "plaza1_36m": {
+    "success": 0.054,
+    "yend_med": 5.175,
+    "yend_p90": 10.852,
+    "snaps": 34.0
+   },
+   "grooved_24m": {
+    "success": 0.047,
+    "yend_med": 3.854,
+    "yend_p90": 8.382,
+    "snaps": 26.0
+   }
+  },
+  "crab_x2": {
+   "indoor_2m": {
+    "success": 0.495,
+    "yend_med": 0.102,
+    "yend_p90": 0.549,
+    "snaps": 8.0
+   },
+   "plaza1_36m": {
+    "success": 0.147,
+    "yend_med": 4.474,
+    "yend_p90": 15.735,
+    "snaps": 34.0
+   },
+   "grooved_24m": {
+    "success": 0.083,
+    "yend_med": 3.761,
+    "yend_p90": 11.774,
+    "snaps": 26.0
+   }
+  },
+  "sign_flip": {
+   "indoor_2m": {
+    "success": 0.039,
+    "yend_med": 0.84,
+    "yend_p90": 3.594,
+    "snaps": 8.0
+   },
+   "plaza1_36m": {
+    "success": 0.012,
+    "yend_med": 12.607,
+    "yend_p90": 55.773,
+    "snaps": 33.29
+   },
+   "grooved_24m": {
+    "success": 0.031,
+    "yend_med": 4.709,
+    "yend_p90": 11.214,
+    "snaps": 25.982
+   }
+  }
+ }
+}

@@ -1,0 +1,65 @@
+hand-made strategies (400 random episodes per scenario):
+
+A gyro only, no camera at all: cost 9.155
+   indoor_2m    on-strip at the end  12.5 %   |y_end| median  37.7 cm  p90  64.6 cm   snaps 1.0
+   plaza1_36m   on-strip at the end   4.2 %   |y_end| median 611.8 cm  p90 1479.6 cm   snaps 1.0
+   grooved_24m  on-strip at the end   8.2 %   |y_end| median 424.5 cm  p90 967.3 cm   snaps 1.0
+
+B align once (1 snap) + straight: cost 7.746
+   indoor_2m    on-strip at the end  38.5 %   |y_end| median  14.5 cm  p90  63.2 cm   snaps 1.0
+   plaza1_36m   on-strip at the end   5.0 %   |y_end| median 512.9 cm  p90 1305.1 cm   snaps 1.0
+   grooved_24m  on-strip at the end   9.2 %   |y_end| median 381.0 cm  p90 989.9 cm   snaps 1.0
+
+C align (3 snaps, median) + verify + straight: cost 7.153
+   indoor_2m    on-strip at the end  57.2 %   |y_end| median   8.3 cm  p90  61.8 cm   snaps 6.0
+   plaza1_36m   on-strip at the end   4.2 %   |y_end| median 478.2 cm  p90 1152.3 cm   snaps 6.0
+   grooved_24m  on-strip at the end   6.5 %   |y_end| median 394.5 cm  p90 955.2 cm   snaps 6.0
+
+D C + check every 2 m: cost 7.146
+   indoor_2m    on-strip at the end  57.2 %   |y_end| median   8.3 cm  p90  61.8 cm   snaps 6.0
+   plaza1_36m   on-strip at the end  12.5 %   |y_end| median 452.7 cm  p90 1152.3 cm   snaps 23.0
+   grooved_24m  on-strip at the end   7.2 %   |y_end| median 434.7 cm  p90 1002.5 cm   snaps 17.0
+
+E C + check every 5 m, 3 snaps/check: cost 7.235
+   indoor_2m    on-strip at the end  57.2 %   |y_end| median   8.3 cm  p90  61.8 cm   snaps 6.0
+   plaza1_36m   on-strip at the end   5.0 %   |y_end| median 482.0 cm  p90 1152.3 cm   snaps 27.0
+   grooved_24m  on-strip at the end   6.0 %   |y_end| median 391.9 cm  p90 927.9 cm   snaps 18.0
+
+F C + measured crab prior, no checks: cost 6.340
+   indoor_2m    on-strip at the end  57.2 %   |y_end| median   8.3 cm  p90  61.8 cm   snaps 6.0
+   plaza1_36m   on-strip at the end   9.0 %   |y_end| median 294.7 cm  p90 1136.8 cm   snaps 6.0
+   grooved_24m  on-strip at the end   7.2 %   |y_end| median 383.1 cm  p90 952.5 cm   snaps 6.0
+
+G F + check every 2 m + crab learning: cost 6.406
+   indoor_2m    on-strip at the end  57.2 %   |y_end| median   8.3 cm  p90  61.8 cm   snaps 6.0
+   plaza1_36m   on-strip at the end  14.2 %   |y_end| median 327.7 cm  p90 1152.2 cm   snaps 23.0
+   grooved_24m  on-strip at the end   6.2 %   |y_end| median 357.9 cm  p90 953.4 cm   snaps 17.0
+
+policy search (cross-entropy method):
+  CEM iteration  1: best cost 5.595
+  CEM iteration  2: best cost 6.038
+  CEM iteration  3: best cost 6.111
+  CEM iteration  4: best cost 6.209
+  CEM iteration  5: best cost 6.236
+  CEM iteration  6: best cost 6.054
+  CEM iteration  7: best cost 5.958
+  CEM iteration  8: best cost 5.746
+  CEM iteration  9: best cost 5.785
+  CEM iteration 10: best cost 5.962
+  CEM iteration 11: best cost 5.570
+  CEM iteration 12: best cost 5.146
+
+BEST policy: {"n_align": 4, "verify": 1, "D_merge": 1.388, "check_every": 2.572, "n_check": 2, "gA": 0.097, "gO": 0.4, "max_corr": 7.789, "ang_tol": 18.426, "off_tol": 0.709, "use_prior": 1, "crab_k": 0.345}
+   indoor_2m    on-strip at the end  60.6 %   |y_end| median   7.5 cm  p90  59.2 cm   snaps 8.0
+   plaza1_36m   on-strip at the end  32.7 %   |y_end| median 200.5 cm  p90 1016.6 cm   snaps 34.0
+   grooved_24m  on-strip at the end   8.4 %   |y_end| median 332.2 cm  p90 868.3 cm   snaps 26.0
+
+failure / stress tests of the BEST policy (1000 episodes each):
+  None        : indoor_2m   61 % (   8 cm) | plaza1_36m   35 % ( 212 cm) | grooved_24m   10 % ( 337 cm)
+  camera_dead : indoor_2m   15 % (  34 cm) | plaza1_36m    4 % ( 643 cm) | grooved_24m    6 % ( 426 cm)
+  link_50pct  : indoor_2m   46 % (  11 cm) | plaza1_36m   19 % ( 304 cm) | grooved_24m    9 % ( 371 cm)
+  bad_scale   : indoor_2m   51 % (  10 cm) | plaza1_36m   18 % ( 280 cm) | grooved_24m    8 % ( 338 cm)
+  mount_8deg  : indoor_2m   12 % (  20 cm) | plaza1_36m    5 % ( 518 cm) | grooved_24m    5 % ( 385 cm)
+  crab_x2     : indoor_2m   50 % (  10 cm) | plaza1_36m   15 % ( 447 cm) | grooved_24m    8 % ( 376 cm)
+  sign_flip   : indoor_2m    4 % (  84 cm) | plaza1_36m    1 % (1261 cm) | grooved_24m    3 % ( 471 cm)
+exit 0

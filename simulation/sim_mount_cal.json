@@ -1,0 +1,34 @@
+{
+ "F align 3 + crab prior|None|indoor_2m": {
+  "on": 0.799,
+  "med_cm": 5.2
+ },
+ "F align 3 + crab prior|None|plaza1_36m": {
+  "on": 0.152,
+  "med_cm": 169.0
+ },
+ "F align 3 + crab prior|mount_cal|indoor_2m": {
+  "on": 0.845,
+  "med_cm": 4.4
+ },
+ "F align 3 + crab prior|mount_cal|plaza1_36m": {
+  "on": 0.16,
+  "med_cm": 157.5
+ },
+ "BEST|None|indoor_2m": {
+  "on": 0.823,
+  "med_cm": 4.9
+ },
+ "BEST|None|plaza1_36m": {
+  "on": 0.454,
+  "med_cm": 80.5
+ },
+ "BEST|mount_cal|indoor_2m": {
+  "on": 0.882,
+  "med_cm": 3.8
+ },
+ "BEST|mount_cal|plaza1_36m": {
+  "on": 0.515,
+  "med_cm": 39.1
+ }
+}

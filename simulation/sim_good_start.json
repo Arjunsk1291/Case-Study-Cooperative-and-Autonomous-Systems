@@ -1,0 +1,82 @@
+{
+ "A gyro only (camera dead)": {
+  "indoor_2m": {
+   "on_strip": 0.365,
+   "within_2m": 1.0,
+   "median_cm": 13.6,
+   "p90_cm": 26.1
+  },
+  "plaza1_36m": {
+   "on_strip": 0.078,
+   "within_2m": 0.29,
+   "median_cm": 411.5,
+   "p90_cm": 970.2
+  },
+  "grooved_24m": {
+   "on_strip": 0.131,
+   "within_2m": 0.406,
+   "median_cm": 271.2,
+   "p90_cm": 626.2
+  }
+ },
+ "B align once + straight": {
+  "indoor_2m": {
+   "on_strip": 0.606,
+   "within_2m": 1.0,
+   "median_cm": 7.9,
+   "p90_cm": 20.7
+  },
+  "plaza1_36m": {
+   "on_strip": 0.053,
+   "within_2m": 0.213,
+   "median_cm": 413.3,
+   "p90_cm": 882.5
+  },
+  "grooved_24m": {
+   "on_strip": 0.109,
+   "within_2m": 0.365,
+   "median_cm": 284.3,
+   "p90_cm": 655.1
+  }
+ },
+ "F align 3 + crab prior": {
+  "indoor_2m": {
+   "on_strip": 0.799,
+   "within_2m": 1.0,
+   "median_cm": 5.2,
+   "p90_cm": 13.4
+  },
+  "plaza1_36m": {
+   "on_strip": 0.152,
+   "within_2m": 0.586,
+   "median_cm": 169.0,
+   "p90_cm": 436.6
+  },
+  "grooved_24m": {
+   "on_strip": 0.161,
+   "within_2m": 0.455,
+   "median_cm": 227.9,
+   "p90_cm": 617.1
+  }
+ },
+ "BEST (search)": {
+  "indoor_2m": {
+   "on_strip": 0.823,
+   "within_2m": 1.0,
+   "median_cm": 4.9,
+   "p90_cm": 12.3
+  },
+  "plaza1_36m": {
+   "on_strip": 0.454,
+   "within_2m": 0.686,
+   "median_cm": 80.5,
+   "p90_cm": 392.6
+  },
+  "grooved_24m": {
+   "on_strip": 0.145,
+   "within_2m": 0.478,
+   "median_cm": 207.3,
+   "p90_cm": 561.1
+  }
+ }
+}
