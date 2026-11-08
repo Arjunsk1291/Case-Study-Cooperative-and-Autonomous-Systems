@@ -1,0 +1,23 @@
+measure                              campus_2     campus_3     campus_4     campus_5     campus_6
+teach                                   False        False        False        False         True
+turn_at_m                               20.05        18.62         None        19.82        18.51
+leg1_wall_m                              1.58          1.2        1.175         1.58         1.07
+open_sea_m                               28.3         37.8         15.1         40.6         38.0
+row_lock_pct                               47           39           54           48           44
+row_offset_m                            6.268        7.226        5.154         6.53        6.669
+row_offset_iqr                          0.351        0.933        0.175        0.957        0.125
+row_dir_vs_bperp_deg                   85.963       -9.748                    -3.265        3.185
+row_dir_spread_deg                    172.515        4.822                     5.689        4.455
+rear_perp_vs_bperp_deg                 50.529      -14.764         None       -0.654        1.034
+end_perp_vs_bperp_deg                    None       -3.107         None       -6.227        4.952
+arcade_wall_m                            None         0.99         None         1.02         1.08
+arcade_len_m                             None         None         None          8.4          8.3
+leg4_wall_dir_vs_expected_deg                                                 -3.704       -2.652
+leg4_wall_dist_m                                                               2.084        2.074
+failsafes                                   0            2            0            3            5
+takeovers                                   5            3            0            1            1
+pauses                                      6           10            3           13           12
+
+recommended from TEACH runs campus_6
+  rowOffsetM: 6.67  (firmware now 6.65)
+  end wall vs B-perpendicular: +5.0 deg (gyro drift over the crossing + wall angle)

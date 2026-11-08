@@ -1,0 +1,300 @@
+<title>Rover B to I Report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: engineering report. One reading column, wide figures, tables for the facts. Accent = the team deck blue; orange marks risks and open points. */
+:root{
+  --bg:#F6F8FA; --panel:#FFFFFF; --ink:#13202B; --ink2:#44525F; --mute:#6A7886; --line:#D5DCE3;
+  --blue:#1F6FB2; --blue-soft:#E4EEF7; --orange:#C0620C; --orange-soft:#FBEBDC; --green:#1E7A4C; --red:#B00020; --grid:#E6EBF0;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F161D; --panel:#17212B; --ink:#E6EDF3; --ink2:#B4C0CC; --mute:#8C9AA8; --line:#2B3946; --blue:#5AA9E6; --blue-soft:#17324A; --orange:#F0A15C; --orange-soft:#3A2A19; --green:#5FCB95; --red:#FF8A9B; --grid:#233140; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F161D; --panel:#17212B; --ink:#E6EDF3; --ink2:#B4C0CC; --mute:#8C9AA8; --line:#2B3946; --blue:#5AA9E6; --blue-soft:#17324A; --orange:#F0A15C; --orange-soft:#3A2A19; --green:#5FCB95; --red:#FF8A9B; --grid:#233140; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto}
+header{padding-block:40px 8px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:0 0 10px}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.1;margin:0 0 14px;font-weight:700;text-wrap:balance}
+.lead{font-size:18px;color:var(--ink2);max-width:68ch;margin:0 0 22px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:0 0 26px}
+.fact{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.fact b{display:block;font-size:22px;font-variant-numeric:tabular-nums;color:var(--blue)}
+.fact span{font-size:13px;color:var(--mute)}
+nav{display:flex;flex-wrap:wrap;gap:6px 16px;padding:12px 0 6px;font-size:14px}
+nav a{color:var(--blue);text-decoration:none} nav a:hover{text-decoration:underline}
+section{padding-block:36px 4px}
+h2{font-size:26px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h3{font-size:18px;margin:26px 0 8px}
+.sub{color:var(--mute);margin:0 0 18px;max-width:70ch}
+p{max-width:75ch;margin:0 0 12px} ul{max-width:75ch;padding-left:20px;margin:0 0 12px} li{margin:3px 0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px} @media(max-width:760px){.two{grid-template-columns:1fr}}
+.plain{background:var(--blue-soft);border-radius:10px;padding:14px 16px;margin:14px 0;max-width:75ch}
+.plain b{color:var(--blue)}
+.risk{background:var(--orange-soft);border-radius:10px;padding:14px 16px;margin:14px 0;max-width:75ch}
+.risk b{color:var(--orange)}
+figure{margin:18px 0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+figure img,figure svg{display:block;width:100%;height:auto;max-width:100%}
+figure.white{background:#fff} figcaption{font-size:13px;color:var(--mute);margin-top:8px;max-width:90ch}
+.tablewrap{overflow-x:auto;margin:12px 0 18px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:620px}
+th,td{padding:8px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600;background:var(--bg)}
+tr:last-child td{border-bottom:0} td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+code,.mono{font-family:var(--f-mono);font-size:.86em}
+td code{background:var(--bg);padding:1px 5px;border-radius:4px}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--ink2);margin-right:4px}
+.tag.b{border-color:var(--blue);color:var(--blue)} .tag.o{border-color:var(--orange);color:var(--orange)} .tag.g{border-color:var(--green);color:var(--green)}
+.bar{display:flex;align-items:center;gap:8px;min-width:150px} .bar i{display:block;height:9px;border-radius:2px;background:var(--blue)} .bar i.o{background:var(--orange)} .bar i.g{background:var(--line)}
+.bar span{font-variant-numeric:tabular-nums;font-size:13px}
+.step{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:10px 0;max-width:80ch} .step .k{font-family:var(--f-mono);font-weight:500;color:var(--blue);font-size:15px;padding-top:2px}
+footer{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;color:var(--mute);font-size:13px}
+a{color:var(--blue)}
+svg text{font-family:var(--f-body)}
+@media print{body{background:#fff} section{break-inside:auto} figure,.tablewrap{break-inside:avoid}}
+</style>
+<div class="wrap">
+<header>
+<p class="eyebrow">Case Study Cooperative and Autonomous Systems · THD · Team B3 · Kit 04 · November 2026</p>
+<h1>How the rover drives from B to I</h1>
+<p class="lead">A LiDAR, ultrasonic and gyro box on the WAVE ROVER that follows a wall, finds a turn landmark, crosses an open square on fixed landmarks, follows a second wall and a railing corridor, and stops at the glass entrance of Block I. No GPS, no camera, rover firmware unchanged.</p>
+<div class="facts">
+<div class="fact"><b>~160 m</b><span>B to I: 20 m wall, 40 m open sea, 10 m arcade, 60 m interlock and railings</span></div>
+<div class="fact"><b>10 logs</b><span>mission logs measured with the same code the box runs</span></div>
+<div class="fact"><b>10 versions</b><span>each one made after a field run (v1 to v10)</span></div>
+<div class="fact"><b>5,670</b><span>simulated people cases on the turn, wrong-pillar turns 7.4 % to 1.2 %</span></div>
+</div>
+<nav><a href="#plain">In plain words</a><a href="#hw">Hardware</a><a href="#sw">Software</a><a href="#legs">Leg by leg</a><a href="#code">Whose code</a><a href="#logs">Logs</a><a href="#sim">Simulation</a><a href="#safety">Safety</a><a href="#hist">Versions</a><a href="#open">Open points</a><a href="#ref">References</a></nav>
+</header>
+
+<section id="plain">
+<h2>The route in plain words</h2>
+<p class="sub">Every leg uses a different thing it can see, because no single reference exists along the whole way.</p>
+<figure>
+@@ROUTE_SVG@@
+<figcaption>Schematic, not to scale. Blue = what the box steers on in that leg, orange = turns. The camera is not used anywhere.</figcaption>
+</figure>
+<div class="step"><span class="k">1</span><div><b>Leg 1, along the B facade (about 20 m).</b> The wall is on the left, 1.1 to 1.6 m away. The box keeps that distance and stays parallel to it. Pillars stand on the right. After a gap in the facade the turn pillar comes, with a dark sign structure behind it.</div></div>
+<div class="step"><span class="k">2</span><div><b>First right turn.</b> The box finds the sign structure beside the turn pillar, drives 0.4 m past the pillar edge and pivots 90 degrees to the right, perpendicular to the B wall.</div></div>
+<div class="step"><span class="k">3</span><div><b>Leg 2, the Open Sea (about 40 m).</b> There are no walls, only a row of trees, stakes and posts on the left, then a building front, then the far end wall. The box steers on those, and on the B wall behind it at the start.</div></div>
+<div class="step"><span class="k">4</span><div><b>Leg 3 and the left turn T3.</b> At the end wall it turns right and follows the arcade wall on its left at 0.6 m. When that wall ends (after about 10 m) it turns left around the corner.</div></div>
+<div class="step"><span class="k">5</span><div><b>Leg 4 to Block I.</b> It follows the next wall at 1.0 m, crosses the light interlock walkway, enters the corridor between two railings, climbs the slight ramp and stops 1.5 m after the recessed glass entrance (KARL).</div></div>
+<div class="plain"><b>In one sentence:</b> the rover reads the shape of the campus with its LiDAR, uses the gyro to hold a straight line in between, and stops and waits whenever something is in front of it.</div>
+</section>
+
+<section id="hw">
+<h2>Hardware and what each sensor is used for</h2>
+<p class="sub">Numbers from the datasheets (checked online during this work) next to what we measured in the field.</p>
+<div class="tablewrap"><table>
+<tr><th>Part</th><th>Datasheet</th><th>What we measured</th><th>Used for</th></tr>
+<tr><td><b>LDROBOT LD20 LiDAR</b> (LD19 family)</td><td>0.02 to 12 m, 4500 samples/s, 5 to 13 Hz scan, 30 klux ambient light, class I. LD20 has no datasheet we could find; the LD19 one is used.</td><td>We keep 90 bins of 4 degrees, 4 Hz. Mounted 7 degrees rotated: offset 83 degrees. In daylight 15 to 21 % of the scans had ghost points at 20 to 34 cm (night: 0 to 5 %).</td><td>Wall fits, landmark corridor, structure, end wall, obstacles</td></tr>
+<tr><td><b>5 x HC-SR04 ultrasonic</b></td><td>2 to 400 cm, about 15 degree cone, measuring cycle above 60 ms</td><td>Pings 60 ms apart. Front sensor floor echo at 50 to 90 cm (40 % of readings with nothing ahead). One front sensor is angled 45 degrees down; the rear one is broken (reads 4 cm).</td><td>Verifies near LiDAR obstacles, stops at under 35 cm</td></tr>
+<tr><td><b>Bosch BNO055 IMU</b></td><td>9 axis fusion (NDOF). Heading drift in NDOF comes mostly from magnetic distortion; the fusion library (BSX) is not public.</td><td>Gyro heading drifts about +-2 degrees per minute at random in the open sea. Pitch and roll for tilt stop, ramp and edge detection.</td><td>Heading hold, turns, pitch rules</td></tr>
+<tr><td><b>ESP32 box</b> (ESP32 Dev Module)</td><td>2 cores, Wi-Fi access point</td><td>Program 96 % of flash. Loop under 10 ms.</td><td>Runs everything, serves the phone page, logs 249-byte records at 4 Hz</td></tr>
+<tr><td><b>WAVE ROVER</b></td><td>JSON over HTTP: T:1 speed, T:130 status</td><td>10 Hz commands, 0.5 s deadman. No wheel encoders: odometry is the commanded speed times time.</td><td>The only actuator. Its firmware is never changed.</td></tr>
+</table></div>
+</section>
+
+<section id="sw">
+<h2>Software: what runs where</h2>
+<p class="sub">One state machine, a few small modules, and every command to the wheels passes through the same ramp stage.</p>
+<figure>
+@@ARCH_SVG@@
+<figcaption>Data flow in the box. GentleDrive is the last stage before the rover: every change of the wheel command is a ramp, which protects the gearbox.</figcaption>
+</figure>
+<figure>
+@@STATE_SVG@@
+<figcaption>State machine of RouteMission.cpp. HOLD (something in front), PAUSED (STOP or tilt) and MANUAL (pad touched) can interrupt every moving state.</figcaption>
+</figure>
+<div class="tablewrap"><table>
+<tr><th>File</th><th>Job</th></tr>
+<tr><td><code>RouteMission.cpp/.h</code></td><td>State machine, leg logic, turn decision, open-sea references, leg 4, edge assist, status for the page (about 1,500 lines)</td></tr>
+<tr><td><code>WallFit.h</code>, <code>LineRef.h</code></td><td>Wall line fit in the side frame, RANSAC line fits for sparse landmark rows and far walls, perpendicular heading</td></tr>
+<tr><td><code>DriveStraight.h</code></td><td>Gyro heading hold with learned wheel trim and a 12 degree failsafe</td></tr>
+<tr><td><code>GentleDrive.h</code></td><td>Ramps for speed, turns and single wheels (turn mode)</td></tr>
+<tr><td><code>LidarScan.h</code>, <code>UsManager.cpp</code>, <code>ImuManager.cpp</code>, <code>Sensors.cpp</code></td><td>LD20 packets to 90 bins with intensity and 35 cm minimum range; ultrasonic ping scheduling; IMU reads</td></tr>
+<tr><td><code>RoverLink.cpp</code></td><td>10 Hz JSON link to the rover in its own task, deadman, read-only status</td></tr>
+<tr><td><code>MissionLog.cpp</code></td><td>Flash log with all sensors, outputs and 67 event codes</td></tr>
+<tr><td><code>MissionPage.h</code>, <code>WebHMI.cpp</code></td><td>Phone dashboard: STOP, manual pad, climb, speedometer, speed override, settings, log download</td></tr>
+<tr><td><code>tools/</code> (Python)</td><td><code>decode_mission_log.py</code>, <code>narrate_run.py</code> (what the rover thought), <code>landmark_benchmark.py</code> and <code>landmark_db.json</code>, <code>fwmirror.py</code> (Python copy of the firmware logic), <code>replay_turn.py</code>, <code>sweep_start.py</code>, <code>sim_open_sea.py</code>, <code>sim_people.py</code></td></tr>
+</table></div>
+</section>
+
+<section id="legs">
+<h2>Leg by leg: reference, reason, code and logs</h2>
+<p class="sub">For each part of the route: what the box looks at, why that and not something else, where the code is, and which logs supported it.</p>
+
+<h3>Leg 1: left wall of B, and the turn</h3>
+<div class="tablewrap"><table>
+<tr><th>Reference</th><th>Why</th><th>Code</th><th>Evidence</th></tr>
+<tr><td>Left facade line (WallFit), keep the distance it had at the start</td><td>Long straight wall at 1.1 to 1.6 m; held 1.57 to 1.59 m for 20 m once the LiDAR 7 degree rotation was removed</td><td><code>_leg1</code>, <code>WallFit::measure</code></td><td>campus_2, campus_3, campus_5, campus_6, log8, campus_9</td></tr>
+<tr><td><b>Turn structure</b>: the dark sign structure behind the turn pillar, found in an evidence grid fed only with beams ahead and abeam</td><td>log8 turned one pillar early because a person behind the rover merged with an ordinary pillar into a wide landmark. Ordinary pillars have nothing behind them. The structure is fixed.</td><td><code>_structAdd</code>, <code>_structDetect</code>, <code>_structUpdate</code>, <code>_structChoice</code></td><td>Found in all 7 runs that reach the turn</td></tr>
+<tr><td><b>B-gap anchor</b>: the left wall comes back after the gap, the sign is 5.35 +- 1.2 m later</td><td>campus_9 started 7.7 m earlier and the fixed 15 to 25 m window missed the sign. The distance from the gap end is the same in every run.</td><td><code>_structWin</code>, gap anchor in <code>_leg1</code></td><td>log8 15.7 to 21.2 m, test2 14.7 to 20.0, campus_6 12.9 to 18.1, campus_5 13.7 to 19.2, test1 15.2 to 20.5</td></tr>
+<tr><td>Turn 0.40 m past the pillar edge, target B wall direction minus 90 degrees (as in v5)</td><td>This timing put the crossing on the strip in the runs that worked</td><td>case <code>L1_FOLLOW</code>, <code>_landmark</code> (Kethan's turnLandmark, widened)</td><td>Replay: campus_6 18.7 m (v8 18.51), test2 20.6 (20.66), campus_5 19.8 (19.82)</td></tr>
+</table></div>
+<figure class="white">
+<img alt="Leg 1 LiDAR maps of four runs with the B gap end, the sign structure and the place where the rover turned" src="@@IMG_TURN@@">
+<figcaption>Leg 1 seen from above in four runs (LiDAR points, commanded odometry). In log8 the red line (turn) is one pillar before the blue line (structure); in campus_9 the rover turned at the gap end, 5.7 m before the sign. v10 waits in the shaded window.</figcaption>
+</figure>
+
+<h3>Leg 2: the Open Sea, landmark corridor</h3>
+<div class="tablewrap"><table>
+<tr><th>Reference</th><th>Why</th><th>Code</th><th>Evidence</th></tr>
+<tr><td>B wall behind (0 to 14 m): perpendicular heading</td><td>Flat, long, close at the start</td><td><code>case L2_GO</code>, <code>LineRef::sectorFit</code>, <code>perpHeading</code></td><td>Perpendicular within +-1.3 degrees in 6 runs</td></tr>
+<tr><td><b>Tree / post row</b> on the left, 6.65 m, used from 10 to 24.5 m</td><td>No wall to match here; the row is fixed and straight enough. The gyro alone drifts about +-2 degrees per minute at random.</td><td><code>LineRef::rowFit</code>, PID kp 10, ki 1.5, kd 20, limit 8 degrees</td><td>Offset 6.5 to 6.8 m in 5 of 9 runs (teach run campus_6 6.67), seen on 39 to 56 % of the scans</td></tr>
+<tr><td><b>Building front</b> on the left, 3.0 m, 26 to 40 m</td><td>The row ends; the building takes over the side position</td><td>same</td><td>seen in log8, test2</td></tr>
+<tr><td>End wall ahead, after 85 % of the crossing; <b>flat and wide</b>, leaky counter</td><td>A person or a small group in front is flat but not wide; real end walls stay within 0.3 m over +-48 degrees</td><td><code>_frontWall</code> (Kethan's frontWallWithin), <code>_frontWallWide</code></td><td>Real end walls at 37.8 to 49.1 m in 6 logs, all accepted</td></tr>
+</table></div>
+<figure class="white">
+<img alt="Open sea LiDAR map of campus_9 with the landmark lines" src="@@IMG_SEA@@">
+<figcaption>Open Sea of campus_9 in the strip frame. The rover track is the orange line; the blue lines are the four landmarks the box steers on.</figcaption>
+</figure>
+<div class="risk"><b>Known weakness.</b> The row steers the side position only until 24.5 m. With a gyro bias of 6 degrees per minute the simulation ends 0.4 m off at the end wall (the earlier version had 0.06 m). The simulated worst mix of drift, slide and missing trees ends 0.41 m off at 24 m (before the PID: 1.02 m).</div>
+
+<h3>Leg 3 and T3: the arcade wall</h3>
+<p>Same wall follower as leg 1, closing in to 0.6 m at 20 degrees per metre (never more than 10 degrees ahead of the heading, 2 degrees per scan: no failsafe in the simulation). When no wall is seen for 1.5 m it turns left, 90 degrees from the wall direction. Logs: campus_5, campus_6, test2, log8, campus_9 (arcade length 8.3 to 10.5 m).</p>
+
+<h3>Leg 4: to Block I</h3>
+<div class="tablewrap"><table>
+<tr><th>Phase</th><th>Reference</th><th>Code</th><th>Evidence</th></tr>
+<tr><td>Wall follow, 1.0 m, power 0.30</td><td>Forward-left line within 15 degrees of the arcade direction plus 90</td><td><code>_leg4Wall</code></td><td>campus_6, test2, log8, campus_9</td></tr>
+<tr><td>Interlock walkway</td><td>Wall direction, left edge at its first distance (grass, strip, bench)</td><td><code>_l4Walk</code> phase 1</td><td>log8 manual drive, campus_9</td></tr>
+<tr><td>Railing corridor</td><td>Right line 0.35 to 1.3 m and left facade 1.4 to 2.6 m, together 2.4 to 3.3 m, 1 s</td><td><code>_l4Walk</code> phase 2</td><td>log8: 40.0 m, campus_9: 35.6 m, never earlier</td></tr>
+<tr><td>KARL entrance, stop</td><td>Left facade steps back (1.7 to 2.0 m) and glass drops beams; stop 1.5 m later, gentle ramp</td><td><code>_l4Walk</code>, case <code>L4_FOLLOW</code></td><td>campus_9: 47.0 m, stop 48.5 m, bollard 56 m</td></tr>
+<tr><td>Edge assist</td><td>Pitch stays 3 to 12 degrees above its recent minimum for 3 s with nothing within 1.2 m</td><td><code>_edgeAssist</code></td><td>log8: 60 s stuck at the cobble to interlock edge at 0.22</td></tr>
+</table></div>
+<figure class="white">
+<img alt="LiDAR map of leg 4 in campus_9 with walkway, railing corridor, entrance and stop" src="@@IMG_BLOCKI@@">
+<figcaption>Leg 4 of campus_9. v9 passed the entrance and hit the bollard; v10 stops 1.5 m after the entrance (replay of the detectors on this log).</figcaption>
+</figure>
+</section>
+
+<section id="code">
+<h2>Whose code is what</h2>
+<p class="sub">Team code the box builds on is credited in the source comments. Everything in the second table was developed in this work.</p>
+<div class="tablewrap"><table>
+<tr><th>From the team, used as a base</th><th>Where</th></tr>
+<tr><td>Kethan: gyro heading hold (PD), IMU read version, full-power turn step, <code>turnLandmark</code>, <code>frontWallWithin</code></td><td><code>DriveStraight.h</code>, <code>ImuManager.h</code>, <code>RouteMission.cpp</code> turn and landmark functions, <code>GentleDrive.h</code> wheel step</td></tr>
+<tr><td>Manikant (collision avoidance, Open Sea approach with SLAM) and Prakash (steering, tap control) are the team's own route-follower parts, shown in the team slides. They are not copied here.</td><td>team decks</td></tr>
+</table></div>
+<div class="tablewrap"><table>
+<tr><th>New in this work</th><th>Version</th><th>Where</th></tr>
+<tr><td>Wall follower with new-wall acquisition, bend acceptance, separate scan and good timers</td><td>v4</td><td><code>_leg1</code></td></tr>
+<tr><td>Turn tactics cycle (pivot, swing, shift, arc) with per-wheel ramps, stall detection</td><td>v3</td><td><code>_turn</code>, <code>GentleDrive</code></td></tr>
+<tr><td>Landmark corridor and cross-track PID in the Open Sea</td><td>v6, v7</td><td><code>case L2_GO</code>, <code>LineRef.h</code></td></tr>
+<tr><td>Leg 3 and leg 4 wall approach law</td><td>v7, v8</td><td><code>_leg4Wall</code>, <code>_leg1</code></td></tr>
+<tr><td>Daylight ghost filter: 35 cm minimum range, near obstacle verified by 4 beams or the ultrasonic</td><td>v8, v8.1</td><td><code>_front</code>, <code>LidarScan.h</code></td></tr>
+<tr><td>No phone heartbeat, automatic recovery (link wait, retry, realign); only STOP and tilt pause</td><td>v8</td><td><code>update</code>, case <code>HOLD</code></td></tr>
+<tr><td>Turn structure with B-gap anchor</td><td>v9, v10</td><td><code>_struct*</code></td></tr>
+<tr><td>Speedometer, speed override, climb button, record button</td><td>v8, v9</td><td><code>MissionPage.h</code></td></tr>
+<tr><td>Wide end wall, leaky counter, hold release for vanished obstacles</td><td>v10</td><td><code>_frontWallWide</code>, case <code>HOLD</code></td></tr>
+<tr><td>Railing corridor, KARL entrance, edge assist</td><td>v9, v10</td><td><code>_l4Walk</code>, <code>_edgeAssist</code></td></tr>
+<tr><td>Log decoder, narrator, landmark benchmark, Python mirror of the firmware, replay, people and weather simulation</td><td>all</td><td><code>tools/</code></td></tr>
+</table></div>
+</section>
+
+<section id="logs">
+<h2>Logs used and why</h2>
+<p class="sub">Every field run produced one mission log (flash on the box) and usually a phone video. The log was decoded record by record before any change.</p>
+<div class="tablewrap"><table>
+<tr><th>Run</th><th>Date</th><th>What happened</th><th>Used for</th></tr>
+<tr><td><code>campus_2</code></td><td>7 Nov</td><td>First full leg 1 and turn; the full pivot locked at the turn spot after 4 to 7 degrees</td><td>Turn tactics, turn landmark, end wall level check</td></tr>
+<tr><td><code>campus_3</code></td><td>7 Nov</td><td>Entrance board test; wall-lost never fired (timer bug)</td><td>Wall follower v4, converging wall</td></tr>
+<tr><td><code>campus_4</code>, <code>campus_5</code></td><td>7 Nov</td><td>Gyro drift correction pulled the rover off the strip</td><td>Removed drift correction, first reference types</td></tr>
+<tr><td><code>campus_6</code> (night) <span class="tag g">teach</span></td><td>7 Nov</td><td>Best run; tree row 6.67 m, strip direction</td><td>Landmark offsets, PID design, simulation world</td></tr>
+<tr><td><code>day_test1</code>, <code>day_test2</code></td><td>8 Nov</td><td>Daylight: ghost points at 20 to 34 cm; false end wall in the open sea (test1)</td><td>Ghost filter, hold end-wall bug</td></tr>
+<tr><td><code>log8</code></td><td>8 Nov</td><td>Turned one pillar early (follower behind); first interlock drive with the climb button</td><td>Turn structure, leg 4 corridor, climb and edge behaviour</td></tr>
+<tr><td><code>campus_9</code></td><td>8 Nov</td><td>Turned at the gap (start 7.7 m earlier); open sea and leg 4 fully autonomous; hit a bollard after the entrance</td><td>B-gap anchor, corridor width, entrance, hold release</td></tr>
+</table></div>
+<div class="plain"><b>Why these and not others:</b> the night teach run is the cleanest reference, the daylight runs show what changes with sun, log8 and campus_9 are the only runs that reach the end of the route. Runs with a person touching the rover or a heartbeat pause (campus_2 to campus_5) were used to find bugs but never to tune numbers.</div>
+</section>
+
+<section id="sim">
+<h2>Simulation: people, crowds and weather</h2>
+<p class="sub">Every change was replayed on the recorded runs and simulated before it went into the box.</p>
+<h3>People near the turn pillar</h3>
+<p>People (circles of 0.15 to 0.30 m radius) are ray-cast into the real leg 1 scans of seven runs, standing, walking along, towards, across, a follower behind, groups of 2 to 5 and a crowd of 8. The same turn logic as in the box then decides. A turn more than 2 m early counts as a wrong pillar.</p>
+<figure class="white"><img alt="Share of wrong-pillar turns per people scenario, v8 against v10" src="@@IMG_PEOPLE@@"><figcaption>Wrong-pillar share per scenario (lower is better) and the share of turns within +-0.5 m of the clean turn. Totals: v10 66 of 5,670 wrong (1.2 %), 93.5 % on target; v8 rule 421 wrong (7.4 %).</figcaption></figure>
+<h3>Open Sea: crowds (20 random starts each) and weather</h3>
+<div class="tablewrap"><table>
+<tr><th>Scenario</th><th class="n">False end wall, old check</th><th class="n">False end wall, v10</th></tr>
+<tr><td>1 person standing in the path (last 30 %)</td><td class="n">18 of 20</td><td class="n">0 of 20</td></tr>
+<tr><td>Group of 3 standing in the path</td><td class="n">20 of 20</td><td class="n">0 of 20</td></tr>
+<tr><td>Walking crowd of 20</td><td class="n">13 of 20</td><td class="n">0 of 20</td></tr>
+<tr><td>Row of 8 across at 30 m</td><td class="n">20 of 20</td><td class="n">0 of 20</td></tr>
+<tr><td>12 standing people, crowd at the tree row, group across at 15 m, people walking along</td><td class="n">0 to 2 of 20</td><td class="n">0 of 20</td></tr>
+</table></div>
+<div class="tablewrap"><table>
+<tr><th>Environment (no people)</th><th>Reach the end wall</th><th class="n">False end wall</th><th class="n">False holds</th></tr>
+<tr><td>Clear night</td><td><div class="bar"><i style="width:120px"></i><span>12 of 12</span></div></td><td class="n">0</td><td class="n">0</td></tr>
+<tr><td>Daylight ghosts, 20 % of scans</td><td><div class="bar"><i style="width:120px"></i><span>12 of 12</span></div></td><td class="n">0</td><td class="n">0</td></tr>
+<tr><td>Low sun, 40 degree wedge blind in 30 % of scans</td><td><div class="bar"><i style="width:120px"></i><span>12 of 12</span></div></td><td class="n">0</td><td class="n">0</td></tr>
+<tr><td>Light rain (3 % random near returns, 10 % dropouts)</td><td><div class="bar"><i style="width:120px"></i><span>12 of 12</span></div></td><td class="n">0</td><td class="n">0</td></tr>
+<tr><td>Heavy rain or snow (8 % near returns, 25 % dropouts)</td><td><div class="bar"><i style="width:100px"></i><span>10 of 12</span></div></td><td class="n">0</td><td class="n">0</td></tr>
+<tr><td>Wet slip 8 % and gyro -6 degrees per minute</td><td><div class="bar"><i style="width:120px"></i><span>12 of 12</span></div></td><td class="n">0</td><td class="n">0</td></tr>
+<tr><td>Worst case: snow, slip, drift and sun together</td><td><div class="bar"><i class="o" style="width:70px"></i><span>7 of 12</span></div></td><td class="n">0</td><td class="n">1</td></tr>
+</table></div>
+<div class="risk"><b>Open points.</b> Groups of 3 to 5 around the pillar before the sign still cause 6 % wrong turns. Eight people shoulder to shoulder at the end wall are not covered. In the worst combined case the rover drifts about 2.5 m off the strip because the row is lost. All of this is replay and simulation: v10 has not been driven yet.</div>
+<h3>Start position sweep</h3>
+<p>Each log was shifted by -8 to +8 m along B. The turn moved by 0.00 to 0.13 m in all seven runs, because the window is measured from the gap end.</p>
+</section>
+
+<section id="safety">
+<h2>Safety rules that never change</h2>
+<div class="two">
+<ul>
+<li><b>Turns need full power</b> (0.50, a step to full like Kethan's code); forward driving is slow (0.22, leg 4 0.30).</li>
+<li><b>Every stop is a ramp.</b> Normal 0.30 per second, obstacle 0.80 per second, never a jump to zero.</li>
+<li><b>People in front: stop and wait.</b> No swerving. After a hold the rover lines up again and retries.</li>
+<li><b>Only STOP and a real tilt pause.</b> A lost rover link makes it stand still and continue.</li>
+</ul>
+<ul>
+<li><b>The rover firmware is not touched.</b> The box only sends T:1 and reads T:130 and T:139.</li>
+<li><b>The ESP32 is not stressed.</b> No flash erase from the program, no heavy Wi-Fi traffic.</li>
+<li><b>Flash at 115200</b>, never Erase All Flash.</li>
+<li><b>Obstacles are verified.</b> A near LiDAR point needs 4 beams or the front ultrasonic; an obstacle that vanishes from closer than 0.45 m is still treated as there.</li>
+</ul>
+</div>
+</section>
+
+<section id="hist">
+<h2>From v1 to v10</h2>
+<div class="tablewrap"><table>
+<tr><th>Version</th><th>Triggered by</th><th>Change</th></tr>
+<tr><td>v3</td><td>campus_2</td><td>Wall follower on leg 1, turn tactics cycle, leg 3, level check for the end wall; camera removed from the route</td></tr>
+<tr><td>v4</td><td>campus_3</td><td>Wall follower timers and new-wall acquisition, entrance board</td></tr>
+<tr><td>v5</td><td>campus_4, campus_5</td><td>Reference types in the open sea, turn landmark edge tracking (pillar edge + 0.40 m)</td></tr>
+<tr><td>v6</td><td>campus_5 + video</td><td>Landmark corridor: tree row and building front</td></tr>
+<tr><td>v7</td><td>campus_6 teach run</td><td>Cross-track PID, leg 4 wall gate</td></tr>
+<tr><td>v8, v8.1</td><td>day_test1, day_test2</td><td>Daylight ghost filter, ultrasonic verification, no heartbeat, climb and record buttons, leg 3 at 0.6 m</td></tr>
+<tr><td>v9</td><td>log8</td><td>Turn structure, speedometer and speed override, leg 4 corridor and ramp, edge assist, wide end wall</td></tr>
+<tr><td>v10</td><td>campus_9</td><td>Start-independent turn window, no blind turn, hold release, KARL entrance stop, end wall gate 85 %</td></tr>
+</table></div>
+</section>
+
+<section id="open">
+<h2>Open points and next field test</h2>
+<ul>
+<li>Drive v10 on the whole route and check: turn at the sign pillar from a different start, stop at the KARL entrance.</li>
+<li>Open sea: the side position is steered only until 24.5 m; a gyro bias then moves the rover about 0.4 m by the end wall.</li>
+<li>Crowds: groups of 3 to 5 at the pillar before the sign; shoulder-to-shoulder rows at the end wall.</li>
+<li>No wheel encoders: all distances are commanded odometry. Slip on wet stones makes them too long.</li>
+<li>Test the crowd cases for real, for example with team members standing at the sign pillar.</li>
+</ul>
+</section>
+
+<section id="ref">
+<h2>References</h2>
+<ul>
+<li>LDROBOT LD19 / STL-19P datasheet (ranging 0.02 to 12 m, 4500 Hz): <a href="https://files.waveshare.com/wiki/D500-LiDAR-Kit/LDROBOT_STL-19P_Datasheet_EN_v1.0(1).pdf">Waveshare file</a>; kit pages <a href="https://www.waveshare.com/wiki/DTOF_LIDAR_LD19">Waveshare DTOF LIDAR LD19</a>, <a href="https://manuals.plus/dfrobot/lidar-ld19-laser-sensor-kit-manual">DFRobot LD19 manual</a></li>
+<li>HC-SR04 datasheet (2 to 400 cm, 15 degrees, 60 ms cycle): <a href="https://www-users.cs.york.ac.uk/~mjf/roach/Datasheets/HCSR04_Manual.pdf">HCSR04 manual</a>, <a href="https://mischianti.org/wp-content/uploads/2025/11/Datasheet-HCSR04-classic.pdf">classic datasheet</a></li>
+<li>Bosch BNO055 NDOF heading behaviour: <a href="https://community.bosch-sensortec.com/t5/MEMS-sensors-forum/BNO055-what-is-the-accuracy-of-heading-Yaw/m-p/21741">Bosch Sensortec community thread</a></li>
+<li>Team slides: Field Tests log_009 to log_011, local path tracking log_020 to log_022 (steering, collision avoidance and SLAM by other team members).</li>
+<li>Project files: <code>deliverables/v10_BOX</code>, <code>cas_box_mission/tools</code>, <code>PPT/new_slides_assets</code>.</li>
+</ul>
+<footer>Prepared from the mission logs in <code>Log_run/</code>. Simulation numbers are from <code>tools/sim_people.py</code> and <code>tools/sim_open_sea.py</code>. The LD20 specification was not found; LD19 figures are used for it.</footer>
+</section>
+</div>
