@@ -12,7 +12,7 @@ li{margin:4px 0}.q{margin:8px 0}@page{size:A4;margin:16mm}"""
 for i, d in enumerate(S, 1):
     h = ['<html><head><meta charset="utf-8"><style>%s</style></head><body>' % CSS]
     h.append('<div class="meta">Speaker file %d · %s</div><h1>%s</h1>' % (i, html.escape(d['title']), html.escape(d['title'])))
-    h.append('<div class="meta"><span class="tag">Nov 8, 2026</span><span class="tag">%s</span><span class="tag">about %d seconds</span></div>' % (html.escape(d['speaker']), d['secs']))
+    h.append('<div class="meta"><span class="tag">Nov 10, 2026</span><span class="tag">%s</span><span class="tag">about %d seconds</span></div>' % (html.escape(d['speaker']), d['secs']))
     h.append('<h2>One-minute script</h2><div class="script">' + ''.join('<p>%s</p>' % html.escape(p) for p in d['script']) + '</div>')
     h.append('<h2>What you need to understand</h2>')
     ul = []

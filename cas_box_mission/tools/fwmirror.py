@@ -272,7 +272,7 @@ class StructGrid:
     Structure = in a 0.4 m along band: a CONTIGUOUS run (one empty cell allowed) of >= RUN lateral cells with >= HIT
     hits each, from <= 1.6 m out to >= 2.3 m. A person standing behind a pillar leaves a gap; one person beside it
     does not reach 2.3 m."""
-    CELL, LAT0, LATC, NLAT, NA, BAND, HIT, RUN = 0.1, 0.8, 0.25, 12, 80, 4, 3, 5
+    CELL, LAT0, LATC, NLAT, NA, BAND, HIT, RUN = 0.1, 0.8, 0.25, 12, 80, 4, 3, 4   # v10.3: RUN 4 (c102_4)
     NEAR_MAX, FAR_MIN = 2.3, 2.3
 
     def __init__(s):
@@ -357,7 +357,7 @@ class TurnV9:
     3. turn at A + structPast; the old pillar edge refines it only if it agrees with A within +-0.6 m.
     4. no lock -> the old pillar landmark only from turnAt on (log8: it fired at 18.2 m on the pillar before);
        fallback turnAt + 2.5 (+4 while candidates were seen but none locked)."""
-    GAP_TO_STRUCT, GAP_WIN = 5.35, 1.2
+    GAP_TO_STRUCT, GAP_WIN, GAP_MIN = 5.35, 2.0, 4.5   # v10.3: window +-2.0, never before gap end + 4.5
 
     def __init__(s, turn_at=20.0, win=5.0, struct_past=0.60, pillar_past=0.40, ahead=6.0, further_n=2):
         s.turn_at, s.win, s.sp, s.pp, s.ahead, s.fn = turn_at, win, struct_past, pillar_past, ahead, further_n
@@ -371,6 +371,8 @@ class TurnV9:
         if d >= 5.0 and s.lock is None:
             s.anchor = d; lo, hi = s._win()
             s.cand = [c for c in s.cand if lo <= c['a'] <= hi]
+
+    def _past_gap(s, dist): return s.anchor is None or dist >= s.anchor + s.GAP_MIN
 
     def _win(s):
         if s.anchor is not None: return s.anchor + s.GAP_TO_STRUCT - s.GAP_WIN, s.anchor + s.GAP_TO_STRUCT + s.GAP_WIN
@@ -411,16 +413,16 @@ class TurnV9:
         if s.lock is not None:
             near = [e for e in s.edges if -0.8 <= e - s.lock <= 2.0]          # v10.2
             tgt = med(near) + s.pp if near else s.lock + s.sp
-            if dist >= tgt and not right_ahead(L, s.pp): return ("structure", dist)
+            if dist >= tgt and s._past_gap(dist) and not right_ahead(L, s.pp): return ("structure", dist)
             if dist >= s.lock + 3.5: return ("ASK (pillar not passed)", dist)
             return None
         # soft lock (people hid it for a while): 2 sightings 0.4 m apart, turn 0.3 m later than a full lock
         soft = s._choice(2, 0.4)
-        if soft is not None and dist >= soft + s.sp + 0.3 and not right_ahead(L, s.pp): return ("structure-soft", dist)
+        if soft is not None and dist >= soft + s.sp + 0.3 and s._past_gap(dist) and not right_ahead(L, s.pp): return ("structure-soft", dist)
         lo, hi = s._win()
         if s.anchor is not None and dist >= lo:
             e2 = [e for e in getattr(s, 'edges2', []) if lo - 0.5 <= e <= hi + 0.5]
-            if e2 and dist - sorted(e2)[len(e2) // 2] >= s.pp and not right_ahead(L, s.pp): return ("pillar-in-gap-window", dist)
+            if e2 and dist - sorted(e2)[len(e2) // 2] >= s.pp and s._past_gap(dist) and not right_ahead(L, s.pp): return ("pillar-in-gap-window", dist)
         ask = (s.anchor + s.GAP_TO_STRUCT + s.GAP_WIN + 1.5) if s.anchor is not None else s.turn_at + 15.0
         if dist >= ask: return ("ASK (sign not found)", dist)
         return None

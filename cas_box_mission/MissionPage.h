@@ -24,7 +24,7 @@ details{background:#1a2027;border-radius:12px;padding:10px 12px;margin:10px 0}su
 pre{white-space:pre-wrap;font-size:12px;color:#c9d1d9;margin:4px 0}table{width:100%;font-size:13px;border-collapse:collapse}td{padding:4px;border-bottom:1px solid #2a2f36}
 input{font-size:16px;padding:6px;width:90px;border-radius:6px;border:0}label{font-size:14px}
 </style></head><body><div class="wrap">
-<h1>Mission v9: B &rarr; open sea &rarr; Block I &middot; Kit 04</h1>
+<h1>Mission v10.3: B &rarr; open sea &rarr; Block I &middot; Kit 04</h1>
 <div class="chips"><span id="cR">Rover</span><span id="cI">IMU</span><span id="cL">LiDAR</span><span id="cB">Battery</span><span id="cG">GPS</span><span id="cLog">Log</span><span id="cN">Page</span></div>
 
 <div class="card"><div class="big" id="state">-</div><div class="small" id="msg"></div>

@@ -55,8 +55,8 @@ def replay(scans, people, turn_at=20.0, old=False):
     tv = F.TurnV9(turn_at=turn_at)
     edges = []
     d0 = scans[0][1]
-    for k, (L, d, rel, anc) in enumerate(scans):
-        t = k * 0.25
+    for k, (L, d, rel, anc, gap) in enumerate(scans):
+        t = k * 0.25; tv.ingap = gap            # v10.2 5-tuple: inside the B gap = no structure sightings
         if anc is not None and tv.anchor is None: tv.set_anchor(anc)
         Lp = inject(L, d, rel, people, t) if people else L
         if old:                                                        # v8: old landmark from turnAt - 5 m, bins to 162

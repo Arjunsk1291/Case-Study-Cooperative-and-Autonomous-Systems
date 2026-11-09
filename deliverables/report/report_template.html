@@ -176,9 +176,11 @@ svg text{font-family:var(--f-body)}
 <h2>Whose code is what</h2>
 <p class="sub">Team code the box builds on is credited in the source comments. Everything in the second table was developed in this work.</p>
 <div class="tablewrap"><table>
-<tr><th>From the team, used as a base</th><th>Where</th></tr>
-<tr><td>Kethan: gyro heading hold (PD), IMU read version, full-power turn step, <code>turnLandmark</code>, <code>frontWallWithin</code></td><td><code>DriveStraight.h</code>, <code>ImuManager.h</code>, <code>RouteMission.cpp</code> turn and landmark functions, <code>GentleDrive.h</code> wheel step</td></tr>
-<tr><td>Manikant (collision avoidance, Open Sea approach with SLAM) and Prakash (steering, tap control) are the team's own route-follower parts, shown in the team slides. They are not copied here.</td><td>team decks</td></tr>
+<tr><th>From the team, used as a base (checked file by file against the team's code, 10 Nov)</th><th>Where in the box code</th></tr>
+<tr><td><b>Kethan</b>: gyro heading hold (PD) and its ~0.06 s yaw-rate filter, the "step to full power" turn, the pivot release before the target (stop at 83 of 90 deg), <code>turnLandmark</code>, <code>frontWallWithin</code>, the field-tested IMU read version, the drive log (<code>DriveLog</code>)</td><td><code>DriveStraight.h</code>, <code>GentleDrive.h</code>, <code>ImuManager.*</code>, <code>RouteMission.cpp</code> (<code>_turn</code>, <code>_landmark</code>, <code>_frontWall</code>), <code>MissionLog.*</code> (built on <code>DriveLog</code>)</td></tr>
+<tr><td><b>Team box base</b> (Prakash's <code>cas_box</code> repository, also in Kethan's copy): sensor manager, ultrasonic, GPS, display, web page server, rover link, LiDAR scan, the wall-line fit <code>WallFollow::measure</code></td><td><code>Sensors.*</code>, <code>UsManager.*</code> (1&ndash;7 lines changed), <code>GpsManager.*</code>, <code>DisplayManager.*</code> (identical), <code>WebHMI.*</code>, <code>RoverLink.*</code>, <code>LidarScan.h</code> (35 cm minimum range, ghost filter added), <code>WallFit.h</code> (unchanged)</td></tr>
+<tr><td><b>Prakash</b>: <code>SafetyGuard</code> (collision avoidance layer 1: tilt stop, front ultrasonic / LiDAR stop with turning still allowed, rear ultrasonic), <code>HeadingHold</code>, <code>RouteFollow</code> / <code>RouteLocalizer</code> (route follower, local path)</td><td>not linked into this build. The same safety ideas are implemented in the mission itself: emergency stop at 0.45 m, ultrasonic stop at 35 cm, hold and wait for people, tilt pause</td></tr>
+<tr><td><b>Manikant</b>: collision avoidance and an Open Sea approach with SLAM, shown in the team slides</td><td>no source code of it is in the shared folders (the <code>mani/</code> folder holds Kethan's logging code and logs), so nothing of it is used here</td></tr>
 </table></div>
 <div class="tablewrap"><table>
 <tr><th>New in this work</th><th>Version</th><th>Where</th></tr>
@@ -192,6 +194,7 @@ svg text{font-family:var(--f-body)}
 <tr><td>Speedometer, speed override, climb button, record button</td><td>v8, v9</td><td><code>MissionPage.h</code></td></tr>
 <tr><td>Wide end wall, leaky counter, hold release for vanished obstacles</td><td>v10</td><td><code>_frontWallWide</code>, case <code>HOLD</code></td></tr>
 <tr><td>Railing corridor, KARL entrance, edge assist</td><td>v9, v10</td><td><code>_l4Walk</code>, <code>_edgeAssist</code></td></tr>
+<tr><td>Ramp opening finder in leg 4 (cross line + facade / railing corner, wait instead of entering), sideways positioning after a late turn before the Open Sea, backwards shift in a blocked turn, no turn before the B-gap end + 4.5 m</td><td>v10.3</td><td><code>_l4FindGap</code>, <code>_l4Gap</code>, <code>_afterTurn</code>, <code>_turn</code></td></tr>
 <tr><td>Log decoder, narrator, landmark benchmark, Python mirror of the firmware, replay, people and weather simulation</td><td>all</td><td><code>tools/</code></td></tr>
 </table></div>
 </section>

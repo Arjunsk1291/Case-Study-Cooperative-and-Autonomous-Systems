@@ -162,6 +162,7 @@ static const uint8_t kSeq[] = {RouteMission::TK_PIVOT, RouteMission::TK_SWING, R
 
 void RouteMission::_tac(uint8_t t, const Sensors& s) {
   _tk = t; _tMs = _tWinMs = millis(); _tYaw = s.yawNowDeg(); _tShiftD = 0;
+  if (t == TK_SHIFT) _tBack = _frontM <= 1.0f;                  // v10.3: front blocked -> this shift goes backwards
   if (t != TK_REST) Serial.printf("[mission] turn: %s\n", kTac[t]);
 }
 
@@ -208,10 +209,16 @@ bool RouteMission::_turn(const Sensors& s, float tgt, float& l, float& r) {
       if (d < 0) { l = 0.5f; r = 0.15f; } else { l = 0.15f; r = 0.5f; }
       stalled = window(3000, 2000) || now - _tMs > 6000;
       break;
-    case TK_SHIFT:
-      if (_frontM <= 1.0f || _tShiftD >= 0.30f || now - _tMs > 3500) { if (_tShiftD > 0.05f) _shifts++; stalled = true; break; }
-      l = r = 0.25f;
+    case TK_SHIFT: {
+      // v10.3 (campus_10.2 runs 3+4: 35-42 s stalled at the open-sea end wall, front 0.7-0.9 m): with the front
+      // blocked SWING / ARC / SHIFT were all skipped and only the PIVOT was left, which the stones there lock.
+      // Front blocked -> shift BACKWARDS 0.3 m at 0.20 (nothing within 0.8 m behind, LiDAR 148-210 deg) = room again.
+      bool rearOk = true;
+      for (int i = 37; i <= 52; i++) { const uint16_t cm = s.lidarCm(i); if (cm && cm < 80) { rearOk = false; break; } }
+      if ((_tBack ? !rearOk : _frontM <= 1.0f) || _tShiftD >= 0.30f || now - _tMs > 3500) { if (_tShiftD > 0.05f) _shifts++; stalled = true; break; }
+      l = r = _tBack ? -0.20f : 0.25f;
       break;
+    }
     default:                                                  // REST
       if (now - _tMs >= 500 && _outL == 0 && _outR == 0) {
         if (_tkNext >= sizeof(kSeq)) { _tkNext = 0; _tCycles++; }
@@ -359,7 +366,7 @@ int RouteMission::_structDetect(float ahead, float* pos, int maxN) const {
       while (e + 1 < kSL && (col[e + 1] >= 3 || (gap == 0 && e + 2 < kSL && col[e + 2] >= 3))) { if (col[e + 1] < 3) gap++; e++; }
       const float nearL = 0.8f + a * 0.25f, farL = 0.8f + (e + 1) * 0.25f;
       const int cells = e - a + 1;
-      if (cells >= 5 && nearL <= 2.3f && farL >= 2.3f && cells > best) best = cells;
+      if (cells >= 4 && nearL <= 2.3f && farL >= 2.3f && cells > best) best = cells;   // v10.3: 4 (c102_4: sign face 1.3-2.3 m = 4 cells)
       j = e + 1;
     }
     if (!best) continue;
@@ -372,7 +379,7 @@ int RouteMission::_structDetect(float ahead, float* pos, int maxN) const {
 
 void RouteMission::_structWin(float& lo, float& hi) const {
   // v10 (campus_9 started 7.7 m earlier: the sign was at 27.9 m, outside turnAt +-5): no start-dependent window any more
-  if (_gapAnchor >= 0) { lo = _gapAnchor + 5.35f - 1.2f; hi = _gapAnchor + 5.35f + 1.2f; }
+  if (_gapAnchor >= 0) { lo = _gapAnchor + 5.35f - 2.0f; hi = _gapAnchor + 5.35f + 2.0f; }   // v10.3: +-2.0 (c102_4: sign 6.4-6.9 m after the gap)
   else { lo = _askAt - turnWinM; hi = _askAt + 15.0f; }   // no B gap seen: 15 m on (a gap makes the anchor window)
 }
 
@@ -554,7 +561,19 @@ void RouteMission::_afterTurn(const Sensors& s) {
     case 8: _go(L2_ALIGN); _bdMs = 0; break;                       // board positioning continues
     case 9: _ds.start(s.yawNowDeg(), now); _ds.setTarget(_tgt); _rlMs = now; _wallScanMs = 0; _go(_rlBack); break;
     default:                                                       // T1 done
-      if (!boardLineUp) { _leg = 2; _base = _turnTgt; _startLeg2(s); break; }   // v5: straight on, walls steer
+      if (!boardLineUp) {                                          // v5: straight on, walls steer
+        _leg = 2; _base = _turnTgt;
+        const float late = _tpTurn ? clampf(_lateM, 0.0f, 1.2f) : 0.0f;   // max 1.2 m (roll 2.4 m, < 15 s at 0.18)
+        _tpTurn = false;                                           // v10.3: the blind 10-deg shift is replaced by this
+        if (startShift && late > 0.15f) {                          // POSITION FIRST: pivot 30 deg right, roll late/sin30, pivot back
+          _dist2 = 0; _bdLockDir = _turnTgt; _bdRollM = late / 0.5f; _posMove = true; _bp = 1;
+          snprintf(_msg, sizeof(_msg), "turned %.2f m late: moving %.2f m right before the open sea", late, late);
+          Serial.printf("[mission] %s\n", _msg);
+          _turnNo = 8; _turnTries = 0; _startTurn(s, wrap180(_turnTgt - 30.0f));   // right = yaw minus
+          break;
+        }
+        _startLeg2(s); break;
+      }
       _leg = 2; _dist2 = 0; _base = _turnTgt; _tgt = _base;
       _bp = 0; _bdN = 0; _bdMs = 0;
       _ds.start(s.yawNowDeg(), now); _ds.setTarget(_tgt);
@@ -609,6 +628,7 @@ void RouteMission::_startLeg4(const Sensors& s) {
   _tgt = _wallDir; _l3Seen = _wallOk; _noWallFrom = -1;
   _ds.start(s.yawNowDeg(), millis()); _ds.setTarget(_tgt);
   _l4Ph = 0; _rampSeen = false; _railN = 0; _railOk = false; _rampMs = _levelOkMs = 0; _l4ScanMs = 0; _entN = 0; _entFrom = _corrFrom = -1;
+  _gN = _gAge = _gLineN = 0; _gHave = _gCommit = _gWaitOn = false; _gWaitMs = 0;
   _eaPh = 0; _eaN = 0; _eaHighMs = 0; _pMin = _pMinNext = s.pitchDeg(); _pMinMs = millis();
   if (_log) _log->event(MissionLog::EV_L4_START);
   snprintf(_msg, sizeof(_msg), "leg 4 (after T3): left wall %s", _wallOk ? "seen" : "not seen yet");
@@ -699,8 +719,114 @@ void RouteMission::_l4Walk(const Sensors& s, uint32_t now) {
       } else _levelOkMs = 0;
     }
   }
+  if (_l4Ph == 1) {                                                // v10.3: the ramp opening overrides the walkway rules
+    float gw; const int8_t gr = _l4Gap(s, yaw, gw);
+    _gWaitOn = gr == 2;
+    if (gr == 2) return;
+    if (gr == 1) {                                                  // > 18 deg: jump (realign = ramped stop + full-power pivot)
+      const float d = wrap180(gw - _tgt);
+      _tgt = fabsf(d) > 18.0f ? gw : wrap180(_tgt + clampf(d, -2.0f, 2.0f));
+      return;
+    }
+  } else _gWaitOn = false;
   want = wrap180(yaw + clampf(wrap180(want - yaw), -10.0f, 10.0f));
   _tgt = wrap180(_tgt + clampf(wrap180(want - _tgt), -2.0f, 2.0f));
+}
+
+// v10.3 RAMP OPENING (campus_10.2 run 4: the rover reached the step line 1.9 m right of the ramp and drove onto the
+// stairs - they are below the LiDAR). The ramp is a 2.7-3.1 m opening in a CROSS LINE (step edge / lights / low wall)
+// with the KARL facade running on from its left end and the railing from its right end. Walkway frame (the scan turned
+// by the heading rel. to _l4Dir, + = right): the nearest y bin (0.25 m) with >= 4 points over >= 2 m of x is the line;
+// an opening = x gap 2.2-4.0 m with nothing in front of it, and >= 3 facade points from its left end (or railing points
+// from its right end) beyond the line; the LEFTMOST one within +-4 m (the stairs right of the railing look open too).
+// Replayed on c102_2/3/4 + campus_9 (0 false openings) and simulated (tools/sim_l4_gap.py: 0 hits in 150 starts).
+bool RouteMission::_l4FindGap(const Sensors& s, float rot, float ymin, Gap& g) const {
+  float px[Sensors::kLidarPoints], py[Sensors::kLidarPoints]; int n = 0;
+  for (int i = 0; i < Sensors::kLidarPoints; i++) {
+    const uint16_t cm = s.lidarCm(i);
+    if (!cm || cm < 35) continue;
+    const float a = (i * 4 + 2 + rot) * DEG_TO_RAD, d = cm / 100.0f, x = d * sinf(a);
+    if (fabsf(x) > 7.0f) continue;
+    px[n] = x; py[n] = d * cosf(a); n++;
+  }
+  for (int k = (int)(ymin / 0.25f); k < 40; k++) {
+    const float y0 = k * 0.25f;
+    float xs[Sensors::kLidarPoints]; int m = 0;
+    for (int i = 0; i < n; i++) if (py[i] >= y0 - 0.3f && py[i] <= y0 + 0.3f) {
+      const float v = px[i]; int j = m - 1; while (j >= 0 && xs[j] > v) { xs[j + 1] = xs[j]; j--; } xs[j + 1] = v; m++;
+    }
+    if (m < 4 || xs[m - 1] - xs[0] < 2.0f) continue;
+    bool found = false;
+    for (int q = 0; q + 1 < m && !found; q++) {                    // left to right: the first valid one is the leftmost
+      const float a = xs[q], b = xs[q + 1], w = b - a, cx = 0.5f * (a + b);
+      if (w < 2.2f || w > 4.0f || fabsf(cx) > 4.0f) continue;
+      bool nearPt = false; int fac = 0, rail = 0;
+      for (int i = 0; i < n; i++) {
+        if (px[i] > a + 0.2f && px[i] < b - 0.2f && py[i] > 0.3f && py[i] < y0 - 0.6f) { nearPt = true; break; }
+        if (fabsf(px[i] - a) <= 0.5f && py[i] >= y0 + 0.4f && py[i] <= y0 + 8.0f) fac++;
+        if (fabsf(px[i] - b) <= 0.5f && py[i] >= y0 + 0.4f && py[i] <= y0 + 5.0f) rail++;
+      }
+      if (nearPt || (fac < 3 && rail < 3)) continue;
+      g.y0 = y0; g.c = cx; g.a = a; g.b = b; found = true;
+    }
+    return found;                                                  // the nearest line only
+  }
+  return false;
+}
+
+float RouteMission::_l4LineAhead(const Sensors& s, float rot) const {   // nearest cross line 1-10 m (-1: none)
+  float px[Sensors::kLidarPoints], py[Sensors::kLidarPoints]; int n = 0;
+  for (int i = 0; i < Sensors::kLidarPoints; i++) {
+    const uint16_t cm = s.lidarCm(i);
+    if (!cm || cm < 35) continue;
+    const float a = (i * 4 + 2 + rot) * DEG_TO_RAD, d = cm / 100.0f, x = d * sinf(a);
+    if (fabsf(x) > 5.0f) continue;
+    px[n] = x; py[n] = d * cosf(a); n++;
+  }
+  for (int k = 4; k < 40; k++) {
+    const float y0 = k * 0.25f; float lo = 99, hi = -99; int m = 0;
+    for (int i = 0; i < n; i++) if (py[i] >= y0 - 0.3f && py[i] <= y0 + 0.3f) { lo = fminf(lo, px[i]); hi = fmaxf(hi, px[i]); m++; }
+    if (m >= 6 && hi - lo >= 2.0f) return y0;
+  }
+  return -1;
+}
+
+// one 250 ms scan in the walkway phase. 0 = nothing (normal walkway rules), 1 = want set (heading to drive),
+// 2 = WAIT (cross line close and the rover not inside the opening, or a line without an opening: someone standing
+// in front of it) - the caller stops with the ramps; after 20 s it asks. Opening confirmed = 3 of the last 5 scans
+// agree within 0.5 m. Off by > 0.3 m: aim at a point 1 m before its centre (>= 18 deg away = the realign rule stops
+// and pivots at full power); <= 0.3 m: the walkway direction; inside it at <= 1.6 m: committed, straight through.
+int8_t RouteMission::_l4Gap(const Sensors& s, float yaw, float& want) {
+  if (_gCommit) { want = _l4Dir; return 1; }
+  const float rot = wrap180(_l4Dir - yaw);
+  Gap g; const bool got = _l4FindGap(s, rot, _gHave ? 0.8f : 2.5f, g);
+  const float yl = _l4LineAhead(s, rot);
+  _gLineN = (yl > 0 && yl <= 6.0f) ? (uint8_t)min(_gLineN + 1, 50) : 0;
+  if (got) { if (_gN == 5) { for (int i = 0; i < 4; i++) _gBuf[i] = _gBuf[i + 1]; _gN = 4; } _gBuf[_gN++] = g; _gAge = 0; }
+  else if (_gAge < 255) _gAge++;
+  if (_gAge > 8) { _gN = 0; _gHave = false; }
+  if (_gN >= 3) {
+    float cs[5]; for (int i = 0; i < _gN; i++) cs[i] = _gBuf[i].c;
+    for (int i = 1; i < _gN; i++) { float v = cs[i]; int j = i - 1; while (j >= 0 && cs[j] > v) { cs[j + 1] = cs[j]; j--; } cs[j + 1] = v; }
+    const float md = cs[_gN / 2]; int good = 0, last = -1;
+    for (int i = 0; i < _gN; i++) if (fabsf(_gBuf[i].c - md) <= 0.5f) { good++; last = i; }
+    if (good >= 3) {
+      if (!_gHave) { if (_log) _log->event(MissionLog::EV_RAMP_GAP);
+        snprintf(_msg, sizeof(_msg), "ramp opening %.1f m ahead, centre %.2f m %s", _gBuf[last].y0, fabsf(_gBuf[last].c), _gBuf[last].c < 0 ? "left" : "right"); }
+      _gHave = true; _gConf = _gBuf[last];
+    }
+  }
+  if (!_gHave) return (_gLineN >= 3 && yl <= 2.0f) ? 2 : 0;
+  const float half = 0.13f;
+  if (_gConf.y0 <= 1.6f) {
+    if (!(_gConf.a + 0.35f <= -half && half <= _gConf.b - 0.35f)) return 2;
+    _gCommit = true; strlcpy(_msg, "inside the ramp opening - straight on", sizeof(_msg));
+    want = _l4Dir; return 1;
+  }
+  if (fabsf(_gConf.c) <= 0.3f) { want = _l4Dir; return 1; }
+  const float left = clampf(atan2f(-_gConf.c, fmaxf(_gConf.y0 - 1.0f, 0.8f)) * RAD_TO_DEG, -50.0f, 50.0f);
+  want = wrap180(_l4Dir + left);                                    // left = yaw plus
+  return 1;
 }
 
 // v9 EDGE ASSIST on leg 4 (log8: at 0.22 the rover stood 60 s at the cobble -> interlock edge, pitch +3 -> +6 deg,
@@ -780,6 +906,7 @@ void RouteMission::noteOutput(float l, float r, float dt) {
     if (_leg == 2) _dist2 += d; else _dist += d;
     if (_st == T1_TURN && _tk == TK_SHIFT) _tShiftD += d;
   }
+  if (_outV < 0 && dt > 0 && dt < 0.2f && _st == T1_TURN && _tk == TK_SHIFT) _tShiftD += -_outV * 1.03f * dt;   // v10.3 backwards shift
 }
 
 void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float padR, bool padActive,
@@ -955,20 +1082,25 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
           for (int i = 1; i < m; i++) { float x = t[i]; int j = i - 1; while (j >= 0 && t[j] > x) { t[j + 1] = t[j]; j--; } t[j + 1] = x; }
           return t[m / 2];
         };
-        float tgt = -1; const char* why = "";
+        float tgt = -1, lockPos = _sLock; const char* why = "";
         if (_sLock >= 0) {
           const float e = med(_tpEdges, _tpEN, _sLock - 0.8f, _sLock + 2.0f);   // v10.2: the pillar may be up to 2 m after the lock (campus_10)
           tgt = e > -90 ? e + pillarPastM : _sLock + structPastM; why = "turn structure";
         } else {
           const float soft = _structChoice(2, 0.4f);   // partly hidden (people in front of it): 0.3 m later
-          if (soft >= 0) { tgt = soft + structPastM + 0.3f; why = "turn structure (partly hidden)"; }
+          if (soft >= 0) { tgt = soft + structPastM + 0.3f; lockPos = soft; why = "turn structure (partly hidden)"; }
           else if (_gapAnchor >= 0 && _dist >= lo) {   // v10: the pillar inside the B-gap window only
             const float e = med(_edges2, _e2N, lo - 0.5f, hi + 0.5f);
             if (e > -90) { tgt = e + pillarPastM; why = "pillar in the B-gap window (structure not seen)"; }
           }
         }
-        if (tgt >= 0 && _dist >= tgt && !_rightAhead(s)) {   // v10.2: never with the pillar still beside / ahead (v6 timing)
+        // v10.3 hard failsafe: never earlier than 4.5 m after the B gap (the open space on the left) ended - the sign is
+        // 5.2-6.9 m after it in all 12 logs, so no pillar before it can ever start the turn
+        if (tgt >= 0 && _dist >= tgt && (_gapAnchor < 0 || _dist >= _gapAnchor + 4.5f) && !_rightAhead(s)) {   // v10.2: never with the pillar still beside / ahead (v6 timing)
           _tpTurn = true; _tpY = pillarPastM + (_dist - tgt);
+          // v10.3: lateness vs the STRUCTURE (good turns: lock + 0.41..0.66 m; test1 +0.99 failed in the open sea, c102_3
+          // +0.92 ran 1 m off the row, c102_2 +1.89). After the right turn this is the sideways offset to the LEFT.
+          _lateM = lockPos >= 0 ? (_dist - lockPos) - 0.55f : (_dist - tgt);
           if (_log) { _log->event(MissionLog::EV_TURN_PILLAR); _log->event(MissionLog::EV_OP_TURN); }
           snprintf(_msg, sizeof(_msg), "%s at %.1f m: turning right", why, _dist);
           Serial.printf("[mission] %s\n", _msg);
@@ -977,7 +1109,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
           break;
         }
       }
-      if (_dist >= ((autoTurn && usePillar) ? (_gapAnchor >= 0 ? _gapAnchor + 5.35f + 1.2f + 1.5f : _askAt + 15.0f) : _askAt) ||
+      if (_dist >= ((autoTurn && usePillar) ? (_gapAnchor >= 0 ? _gapAnchor + 5.35f + 2.0f + 1.5f : _askAt + 15.0f) : _askAt) ||
           (autoTurn && usePillar && _sLock >= 0 && _dist >= _sLock + 3.5f)) {   // v10.2: locked but the pillar never passed -> ask
         if (_log) _log->event(MissionLog::EV_T1_ASK);
         _tpTurn = false;
@@ -1078,7 +1210,8 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
       } else {                                        // parallel to the board: lock and go
         if (_log) _log->event(MissionLog::EV_BOARD_LOCK);
         _base = _bdLockDir; _startLeg2(s);
-        snprintf(_msg, sizeof(_msg), "locked on the board: open sea heading %.1f deg", _bdLockDir);
+        if (_posMove) { _posMove = false; snprintf(_msg, sizeof(_msg), "lined up after the late turn: open sea heading %.1f deg", _bdLockDir); }
+        else snprintf(_msg, sizeof(_msg), "locked on the board: open sea heading %.1f deg", _bdLockDir);
       }
       break;
     }
@@ -1223,6 +1356,13 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
       if (fabsf(wrap180(_tgt - yaw)) > 18.0f && now - _rlMs > 1000) { _realign(s, _tgt, "off the wall line - turning parallel"); break; }
       _leg1(s, l, r);                               // left wall follower (leg 4 after the wall: _l4Walk)
       if (_st != L3_FOLLOW && _st != L4_FOLLOW) break;   // failsafe pause inside
+      if (l4 && _l4Ph == 1 && _gWaitOn) {          // v10.3: step line close, not lined up with the ramp -> never enter
+        l = r = 0;                                  // GentleDrive ramps the stop
+        if (!_gWaitMs) { _gWaitMs = now; if (_log) _log->event(MissionLog::EV_GAP_WAIT);
+          strlcpy(_msg, "step line ahead, not lined up with the ramp opening - waiting", sizeof(_msg)); }
+        if (now - _gWaitMs > 20000) { _gWaitMs = 0; _ask(END_ASK, "Ramp opening not found or blocked. Line the rover up with the ramp (MANUAL), then GO."); }
+        break;
+      } else _gWaitMs = 0;
       if (l4 && _l4Ph >= 1) {                       // v9: walkway / railing / ramp - no "wall ended" stop
         if (_l4Ph == 3 && _dist - _l4PhStart > 6.0f) {
           l = r = 0; if (_log) _log->event(MissionLog::EV_AT_I);

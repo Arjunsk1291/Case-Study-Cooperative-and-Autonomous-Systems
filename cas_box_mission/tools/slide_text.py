@@ -75,3 +75,31 @@ S.append(dict(speaker='[name to be added]', title='Last leg to Block I: corridor
  ("Will it stop at the right door?", "Replay says 48.5 m, the entrance is at 47.0 m. It must be checked outdoors."),
  ("What if a person stands at the entrance?", "It holds and finishes the route there. It never drives into or around people.")]))
 
+
+# ---------------------------------------------------------------------------------------------------------------------
+# v10.3 (PPT/PPT corrections/corrections.pdf, 9 Nov): the slides show ONLY the plot (text boxes removed), so the speaker
+# notes carry the words. Scripts cut to about one minute (~150 words). New facts from the campus_10.2 runs (9 Nov).
+S[0]['secs'] = 60
+S[0]['script'] = [
+ "After the right turn the rover crosses about 40 metres of open ground with no wall beside it. GPS was 6 to 15 metres off here and the gyro drifts, so we steer on fixed landmarks in the LiDAR scan.",
+ "The plot is one real crossing seen from above. The blue lines are the B wall behind and the end wall ahead; they give the heading. The circles are the two campus-store poles and the two trees with their structures, in front of the U-shaped store front. The box fits a straight line through them, and a PID keeps the rover 6.65 metres from it, the distance from our teaching run. After 24.5 metres the building front takes over. The orange line is the rover track.",
+ "Log 8 and campus 9 crossed wall to wall with no hold and under 6 degrees heading change. This week we learned the rover must start on the strip: a late turn started it 0.4 to 1.3 metres left, so version 10.3 first moves sideways, then enters.",
+]
+S[0]['questions'][2] = ("Is it tested on the real rover?", "Yes: log 8 and campus 9 crossed autonomously, and version 10.2 crossed in 3 runs on 9 November (one needed a push on the cobblestones). Runs that started off the strip ended up to 1 m off the row; version 10.3 lines up first.")
+
+S[1]['secs'] = 60
+S[1]['script'] = [
+ "We cannot bring crowds or snow to the campus on demand, so we wrote our own closed-loop simulation in Python: a metric map of the square, a simulated 90-beam LiDAR, a simple rover with wheel slip and gyro drift, and the box rules copied line by line. One run is one full crossing.",
+ "Chart A is about crowds. The danger is that people look like the end wall and the rover turns too early. Orange is the old rule, blue the new one. A person 0.8 metres in front of the end wall fooled the old rule in 9 of 20 runs and the new rule in none. In every crowd case the rover only stopped, waited and drove on.",
+ "Chart B is sun and snow, 12 runs each: clear, glare, low sun and snowy ground 12 of 12. Falling snow 10 of 12, everything at once 7 of 12; in those misses it never stopped in a wrong place.",
+]
+S[1]['questions'][1] = ("What did the simulation change in the code?", "The end-wall check: it must be wide, use the nearest surface, come after 85 percent of the crossing and use a leaky counter. A tighter landmark gate was also tested, but it rejected real rows in the logs, so it was not used.")
+
+S[2]['secs'] = 60
+S[2]['script'] = [
+ "The last leg goes from the end of the arcade to the glass KARL entrance of Block I, where the rover must stop.",
+ "The plot is a real LiDAR map of this leg. First the rover follows the wall at one metre. Then it crosses the interlock walkway, where the benches, the hydrant and the low railing at the building are the only references. Then it drives between the railings. The KARL entrance is where the facade steps back and the glass loses LiDAR points; the rover stops 1.5 metres after it.",
+ "On 9 November two of three runs reached Block I. In the third the rover arrived 1.9 metres right of the ramp and drove onto the steps, which are below the LiDAR. Version 10.3 looks for the ramp opening between the facade and the railing and lines up with it, or stops and waits. In 180 simulated approaches it never touched the steps.",
+]
+S[2]['questions'][2] = ("Will it stop at the right door?", "On 9 November two runs reached Block I with version 10.2. The ramp-opening rule of version 10.3 is replayed on four logs and simulated; it still has to be driven.")
+S[1]['title'] = 'Open Sea simulation: crowds, sun and snow'      # v10.3: the fault box was removed from the slide

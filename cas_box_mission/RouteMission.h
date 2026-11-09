@@ -65,6 +65,7 @@ public:
   // Open-sea heading priority: wall behind / wall ahead (perpendicular) > board (parallel, +-5 deg gate) > gyro +
   // measured drift. Board line-up stop and end-board following are off by default.
   bool boardLineUp = false;
+  bool startShift = true;     // v10.3: late turn -> stop, pivot 30 deg right, roll, pivot back BEFORE the open sea
   // v6 (campus5 + run.mp4): LANDMARK CORRIDOR. The tactile strip of the open sea runs parallel to a straight row of
   // permanent landmarks on its LEFT (trees in grates + stakes + sign / lamp posts, ~9-24 m) at ~6.5 m (campus_2 6.2-6.6,
   // campus5 on the strip 6.8), and to the far building front at ~3.0 m (~28-37 m). Both are followed like distant
@@ -191,6 +192,7 @@ private:
   // turn pillar + aim after the turn
   uint32_t _tpMs = 0, _aimMs = 0, _aimSeenMs = 0; uint8_t _tpClear = 0;
   bool _tpTurn = false, _aimOn = false; float _tpY = 0, _tpX = 0, _aimDeg = 0;
+  float _lateM = 0; bool _posMove = false; bool _tBack = false;   // v10.3: SHIFT goes backwards when the front is blocked   // v10.3: turn lateness vs the structure -> sideways move before the open sea
   uint32_t _posStopMs = 0; float _posLat = 0;
   float _tpEdges[7]; uint8_t _tpEN = 0;          // pillar front-edge position along leg 1 (odometry), per sighting
   float _shiftEndM = 0, _shiftOff = 0;                          // open-sea start: steer 10 deg right until this distance (sideways shift)
@@ -221,6 +223,13 @@ private:
   uint8_t _l4Ph = 0, _railN = 0; bool _rampSeen = false, _l4KeepSet = false, _railOk = false;
   float _l4Dir = 0, _l4Keep = 0, _railDir = 0, _railD = 0.6f, _l4Flat = 0, _l4PhStart = 0;
   uint32_t _rampMs = 0, _levelOkMs = 0, _railGoodMs = 0, _l4ScanMs = 0;
+  // v10.3 leg-4 RAMP OPENING (campus_10.2 run 4 drove onto the stairs 1.9 m right of it): tools/replay_l4_gap.py
+  struct Gap { float y0, c, a, b; };
+  Gap _gBuf[5], _gConf; uint8_t _gN = 0, _gAge = 0, _gLineN = 0; bool _gHave = false, _gCommit = false, _gWaitOn = false;
+  uint32_t _gWaitMs = 0;
+  bool _l4FindGap(const Sensors& s, float rot, float ymin, Gap& g) const;
+  float _l4LineAhead(const Sensors& s, float rot) const;
+  int8_t _l4Gap(const Sensors& s, float yaw, float& want);
   // v9 edge assist (leg 4): pitch stays >= 3 deg above its recent minimum while driving = front wheels on an edge
   uint8_t _eaPh = 0, _eaN = 0; uint32_t _eaMs = 0, _eaHighMs = 0, _pMinMs = 0; float _pMin = 0, _pMinNext = 0, _eaPitch = 0;
   volatile bool _spdEv = false;
