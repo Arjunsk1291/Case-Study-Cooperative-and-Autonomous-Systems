@@ -127,7 +127,7 @@ class OpenSea:
     V6 = dict(row_moves_base=True, keep_i=False, row_cap=180.0, row_rmax=9.0, bld_max=4.5, leg2=36.0, rowoff=6.5, bldoff=3.0, row_from=10.0, row_to=26.0, row_min=4.5, row_max=8.5,
               rear_from=0.0, rear_min_dist=0.0, kp=10.0, ki=0.0, kd=0.0, lat_max=8.0, i_max=4.0, dir_med=5, dir_step=0.5)
     V7 = dict(V6, rowoff=6.65, rear_from=2.0, rear_min_dist=2.5, ki=1.5, kd=20.0, dir_med=9, dir_step=0.25, row_cap=5.0,
-              row_moves_base=False, keep_i=True, row_to=24.5, row_min=5.65, row_max=7.65, row_rmax=11.0, bld_max=6.0)
+              row_moves_base=False, keep_i=True, row_to=24.5, row_min=4.0, row_max=9.5, row_rmax=11.0, bld_max=6.0)
     DEFAULT = V6
     NAMES = {0: "gyro", 1: "rear_wall", 2: "front_wall", 3: "board", 4: "left_row", 5: "left_building"}
 

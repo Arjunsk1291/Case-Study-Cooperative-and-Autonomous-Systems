@@ -167,7 +167,7 @@ def build(N):
     card(s, 9.0, 1.86, 3.85, 1.38, 'Proximity PID on the store front', [
         'e = measured line distance − 6.65 m',
         'turn = kp·e + ki·∫e + kd·ė  (10 / 1.5 / 20, ±8°)',
-        'gate ±1.0 m (v10.1): false lines are rejected'], size=12)
+        'line must be parallel (±8°) and 4–9.5 m away'], size=12)
     card(s, 9.0, 3.32, 3.85, 1.46, 'Measured in 9 logs', [
         f'store-front distance {N["row_lo"]}–{N["row_hi"]} m in 5 of 9 runs; teach run 6.67 m',
         'seen on 39–56 % of the scans',
@@ -175,7 +175,7 @@ def build(N):
     card(s, 9.0, 4.88, 3.85, 1.82, 'Result', [
         'log8, campus_9: wall to wall, no hold, pause or failsafe',
         'heading changed 5.6° over 49 m and 5.8° over 42 m',
-        'fault sim: false line 1.6–2.0 m off → 0.01–0.03 m'], edge=ORANGE, size=11)
+        'fault sim: row missing or gap: 0.01–0.02 m'], edge=ORANGE, size=11)
     set_notes(s, notes_text(0), NOTE_BODY)
 
     # ================================================================ slide 2: Open Sea simulation
@@ -184,7 +184,7 @@ def build(N):
                            ('Rover model', '0.22 m/s, slide, gyro bias'), ('Firmware mirror', 'same rules, 0.25 s step'),
                            ('Metrics', 'side error, false end, holds')], 2.0, 0.40, 0.78)
     picture(s, ASSETS + 'fig_faults.png', 0.889, 2.84, 7.4)
-    text(s, 0.889, 6.3, 7.6, 0.45, ['tools/sim_open_sea.py + tools/fwmirror.py (class OpenSea). 20 random starts per case, 12 for weather. v10.1 = row gate ±1.0 m.'], size=11, color=GREY, line=14)
+    text(s, 0.889, 6.3, 7.6, 0.45, ['tools/sim_open_sea.py + tools/fwmirror.py (class OpenSea). 20 random starts per case, 12 for weather. The row gate is unchanged.'], size=11, color=GREY, line=14)
     card(s, 8.75, 2.84, 4.1, 1.5, 'Crowds (20 starts each)', [
         'one person in the path: false end wall 18 → 0',
         'group of 3: 20 → 0; walking crowd of 20: 13 → 0',
@@ -193,7 +193,7 @@ def build(N):
         'ghosts, low sun, light rain: 12 / 12',
         'heavy rain / snow 10 / 12; worst mix 7 / 12'], size=11)
     card(s, 8.75, 5.7, 4.1, 1.0, 'Found and open', [
-        'false line pulled it 1.6–2.0 m: fixed (gate)',
+        'false line pulls it 1.1–2.0 m: gate proposed, not applied',
         'open: −15° glitch late, gyro bias with no landmark'], edge=ORANGE, size=10.5)
     set_notes(s, notes_text(1), NOTE_BODY)
 

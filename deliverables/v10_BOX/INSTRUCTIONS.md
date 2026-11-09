@@ -17,9 +17,8 @@
 
 Kept: turns full power, forward 0.22 (leg 4: 0.30), every stop a gentle ramp, people = stop and wait, only STOP / tilt pause, speedometer and speed override from v9. The rover firmware is not touched.
 
-## v10.1 update (Open Sea fault simulation, same day)
-`tools/sim_open_sea.py --faults` (20 starts per case): a **false straight line** on the left (bike rack at 4.5 m, hoarding at 8.5 m) pulled the rover 1.06-1.95 m off at the end wall, because the landmark-row gate was 4.0-9.5 m. The gate is now **+-1.0 m around the taught row distance (6.65 m)**: error 0.01 m. Missing row / row gap / B wall hidden / +10 deg glitch: 0.01-0.02 m (unchanged). Nothing else in the firmware changed (compiles, 96 %).
-Still open: a -15 deg heading glitch late in the crossing (8 m), gyro +-6 deg/min with no landmark (0.75 m), a real row more than 0.7 m from the taught distance (0.3-1.1 m).
+## Open Sea fault simulation (tested, NOT applied)
+tools/sim_open_sea.py --faults: row missing / gap / B wall hidden / +10 deg glitch: 0.01-0.02 m. A false straight line on the left (bike rack 4.5 m, hoarding 8.5 m) would pull the rover 1.06-1.95 m off, because the row gate is 4.0-9.5 m. A gate of +-1.5 m around 6.65 m fixes it (0.01 m) but on the real logs it changes the row use in log8 (72 scans, max 1.3 deg) and campus_3 (22 scans), so the **row gate was left unchanged** (the crossing that worked from v5 to v9). Open: -15 deg glitch late in the crossing (8 m), gyro +-6 deg/min with no landmark (0.75 m).
 
 ## Please check outdoors
 1. Page line **"turn structure"**: "B gap end ~13-23 m", then LOCKED, the rover turns ~0.6 m past the sign pillar. If the sign is not found it stops and asks (button).

@@ -219,7 +219,7 @@ def fig_ghost():
 
 
 def fig_faults():
-    """Open Sea fault simulation: side error at the end wall (median of 20 runs), V6 / V7 (old gate) / v10.1 (gate +-1.0 m)"""
+    """Open Sea fault simulation: side error at the end wall (median of 20 runs), V6 / V7 (old gate) / v10.1 (gate +-1.5 m)"""
     import re
     rd = lambda f: {m.group(1) + ' ' + m.group(2).strip(): float(m.group(3)) for m in (re.match(r'^(V\d) (.*?)\s+24 m: .*end: med ([\d.]+)', l) for l in open(OUT + f)) if m}
     b, n = rd('open_sea_faults_before.txt'), rd('open_sea_faults_v10_1.txt')
@@ -236,7 +236,7 @@ def fig_faults():
         if v7 > 0.5: ax.text(v7 + 0.04, yy, f'{v7:.2f}', va='center', fontsize=8, color=ORANGE_T if False else '#C0620C')
     ax.set_yticks(y); ax.set_yticklabels(lab, fontsize=9); ax.set_xlim(0, 2.4); ax.set_xlabel('side error at the end wall (m), median of 20 runs  -  lower is better', fontsize=9)
     from matplotlib.patches import Patch
-    ax.legend(handles=[Patch(color='#C9D1D9', label='V6 (row only as heading)'), Patch(color='#E9B27A', label='V7 (PID, gate 4.0-9.5 m)'), Patch(color=BL, label='v10.1 (PID, gate +-1.0 m)')],
+    ax.legend(handles=[Patch(color='#C9D1D9', label='V6 (row only as heading)'), Patch(color='#E9B27A', label='current code (V7, gate 4.0-9.5 m)'), Patch(color=BL, label='proposed gate +-1.5 m (not in code)')],
               loc='lower center', bbox_to_anchor=(0.45, 1.0), ncol=3, frameon=False, fontsize=8.5)
     for s_ in ('top', 'right'): ax.spines[s_].set_visible(False)
     fig.subplots_adjust(left=0.27, right=0.985, top=0.9, bottom=0.14); fig.savefig(OUT + 'fig_faults.png'); plt.close(fig)
