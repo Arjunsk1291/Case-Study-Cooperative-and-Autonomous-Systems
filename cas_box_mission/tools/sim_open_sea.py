@@ -155,6 +155,26 @@ def crowd(rng, kind):
         for _ in range(15): P.append([rng.uniform(4.0, 6.2), rng.uniform(-24, -10), 0, rng.choice((0, 0.6, -0.6)), 0.22])
     elif kind == 'row of people across at 30 m (fake end wall?)':
         for k in range(8): P.append([-1.6 + 0.42 * k, -30.0, 0, 0, 0.2])
+    elif kind == 'people standing at the store poles (2-4 m left)':
+        for _ in range(8): P.append([rng.uniform(1.5, 4.5), rng.uniform(-30, -10), 0, 0, rng.uniform(0.18, 0.28)])
+    elif kind == 'people walking near the store poles':
+        for _ in range(10):
+            a = rng.uniform(0, 2 * math.pi); v = rng.uniform(0.8, 1.5)
+            P.append([rng.uniform(0.5, 4.5), rng.uniform(-30, -10), v * math.cos(a), v * math.sin(a), 0.22])
+    elif kind == 'mix of 20 at the poles (10 stand, 10 walk)':
+        for _ in range(10): P.append([rng.uniform(1.0, 4.5), rng.uniform(-30, -10), 0, 0, 0.22])
+        for _ in range(10):
+            a = rng.uniform(0, 2 * math.pi); v = rng.uniform(0.8, 1.5)
+            P.append([rng.uniform(-1, 4.5), rng.uniform(-30, -10), v * math.cos(a), v * math.sin(a), 0.22])
+    elif kind == 'group of 5 in the path at 33-36 m':
+        y = rng.uniform(-36, -33); x = rng.uniform(-0.4, 0.4)
+        for k in range(5): P.append([x - 0.9 + 0.45 * k, y, 0, 0, 0.22])
+    elif kind == '8 shoulder to shoulder across at 34 m':
+        for k in range(8): P.append([-1.6 + 0.42 * k, -34.0, 0, 0, 0.2])
+    elif kind == 'person 0.8 m in front of the end wall':
+        P.append([rng.uniform(-0.3, 0.3), -39.2, 0, 0, 0.22])
+    elif kind == 'pillar / pole 0.3 m in the path at 34 m (never moves)':
+        P.append([0.0, -34.0, 0, 0, 0.15, 'fixed'])
     elif kind == 'people walking along with the rover':
         for dx in (-1.0, 1.2, 2.0): P.append([dx, -1.5, 0, -0.22, 0.22])
     return P
@@ -173,7 +193,7 @@ def run_crowd(seed, kind, preset, leave_s=30.0, wide=True):
             p[0] += p[2] * dt; p[1] += p[3] * dt
             if p[0] < -5 or p[0] > 10: p[2] = -p[2]
             if p[1] < -38 or p[1] > -1: p[3] = -p[3]
-            if first_hold is not None and t > first_hold + leave_s and p[2] == 0 and p[3] == 0 and abs(p[0] - x) < 1.5:
+            if first_hold is not None and t > first_hold + leave_s and p[2] == 0 and p[3] == 0 and len(p) < 6 and abs(p[0] - x) < 1.5:
                 p[0] += (1.0 if p[0] >= x else -1.0) * dt               # people in the way walk off ~30 s after the stop
         if t - last >= 0.25:
             last = t
@@ -289,6 +309,19 @@ if __name__ == "__main__":
         for name, kw in FAULTS:
             for tag, P in ((("V7", F.OpenSea.V7),) if "--v7only" in sys.argv else (("V6", F.OpenSea.V6), ("V7", F.OpenSea.V7))):
                 print(batch(f"{tag} {name}", P, n=20, **kw), flush=True)
+        sys.exit()
+    if "--nearest" in sys.argv:
+        KINDS = ['nobody', 'people standing at the store poles (2-4 m left)', 'people walking near the store poles', 'mix of 20 at the poles (10 stand, 10 walk)',
+                 '1 person standing in the path (last 30 %)', 'group of 5 in the path at 33-36 m', '8 shoulder to shoulder across at 34 m',
+                 'person 0.8 m in front of the end wall', 'pillar / pole 0.3 m in the path at 34 m (never moves)', 'walking 20']
+        n = 20
+        print(f"{'scenario (20 starts)':55s} {'rule':8s} {'reached':>7s} {'FALSE end':>9s} {'holds':>6s} {'wait s':>7s} {'side end med':>12s}")
+        for kind in KINDS:
+            for tag, near in (('median', False), ('nearest', True)):
+                F.WIDE_NEAREST = near
+                R = [run_crowd(2100 + k, kind, F.OpenSea.V7) for k in range(n)]
+                lat = sorted(r['lat_end'] for r in R)[n // 2]
+                print(f"{kind[:55]:55s} {tag:8s} {sum(r['end_ok'] for r in R):4d}/{n} {sum(r['false_end'] for r in R):9d} {sum(r['holds'] for r in R):6d} {sum(r['hold_s'] for r in R) / n:7.1f} {lat:12.2f}", flush=True)
         sys.exit()
     if "--env" in sys.argv: env_table(); sys.exit()
     if "--crowd" in sys.argv: crowd_table(); sys.exit()

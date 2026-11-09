@@ -185,7 +185,7 @@ def build(N):
                            ('Metrics', 'side error, false end, holds')], 2.0, 0.40, 0.78)
     picture(s, ASSETS + 'fig_faults.png', 0.889, 2.84, 7.4)
     text(s, 0.889, 6.3, 7.6, 0.45, ['tools/sim_open_sea.py + tools/fwmirror.py (class OpenSea). 20 random starts per case, 12 for weather. The row gate is unchanged.'], size=11, color=GREY, line=14)
-    card(s, 8.75, 2.84, 4.1, 1.5, 'Crowds (20 starts each)', [
+    card(s, 8.75, 2.84, 4.1, 1.5, 'Crowds (20 starts, v8 rule → v10)', [
         'one person in the path: false end wall 18 → 0',
         'group of 3: 20 → 0; walking crowd of 20: 13 → 0',
         'rover stops and waits, never swerves'], size=11.5)
@@ -210,7 +210,7 @@ def build(N):
         'LiDAR line through the left edge: grass edge, benches, strip (1–3 m, ≥ 5 points)',
         'keeps the first-seen distance (1.3–2.4 m), 10°/m, max ±6°'], size=11)
     card(s, 9.0, 3.68, 3.85, 1.58, 'Railing corridor → KARL entrance', [
-        'right line 0.35–1.3 m + left facade, width 2.4–3.3 m: found at 35.6 m',
+        'right line 0.35–1.3 m + left facade, width 2.4–3.3 m: found at 35.8 m',
         'facade steps back, glass drops beams: 47.0 m; stop at 48.5 m'], size=11)
     card(s, 9.0, 5.36, 3.85, 1.34, 'Limits (replay)', [
         'edge line found on only 10 % of the walkway scans in campus_9 (35 % in log8): the rest is heading hold',

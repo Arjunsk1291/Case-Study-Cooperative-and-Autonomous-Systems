@@ -426,6 +426,9 @@ def front_wall(L, max_m):
     return hits >= 4 and re - le >= 0.25 and ff - nf <= 0.30
 
 
+WIDE_NEAREST = True
+
+
 def front_wall_wide(L, max_m, half=1.1):
     """v9 (RouteMission::_frontWallWide): the open-sea END WALL must also be WIDE. Real end walls (campus3/5/6, test2,
     log8): the forward distance stays within 0.3 m over +-48 deg = more than +-1.3 m to each side. One person or a
@@ -434,7 +437,7 @@ def front_wall_wide(L, max_m, half=1.1):
     if not front_wall(L, max_m): return False
     fc = sorted(L[k % 90] / 100 * math.cos(math.radians(k * 4 + 2)) for k in range(-4, 4) if L[k % 90])
     if not fc: return False
-    f0 = fc[0]                                   # the NEAREST surface (a median can land on the far wall behind a person)
+    f0 = fc[0] if WIDE_NEAREST else fc[len(fc) // 2]   # v10 NEAREST surface (v9: median) (a median can land on the far wall behind a person)
     def side(ks):
         n = 0
         for k in ks:

@@ -69,7 +69,7 @@ def fig_blockI():
     pts, path = project(l4, h0)
     at = {}
     for x, y, r in path:
-        for k, lo in (('walkway', 14.8), ('corr', 35.63), ('ent', 46.96), ('hold', 56.4)):
+        for k, lo in (('walkway', 14.8), ('corr', 35.8), ('ent', 46.96), ('hold', 56.4)):
             if k not in at and r['leg_dist_m'] >= lo: at[k] = (x, y)
     fig, ax = plt.subplots(figsize=(7.8, 2.9), dpi=220)
     xs = [p[0] for p in pts if -3 < p[0] < 70 and -6 < p[1] < 7]; ys = [p[1] for p in pts if -3 < p[0] < 70 and -6 < p[1] < 7]
