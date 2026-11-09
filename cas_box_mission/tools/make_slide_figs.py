@@ -242,5 +242,31 @@ def fig_faults():
     fig.subplots_adjust(left=0.27, right=0.985, top=0.9, bottom=0.14); fig.savefig(OUT + 'fig_faults.png'); plt.close(fig)
 
 
+def fig_sim2():
+    """slide 2: crowds (false end-wall stops, v9 vs v10, 20 runs) and weather (reached the end wall, 12 runs) in plain words"""
+    crowd = [('person 0.8 m in front of the end wall', 9, 0), ('1 person standing in the path', 3, 0), ('20 people at the store poles', 2, 0),
+             ('10 people walking near the poles', 1, 0), ('group of 5 in the path', 0, 0), ('8 people side by side', 0, 0), ('crowd of 20 walking', 0, 0)]
+    wx = [('clear night (reference)', 12), ('sun glare: fake dots in 20 % of scans', 12), ('low sun: 40° blind spot', 12), ('light rain', 12),
+          ('heavy rain / snow', 10), ('wet slip + gyro drift', 12), ('everything bad at once', 7)]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(9.6, 3.6), dpi=220, gridspec_kw={'wspace': 1.05})
+    y = list(range(len(crowd)))[::-1]
+    for yy, (n, o, v) in zip(y, crowd):
+        a1.barh(yy + 0.18, o, height=0.34, color='#E9B27A'); a1.barh(yy - 0.18, max(v, 0.08), height=0.34, color=BL)
+        a1.text(o + 0.25, yy + 0.18, str(o), va='center', fontsize=8.5, color='#C0620C'); a1.text(max(v, 0.08) + 0.25, yy - 0.18, str(v), va='center', fontsize=8.5, color=BL, fontweight='bold')
+    a1.set_yticks(y); a1.set_yticklabels([c[0] for c in crowd], fontsize=8.5); a1.set_xlim(0, 20)
+    a1.set_title('A · Crowds: wrong "end wall" stops\n(out of 20 runs, lower is better)', fontsize=9.5, loc='left', color=INK)
+    from matplotlib.patches import Patch
+    a1.legend(handles=[Patch(color='#E9B27A', label='v9 rule'), Patch(color=BL, label='v10 rule')], loc='lower right', frameon=False, fontsize=8.5)
+    y = list(range(len(wx)))[::-1]
+    for yy, (n, v) in zip(y, wx):
+        a2.barh(yy, 12, height=0.55, color='#E6EAEE'); a2.barh(yy, v, height=0.55, color=BL if v == 12 else '#E07B1A')
+        a2.text(12.3, yy, f'{v}/12', va='center', fontsize=9, color=INK, fontweight='bold')
+    a2.set_yticks(y); a2.set_yticklabels([w[0] for w in wx], fontsize=8.5); a2.set_xlim(0, 14.5); a2.set_xticks([0, 6, 12])
+    a2.set_title('B · Weather: reached the end wall\n(out of 12 runs, higher is better)', fontsize=9.5, loc='left', color=INK)
+    for a in (a1, a2):
+        for s_ in ('top', 'right'): a.spines[s_].set_visible(False)
+    fig.subplots_adjust(left=0.25, right=0.985, top=0.86, bottom=0.08); fig.savefig(OUT + 'fig_sim2.png'); plt.close(fig)
+
+
 if __name__ == '__main__':
-    fig_sea(); fig_blockI(); fig_people(); fig_turn(); fig_tools(); fig_ghost(); fig_faults()
+    fig_sea(); fig_blockI(); fig_people(); fig_turn(); fig_tools(); fig_ghost(); fig_faults(); fig_sim2()

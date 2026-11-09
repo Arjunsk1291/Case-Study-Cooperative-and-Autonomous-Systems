@@ -183,18 +183,18 @@ def build(N):
     chain(s, 0.889, 1.86, [('World model', 'B wall, store front, building, end wall'), ('Scanner', '90 beams, 2 cm noise, 12 % drops'),
                            ('Rover model', '0.22 m/s, slide, gyro bias'), ('Firmware mirror', 'same rules, 0.25 s step'),
                            ('Metrics', 'side error, false end, holds')], 2.0, 0.40, 0.78)
-    picture(s, ASSETS + 'fig_faults.png', 0.889, 2.84, 7.4)
-    text(s, 0.889, 6.3, 7.6, 0.45, ['tools/sim_open_sea.py + tools/fwmirror.py (class OpenSea). 20 random starts per case, 12 for weather. The row gate is unchanged.'], size=11, color=GREY, line=14)
-    card(s, 8.75, 2.84, 4.1, 1.5, 'Crowds (20 starts, v8 rule → v10)', [
-        'one person in the path: false end wall 18 → 0',
-        'group of 3: 20 → 0; walking crowd of 20: 13 → 0',
-        'rover stops and waits, never swerves'], size=11.5)
-    card(s, 8.75, 4.42, 4.1, 1.2, 'Weather (12 starts)', [
-        'ghosts, low sun, light rain: 12 / 12',
-        'heavy rain / snow 10 / 12; worst mix 7 / 12'], size=11)
-    card(s, 8.75, 5.7, 4.1, 1.0, 'Found and open', [
-        'false line pulls it 1.1–2.0 m: gate proposed, not applied',
-        'open: −15° glitch late, gyro bias with no landmark'], edge=ORANGE, size=10.5)
+    picture(s, ASSETS + 'fig_sim2.png', 0.889, 2.84, 8.5)
+    text(s, 0.889, 6.08, 8.5, 0.6, ['Each run = one simulated crossing of the Open Sea with the real box rules (tools/sim_open_sea.py). '
+                                    'A "wrong end wall stop" = the rover thinks people are the end wall and turns too early.'], size=11, color=GREY, line=14)
+    card(s, 9.6, 2.84, 3.25, 1.35, 'Weather, in plain words', [
+        'sun glare / low sun: fake or missing LiDAR dots',
+        'rain / snow: random dots + lost beams'], size=10.5)
+    card(s, 9.6, 4.27, 3.25, 1.2, 'Faults (20 runs each)', [
+        'landmark hidden, gap, B wall hidden: still on track (≤ 2 cm)',
+        'fake straight line (bike rack): 1–2 m off'], size=10.5)
+    card(s, 9.6, 5.55, 3.25, 1.15, 'Not solved yet', [
+        'heavy rain: end wall not confirmed in 2 / 12',
+        'fake line, gyro drift with no landmark'], edge=ORANGE, size=10.5)
     set_notes(s, notes_text(1), NOTE_BODY)
 
     # ================================================================ slide 3: Block I
