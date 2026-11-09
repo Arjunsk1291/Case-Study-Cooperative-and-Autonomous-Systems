@@ -4,7 +4,7 @@ N = dict(
     sim1='simulation, worst mix: 0.41 m off at 24 m (before 1.02 m)',
     open_lines=['1 person in the path: false end wall 18 → 0 of 20',
                 'group of 3: 20 → 0; walking crowd of 20: 13 → 0',
-                'rain, snow, low sun: no false holds'],
+                'snow, low sun: no false holds'],
     bar_note='v8 rule: 421 of 5,670 cases turned at a wrong pillar, v10: 66. On target = within ±0.5 m of the turn on clean scans.',
 )
 
@@ -28,11 +28,11 @@ S.append(dict(speaker='Arjun', title='Landmark proximity corridor for the Open S
  ("What if the line is wrong or missing?", "Missing: it holds the heading with the gyro (simulated: 0.01 m error). Wrong, like a bike rack: the box would follow it (about 1 to 2 metres off in simulation). A tighter gate fixes that but also rejects real drifted rows, so it is not applied."),
  ("Is it tested on the real rover?", "Two real autonomous crossings (log 8, campus 9) and the closed-loop simulation on the next slide. Version 10 has not been driven yet.")]))
 
-S.append(dict(speaker='Kamal', title='Open Sea simulation: crowds, weather and faults', secs=100,
+S.append(dict(speaker='Kamal', title='Open Sea simulation: crowds, sun, snow and faults', secs=100,
  script=[
- "We cannot bring crowds, rain and snow to the campus on demand, so we built a closed-loop simulation of the Open Sea. A map of the square in metres, a simulated LiDAR with 90 beams that sees that map, a simple model of the rover, and the box's own rules copied to Python. One run is one complete crossing, from the B wall to the end wall.",
+ "We cannot bring crowds and snow to the campus on demand, so we built a closed-loop simulation of the Open Sea. A map of the square in metres, a simulated LiDAR with 90 beams that sees that map, a simple model of the rover, and the box's own rules copied to Python. One run is one complete crossing, from the B wall to the end wall.",
  "Chart A is about crowds. The danger is that the rover takes people for the end wall and turns too early. Orange is the old version 9 rule, blue is version 10. A person standing 0.8 metres in front of the end wall fooled version 9 in 9 of 20 runs; version 10 in none. One person in the path: 3 to 0. Twenty people at the store poles: 2 to 0. In every crowd case version 10 made no wrong stop; the rover only stopped, waited for the people and drove on.",
- "Chart B is about weather, 12 runs each. Sun glare puts fake dots close to the LiDAR, low sun blinds a 40 degree slice, rain and snow add random dots and lose beams, and a wet floor makes the wheels slip while the gyro drifts. Clear, glare, low sun, light rain and slip: 12 of 12 crossings reached the end wall. Heavy rain or snow: 10 of 12. Everything bad at the same time: 7 of 12. In no run did the weather cause a wrong stop.",
+ "Chart B is about sun and snow, 12 runs each. Sun glare puts fake dots close to the LiDAR, and low sun blinds a 40 degree slice. Falling snow adds random close dots and loses a quarter of the beams. Snow on the ground makes the wheels slip sideways while the gyro drifts. Clear, sun glare, low sun and snowy ground: 12 of 12 crossings reached the end wall. Falling snow: 10 of 12. Snow, slip, drift and sun all at once: 7 of 12. In no run did it cause a wrong stop.",
  "We also tested faults: a hidden landmark, a gap in it, the B wall hidden: still on track within 2 centimetres. One weakness: a fake straight line, like a bike rack, can pull the rover 1 to 2 metres off. A fix exists in simulation, but it changed the real runs, so it is not in the code yet."],
  understand=[
  "Files: tools/sim_open_sea.py is the simulator (world(), scan(), run(), crowd(), env_noise()); tools/fwmirror.py class OpenSea is the mirror of the firmware logic in RouteMission.cpp. Run it with python3 sim_open_sea.py --crowd, --env or --faults. Results are saved in PPT/new_slides_assets/open_sea_faults_*.txt.",
@@ -41,8 +41,10 @@ S.append(dict(speaker='Kamal', title='Open Sea simulation: crowds, weather and f
  "- End wall: it must be wide (at least 1.1 m on both sides), only after 85 percent of the crossing, and a leaky counter (+2 for a good scan, −1 for a bad one, trigger 6).",
  "- The nearest-surface rule, in plain words: the 8 beams straight ahead each give a forward distance, for example a person at 1.0 m on 3 beams and the wall at 2.0 m on 5 beams past the person. Version 9 took the MIDDLE value of the sorted list (here 2.0 m, the wall behind the person), found the wall also to the sides at 2.0 m and said 'end wall' with a person in front. Version 10 takes the SMALLEST value (1.0 m, the person); nothing 1.1 m to the sides is at 1.0 m, so it is not a wall, and the people rule stops and waits instead. With no one in front all 8 beams see the wall, smallest and middle are the same, so real end walls are found exactly as before (real logs: same result on all but 0 to 2 scans per log).",
  "- Crowd test of this rule (tools/sim_open_sea.py --nearest, 20 starts each): false end walls middle → smallest: people walking near the store poles 1 → 0, 20 people at the poles 2 → 0, one person in the path 3 → 0, a person 0.8 m in front of the end wall 9 → 0, group of 5, 8 shoulder to shoulder, 8 standing at the poles, 20 walking: 0 → 0. A pole that never moves in the path: the rover stops and waits, never a false end wall.",
- "- Why heavy rain fails in 2 of 12: too many lost and random beams, so the end wall is never confirmed 3 scans in a row. There is no wrong stop. On the real box the close-range safety stops (LiDAR 0.45 m, ultrasonic 35 cm) would still stop it at the wall and it would wait for the operator. The simulator does not model the ultrasonic at walls, so this last part is the firmware rule, not a simulated result.",
- "- Weather model: daylight ghosts (20 percent of scans, beams at 20 to 34 cm), a 40 degree blind wedge for low sun, random near returns for rain and snow (3 to 8 percent of beams, 10 to 25 percent dropouts), slide up to 8 percent sideways, gyro bias ±6 degrees per minute.",
+ "- How snow was simulated (sim_open_sea.py, env_noise()): every simulated LiDAR beam has an 8 percent chance to return a random close distance of 0.35 to 3 m (a snowflake) and a 25 percent chance to return nothing (beam lost in the snow); 10 percent of the scans also get a sun-type fake dot.",
+ "- How slip and drift were simulated (run()): slip = the rover moves sideways by 8 percent of its forward speed on every step, like sliding on a snowy slant; drift = the gyro heading is wrong by 6 degrees more every minute (a slow, steady error), so the box believes it is straight while it is not. The landmarks and walls must correct both.",
+ "- Why falling snow fails in 2 of 12: too many lost and random beams, so the end wall is never confirmed. There is no wrong stop. On the real box the close-range safety stops (LiDAR 0.45 m, ultrasonic 35 cm) would still stop it at the wall and it would wait for the operator; the simulator does not model the ultrasonic at walls, so this part is the firmware rule, not a simulated result.",
+ "- Sun model: daylight fake dots (20 percent of scans, 1 to 2 beams at 20 to 34 cm, as measured in the logs) and a 40 degree blind slice for low sun (30 percent of scans).",
  "- Fault list: row missing, row gap 14 to 20 m, row 0.7 m off the taught distance, false line 4.5 m and 8.5 m, B wall hidden, heading glitch +10 and −15 degrees, gyro bias with no row, and a mix of five faults.",
  "- Limits: it is a simulation with our own world model, not the real campus. The row 0.7 m off the taught distance gives 0.3 to 1.1 m error because the box cannot tell it from a start offset; in the logs the row was within ±0.15 m."],
  questions=[
@@ -73,20 +75,3 @@ S.append(dict(speaker='[name to be added]', title='Last leg to Block I: corridor
  ("Will it stop at the right door?", "Replay says 48.5 m, the entrance is at 47.0 m. It must be checked outdoors."),
  ("What if a person stands at the entrance?", "It holds and finishes the route there. It never drives into or around people.")]))
 
-S.append(dict(speaker='[name to be added]', title='Daylight ghost filter: LiDAR and ultrasonic cross-check', secs=100,
- script=[
- "In daylight the LiDAR sometimes reports objects at 20 to 34 centimetres that are not there. In the older logs, 3 to 8 percent of the scans had such a beam. If the rover believed them it would stop for nothing.",
- "The fix has three layers. The LiDAR ignores everything below 35 centimetres. A nearer obstacle only counts if at least four beams agree, or if the front ultrasonic sensor agrees within 15 centimetres. And the downward-angled ultrasonic sensor sees the floor at 50 to 90 centimetres, so that echo is ignored.",
- "The numbers come from the datasheets: the LD19 family is rated for 30 kilolux of ambient light, so direct sun is at its limit, and the HC-SR04 measures 2 to 400 centimetres in a cone of about 15 degrees, one ping every 60 milliseconds. We use each sensor where it is strong.",
- "The price: a real obstacle closer than 35 centimetres is invisible to the LiDAR, as the bollard in campus 9 was. So the ultrasonic stop distance is 35 centimetres, and an obstacle that vanishes from closer than 45 centimetres counts as still there."],
- understand=[
- "Where the filter lives: LidarScan.h (minimum range 350 mm) and RouteMission.cpp, _front() and _usMed(): the verification uses the median of the front ultrasonic readings and the count of valid beams.",
- "- The chart: left, the range of beams below 35 cm in the daytime logs of campus_2, campus_3 and campus_5 (mostly 20 to 34 cm, nothing in the real world was that close); right, the share of scans with such a beam in each log (1 to 8 percent). Logs from campus_6 on contain none because the filter was already in the firmware.",
- "- Rule: a near obstacle is accepted if at least 4 valid beams agree, or if the front ultrasonic median is below 50 cm and not more than 15 cm above the LiDAR. In replay 27 of 28 ghost events were dropped.",
- "- Ultrasonic floor echo: one front sensor is angled 45 degrees down, so the floor at 50 to 90 cm gives false near readings; they are masked.",
- "- Datasheet facts, checked online: LD19 0.02 to 12 m, 4,500 samples per second, 30 klux; the LD20 datasheet was not found, so the LD19 values are used. HC-SR04 2 to 400 cm, about 15 degrees, more than 60 ms per measurement.",
- "- Tilt and the ramp are handled separately; this slide is only about false near obstacles."],
- questions=[
- ("Why not just lower the LiDAR sensitivity?", "The ghosts are real returns from sunlight at the sensor, not noise we can threshold. Cross-checking with a different physical principle (ultrasound) is more robust."),
- ("What does the filter cost?", "Anything closer than 35 cm is invisible to the LiDAR. The ultrasonic stop at 35 cm and the hold rule for vanished obstacles cover that."),
- ("Is it tested?", "Replayed on the logs (27 of 28 ghosts dropped) and in the Open Sea simulation with ghosts in 20 percent of scans: 12 of 12 runs reach the end wall.")]))

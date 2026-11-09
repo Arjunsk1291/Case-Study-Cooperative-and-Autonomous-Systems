@@ -258,9 +258,8 @@ def _crowd_table(n, wide):
 ENVS = [("clear night (reference)", {}, {}),
         ("daylight ghosts 20 % of scans", dict(ghost=0.20), {}),
         ("low sun: 40 deg blind wedge, 30 % of scans", dict(sun=0.30, ghost=0.15), {}),
-        ("light rain: 3 % random near returns + 10 % dropouts", dict(precip=0.03, drop=0.10), {}),
-        ("heavy rain / snow: 8 % near returns + 25 % dropouts", dict(precip=0.08, drop=0.25, ghost=0.10), {}),
-        ("snow/wet slip 8 % sideways + gyro -6 deg/min", {}, dict(slide=0.08, bias_dpm=-6)),
+        ("falling snow: 8 % random near returns + 25 % lost beams", dict(precip=0.08, drop=0.25, ghost=0.10), {}),
+        ("snowy ground: 8 % sideways slip + gyro drift -6 deg/min", {}, dict(slide=0.08, bias_dpm=-6)),
         ("worst: snow + slip + drift + sun", dict(precip=0.08, drop=0.25, ghost=0.2, sun=0.3), dict(slide=0.05, bias_dpm=6))]
 
 

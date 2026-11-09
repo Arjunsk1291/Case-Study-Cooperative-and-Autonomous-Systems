@@ -179,21 +179,21 @@ def build(N):
     set_notes(s, notes_text(0), NOTE_BODY)
 
     # ================================================================ slide 2: Open Sea simulation
-    s = frame_slide(prs, 'SIMULATION · OPEN SEA', 'Open Sea simulation: crowds, weather and faults', 'Open Sea simulation', 'Kamal')
+    s = frame_slide(prs, 'SIMULATION · OPEN SEA', 'Open Sea simulation: crowds, sun, snow and faults', 'Open Sea simulation', 'Kamal')
     chain(s, 0.889, 1.86, [('World model', 'B wall, store front, building, end wall'), ('Scanner', '90 beams, 2 cm noise, 12 % drops'),
                            ('Rover model', '0.22 m/s, slide, gyro bias'), ('Firmware mirror', 'same rules, 0.25 s step'),
                            ('Metrics', 'side error, false end, holds')], 2.0, 0.40, 0.78)
     picture(s, ASSETS + 'fig_sim2.png', 0.889, 2.84, 8.5)
     text(s, 0.889, 6.08, 8.5, 0.6, ['Each run = one simulated crossing of the Open Sea with the real box rules (tools/sim_open_sea.py). '
                                     'A "wrong end wall stop" = the rover thinks people are the end wall and turns too early.'], size=11, color=GREY, line=14)
-    card(s, 9.6, 2.84, 3.25, 1.35, 'Weather, in plain words', [
-        'sun glare / low sun: fake or missing LiDAR dots',
-        'rain / snow: random dots + lost beams'], size=10.5)
+    card(s, 9.6, 2.84, 3.25, 1.35, 'Sun and snow, in plain words', [
+        'sun: fake close dots / a blind slice',
+        'snow: random dots, lost beams, wheel slip, gyro drift'], size=10.5)
     card(s, 9.6, 4.27, 3.25, 1.2, 'Faults (20 runs each)', [
         'landmark hidden, gap, B wall hidden: still on track (≤ 2 cm)',
         'fake straight line (bike rack): 1–2 m off'], size=10.5)
     card(s, 9.6, 5.55, 3.25, 1.15, 'Not solved yet', [
-        'heavy rain: end wall not confirmed in 2 / 12',
+        'falling snow: end wall not confirmed in 2 / 12',
         'fake line, gyro drift with no landmark'], edge=ORANGE, size=10.5)
     set_notes(s, notes_text(1), NOTE_BODY)
 
@@ -217,22 +217,6 @@ def build(N):
         'edge assist at the cobble edge; any hold near the end finishes the route'], edge=ORANGE, size=10.5)
     set_notes(s, notes_text(2), NOTE_BODY)
 
-    # ================================================================ slide 4: daylight ghost filter
-    s = frame_slide(prs, 'SENSORS · DAYLIGHT GHOSTS', 'Daylight ghost filter: LiDAR and ultrasonic cross-check', 'Ghost filter', '[name to be added]')
-    chain(s, 0.889, 1.86, [('LiDAR beam', 'ghosts 20–34 cm in sun'), ('Min range', 'drop < 35 cm'), ('Confirm', '≥ 4 beams or ultrasonic'),
-                           ('Mask', 'floor echo 50–90 cm'), ('Act', 'gentle stop if real')], 2.0, 0.40, 0.78, last_edge=ORANGE)
-    picture(s, ASSETS + 'fig_ghost.png', 0.889, 2.84, 7.4)
-    text(s, 0.889, 6.3, 7.6, 0.45, ['Returns below 35 cm in the daytime logs recorded before the filter (campus_2, _3, _4, _5). Later logs contain none.'], size=11, color=GREY, line=14)
-    card(s, 8.75, 2.84, 4.1, 1.5, 'From the datasheets', [
-        'LD19 family: 0.02–12 m, 4,500 Hz, 30 klux ambient light',
-        'HC-SR04: 2–400 cm, ~15° cone, ≥ 60 ms per ping'], size=11.5)
-    card(s, 8.75, 4.42, 4.1, 1.2, 'Rule in the box', [
-        'near obstacle: ≥ 4 valid beams, or front ultrasonic < 50 cm and ≤ LiDAR + 15 cm',
-        'replay: 27 of 28 ghost events dropped'], size=10.5)
-    card(s, 8.75, 5.7, 4.1, 1.0, 'Price', [
-        'LiDAR is blind below 35 cm (bollard, campus_9)',
-        'covered by ultrasonic stop at 35 cm + hold rule'], edge=ORANGE, size=10.5)
-    set_notes(s, notes_text(3), NOTE_BODY)
     prs.save(OUT)
     print('saved', OUT)
 
