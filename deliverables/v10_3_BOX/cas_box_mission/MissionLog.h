@@ -28,7 +28,7 @@ public:
     EV_P_STOP = 47, EV_P_PHONE = 48, EV_P_ROVER = 49, EV_P_TILT = 50, EV_P_TURN = 51, EV_P_BLOCKED = 52, EV_P_DRIVE = 53,
     EV_GHOST = 54, EV_CLIMB = 55, EV_RECORD = 56, EV_LINK_WAIT = 57, EV_RETRY = 58,
     EV_STRUCT = 59, EV_GAP_ANCHOR = 60, EV_EDGE_PUSH = 61, EV_BACKUP = 62, EV_L4_OPEN = 63, EV_RAILING = 64, EV_RAMP = 65,
-    EV_AT_I = 66, EV_SPEED = 67, EV_RAMP_GAP = 68, EV_GAP_WAIT = 69
+    EV_AT_I = 66, EV_SPEED = 67, EV_RAMP_GAP = 68, EV_GAP_WAIT = 69, EV_ALIGN_START = 70
   };
   struct Sample {                 // filled by the mission every loop pass
     float cmdL = 0, cmdR = 0, outL = 0, outR = 0, batteryV = 0, rttMs = 0;

@@ -27,21 +27,26 @@ The end-wall turn stalled for 35–42 s in runs 3 and 4. Only the pivot was ever
    - B-gap window ±2.0 m (was ±1.2).
    - New hard failsafe: **no turn earlier than 4.5 m after the B gap (left open space) ends**. All 12 logs: the sign is 5.2–6.9 m after it.
    - Replay `tools/replay_turn.py`: 11 old logs unchanged, and run 4 now turns on the sign at 26.8 m. People sim: 5,670 cases, 93.3 % on target, 0 wrong pillars, fewer late turns (198 vs 224).
-3. **Position first, then the Open Sea** (`_afterTurn` + the existing `L2_ALIGN` sideways move):
-   - **Lateness.** Measured as turn − sign lock − 0.55 m. Good runs: −0.14…+0.11. test1 (failed in the Open Sea): +0.44. c102_3: +0.37. c102_2: +1.34.
-   - **Move.** If it is >0.15 m, the rover stops, pivots 30° right at full power, rolls 2 × lateness at 0.18 (max 1.2 m sideways), pivots back to B-perpendicular, and only then starts the Open Sea. This replaces the blind 10° shift.
-   - **Why.** In the simulation with realistic row visibility (seen on only 15–25 % of scans, as in the logs) plus slip or gyro drift, a centred start never ended >1 m off (0/20). Starts 0.5–1.5 m off ended >1 m off in 4–8 of 20. Lined up within ±0.25 m: 1–2 of 20.
-   - **Open Sea logic (`L2_GO`) is unchanged.** A stronger correction (±12°) or an earlier row (from 6 m) did not help in the simulation.
+3. **Position first, then the Open Sea (start alignment, after EVERY right turn)** (`_alignStart`, uses the existing `L2_ALIGN` state):
+   - **Measure.** The rover stops (ramp) and measures the nearest object on the right, abeam: the THD sign pillar. Median of 5 scans, up to 8 s.
+   - **Good turn: nothing.** 0.85–1.75 m (every good run read 0.9–1.6 m): it only logs "aligned" and goes on.
+   - **Otherwise: take the time.** Pivot 30° (full power) → roll slowly (max 1.6 m, 0.18) → pivot back to the B-perpendicular heading → measure again, up to 3 rounds / 60 s, target 1.3 m. It follows the pillar by odometry while it moves. Sign to the right too far (late turn) → it moves right; too near → left.
+   - **No sign seen in 8 s:** the earlier lateness-based move, otherwise it goes on. Front closer than 1.5 m: it goes on. People: the normal hold rule.
+   - **Measuring.** The rover stands still, so a real object is at the same place in every scan. It uses the nearest point that appears within 0.15 m in at least 4 of the last 8 scans. Snow flakes, ghosts and a person walking by do not. (The first version used the plain nearest point and failed in falling snow: 13 of 144 late starts ended worse. The vote fixed that.)
+   - **Real logs** (`tools/replay_start_align.py`): the 7 good turns (campus_3, 5, 6, test2, log8, campus_9, c102_4) are untouched; campus_10 (2.08 m), c102_3 (2.94 m) and c102_2 (0.83 m) are moved. test1 (0.95 m) is left alone.
+   - **Simulation** (`tools/sim_start_align.py`: pillar, board, a second pole, people, then the unchanged Open Sea): 100 of 100 in-band starts untouched. Late starts +0.7 m / +1.4 m / +2.2 m end 0.06 / 0.19 / 0.18 m (median) off the strip, using 1–3 rounds and 17–46 s. A start 2.8 m late (never seen: the worst log is 1.6 m) ends within 0.5 m in 10 of 16.
+   - **Harsh conditions** (falling-snow noise in every scan, 25 % dropouts, 20 % ghosts, pivot error 6°, slip 8 %, a person beside the sign in half of the runs): in-band starts untouched 120 of 120; late starts within 0.5 m 131 of 144; ended worse than before 0 of 144.
+   - **The Open Sea logic (`L2_GO`) is unchanged.** A stronger correction (±12°) or an earlier row (from 6 m) did not help in the simulation.
 4. **End-wall turn:** with the front ≤1.0 m, SHIFT goes **backwards** 0.3 m at 0.20, but only if nothing is within 0.8 m behind. That gives SWING and ARC room again.
 5. The phone page now says "Mission v10.3".
 
-Compile: 1,262,352 B (96 %), no new warnings.
+Compile: 1,264,848 B (96 %), no new warnings.
 
 ## Field test checklist
 - Start ~1.0 m from the B wall, parallel to it.
 - Page messages to watch:
   - `turn structure locked`;
-  - after the turn, possibly `turned X m late: moving X m right before the open sea`, followed by `lined up after the late turn`;
+  - after the turn: `sign X m right: aligned - going on` (good turn) or `sign X m off the target: moving ... (round N)`;
   - in leg 4, `ramp opening … ahead, centre … left/right`, then `inside the ramp opening - straight on`.
 - If it shows `step line ahead, not lined up … waiting`: wait 20 s, or take over, line it up and press GO.
 - Avoid manual take-overs in the Open Sea, because each one resets the heading base.

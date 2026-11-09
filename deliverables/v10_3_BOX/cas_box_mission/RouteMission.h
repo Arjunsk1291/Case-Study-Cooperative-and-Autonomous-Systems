@@ -66,6 +66,9 @@ public:
   // measured drift. Board line-up stop and end-board following are off by default.
   bool boardLineUp = false;
   bool startShift = true;     // v10.3: late turn -> stop, pivot 30 deg right, roll, pivot back BEFORE the open sea
+  // v10.3 START ALIGNMENT (tools/sim_start_align.py): after EVERY right turn stop and measure the sign / pillar on the right.
+  // 0.85-1.75 m (every good run: 0.9-1.6 m) -> nothing; else pivot 30 deg, roll, pivot back, measure again (max 3 rounds / 60 s)
+  float alignLo = 0.85f, alignHi = 1.75f, alignTarget = 1.3f, alignMaxRoll = 1.6f;
   // v6 (campus5 + run.mp4): LANDMARK CORRIDOR. The tactile strip of the open sea runs parallel to a straight row of
   // permanent landmarks on its LEFT (trees in grates + stakes + sign / lamp posts, ~9-24 m) at ~6.5 m (campus_2 6.2-6.6,
   // campus5 on the strip 6.8), and to the far building front at ~3.0 m (~28-37 m). Both are followed like distant
@@ -192,7 +195,15 @@ private:
   // turn pillar + aim after the turn
   uint32_t _tpMs = 0, _aimMs = 0, _aimSeenMs = 0; uint8_t _tpClear = 0;
   bool _tpTurn = false, _aimOn = false; float _tpY = 0, _tpX = 0, _aimDeg = 0;
-  float _lateM = 0; bool _posMove = false; bool _tBack = false;   // v10.3: SHIFT goes backwards when the front is blocked   // v10.3: turn lateness vs the structure -> sideways move before the open sea
+  float _lateM = 0; bool _posMove = false;
+  bool _apOn = false, _apTrack = false, _apFallback = false; uint8_t _apPh = 0, _apRound = 0, _apN = 0;
+  float _apPX[8][24], _apPY[8][24], _apBase = 0, _apRoll = 0, _apRollStart = 0, _apTX = 0, _apTY = 0, _apE = 0, _apLate = 0, _apLastE = 99;
+  uint8_t _apNs[8], _apHead = 0;
+  uint32_t _apMs = 0, _apT0 = 0, _apMeasT0 = 0;
+  void _apAddScan(const Sensors& s);
+  bool _apVote(float& x, float& y) const;
+  void _apFinish(const Sensors& s, const char* msg);
+  void _alignStart(const Sensors& s, uint32_t now, float& l, float& r); bool _tBack = false;   // v10.3: SHIFT goes backwards when the front is blocked   // v10.3: turn lateness vs the structure -> sideways move before the open sea
   uint32_t _posStopMs = 0; float _posLat = 0;
   float _tpEdges[7]; uint8_t _tpEN = 0;          // pillar front-edge position along leg 1 (odometry), per sighting
   float _shiftEndM = 0, _shiftOff = 0;                          // open-sea start: steer 10 deg right until this distance (sideways shift)

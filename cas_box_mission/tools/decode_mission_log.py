@@ -24,7 +24,7 @@ EVENTS = {0: "", 1: "start", 2: "pillar", 3: "t1_ask", 4: "op_turn", 5: "op_on1m
           52: "pause_blocked_20s", 53: "pause_heading_failsafe",
           54: "lidar_ghost_ignored", 55: "climb", 56: "record_manual_drive", 57: "rover_link_wait", 58: "retry",
           59: "turn_structure", 60: "b_gap_end", 61: "edge_push", 62: "backup", 63: "leg4_walkway", 64: "railing",
-          65: "ramp", 66: "at_block_I", 67: "speed_override", 68: "ramp_opening", 69: "opening_wait"}
+          65: "ramp", 66: "at_block_I", 67: "speed_override", 68: "ramp_opening", 69: "opening_wait", 70: "start_align"}
 
 
 V2 = False

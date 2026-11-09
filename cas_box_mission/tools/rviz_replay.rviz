@@ -1,0 +1,65 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 5
+      Plane Cell Count: 40
+      Color: 70; 80; 90
+    - Class: rviz_default_plugins/LaserScan
+      Name: LiDAR (90 beams)
+      Enabled: true
+      Topic: {Value: /scan, Depth: 5, Reliability Policy: Best Effort, History Policy: Keep Last, Durability Policy: Volatile}
+      Style: Flat Squares
+      Size (m): 0.08
+      Decay Time: 90
+      Color Transformer: FlatColor
+      Color: 120; 190; 255
+      Use Fixed Frame: true
+      Autocompute Intensity Bounds: true
+    - Class: rviz_default_plugins/Path
+      Name: Rover track
+      Enabled: true
+      Topic: {Value: /path}
+      Color: 255; 140; 30
+      Line Style: Lines
+      Line Width: 0.07
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Events, ramp opening
+      Enabled: true
+      Topic: {Value: /markers}
+    - Class: rviz_default_plugins/TF
+      Name: Rover
+      Enabled: true
+      Show Names: false
+      Show Axes: true
+      Marker Scale: 2
+  Global Options:
+    Fixed Frame: map
+    Background Color: 20; 24; 30
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Name: Top view
+      Scale: 22
+      Target Frame: base_link
+      Angle: 1.5708
+      Invert Z Axis: false
+      X: 0
+      Y: 0
+    Saved: ~
+Window Geometry:
+  Displays: {collapsed: true}
+  Height: 900
+  Width: 1400
+  X: 60
+  Y: 60
+  Hide Left Dock: true
+  Hide Right Dock: true

@@ -83,9 +83,9 @@ S[0]['secs'] = 60
 S[0]['script'] = [
  "After the right turn the rover crosses about 40 metres of open ground with no wall beside it. GPS was 6 to 15 metres off here and the gyro drifts, so we steer on fixed landmarks in the LiDAR scan.",
  "The plot is one real crossing seen from above. The blue lines are the B wall behind and the end wall ahead; they give the heading. The circles are the two campus-store poles and the two trees with their structures, in front of the U-shaped store front. The box fits a straight line through them, and a PID keeps the rover 6.65 metres from it, the distance from our teaching run. After 24.5 metres the building front takes over. The orange line is the rover track.",
- "Log 8 and campus 9 crossed wall to wall with no hold and under 6 degrees heading change. This week we learned the rover must start on the strip: a late turn started it 0.4 to 1.3 metres left, so version 10.3 first moves sideways, then enters.",
+ "Log 8 and campus 9 crossed wall to wall with no hold and under 6 degrees heading change. This week we learned the rover must start on the strip: a late turn started it 0.4 to 1.3 metres left. Version 10.3 therefore stops after every turn and measures the sign pillar: 0.9 to 1.6 metres on the right is good and untouched; otherwise it lines up, then enters.",
 ]
-S[0]['questions'][2] = ("Is it tested on the real rover?", "Yes: log 8 and campus 9 crossed autonomously, and version 10.2 crossed in 3 runs on 9 November (one needed a push on the cobblestones). Runs that started off the strip ended up to 1 m off the row; version 10.3 lines up first.")
+S[0]['questions'][2] = ("Is it tested on the real rover?", "Yes: log 8 and campus 9 crossed autonomously, and version 10.2 crossed in 3 runs on 9 November (one needed a push on the cobblestones). Runs that started off the strip ended up to 1 m off the row; version 10.3 measures the sign pillar after every turn and lines up first (tested in simulation and on the 11 real turns, not yet driven).")
 
 S[1]['secs'] = 60
 S[1]['script'] = [

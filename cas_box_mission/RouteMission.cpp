@@ -553,6 +553,97 @@ bool RouteMission::_boardFit(const Sensors& s, float dMin, float dMax, float& di
   return true;
 }
 
+// v10.3 START ALIGNMENT. The sign pillar / board stands 0.9-1.6 m right of the strip in every good run (campus_3/5/6,
+// test2, log8, campus_9, c102_4); the late turns read 2.0 m (campus_10) and 2.9 m (c102_3). Nearest object 0.3-4.5 m right,
+// abeam (y -1.0..+1.0 m), >= 2 points within 0.8 m of it; after a roll it is followed by odometry (0.6 m around where it must be).
+// The rover STANDS STILL while it measures, so a real object is at the same place in every scan; snow flakes, ghosts and a person
+// walking by are not (simulated: random near returns made the plain "nearest point" fail, the vote did not). Per scan the points
+// that may be the sign (<= 24); the last 8 scans; the nearest point that has a point within 0.15 m in >= 4 of them is the sign.
+void RouteMission::_apAddScan(const Sensors& s) {
+  uint8_t n = 0; float* px = _apPX[_apHead]; float* py = _apPY[_apHead];
+  for (int i = 0; i < Sensors::kLidarPoints && n < 24; i++) {
+    const uint16_t cm = s.lidarCm(i);
+    if (!cm || cm < 35) continue;
+    const float a = (i * 4 + 2) * DEG_TO_RAD, d = cm / 100.0f, x = d * sinf(a), y = d * cosf(a);
+    const bool in = _apTrack ? (x > 0.3f && hypotf(x - _apTX, y - _apTY) <= 0.6f) : (x >= 0.3f && x <= 4.5f && y > -1.0f && y < 1.0f);
+    if (in) { px[n] = x; py[n] = y; n++; }
+  }
+  _apNs[_apHead] = n; _apHead = (_apHead + 1) & 7; if (_apN < 8) _apN++;
+}
+
+bool RouteMission::_apVote(float& bx, float& by) const {
+  if (_apN < 8) return false;
+  bool have = false; float bestX = 99, bestY = 0;
+  for (int a = 0; a < 8; a++) for (int i = 0; i < _apNs[a]; i++) {
+    const float x = _apPX[a][i], y = _apPY[a][i]; float sx = 0, sy = 0; int cnt = 0;
+    for (int b = 0; b < 8; b++) {
+      float bd = 0.15f, qx = 0, qy = 0; bool f = false;
+      for (int j = 0; j < _apNs[b]; j++) { const float d = hypotf(_apPX[b][j] - x, _apPY[b][j] - y); if (d <= bd) { bd = d; qx = _apPX[b][j]; qy = _apPY[b][j]; f = true; } }
+      if (f) { sx += qx; sy += qy; cnt++; }
+    }
+    if (cnt >= 4) { const float mx = sx / cnt; if (!have || mx < bestX - 0.05f) { have = true; bestX = mx; bestY = sy / cnt; } }
+  }
+  if (have) { bx = bestX; by = bestY; }
+  return have;
+}
+
+void RouteMission::_apFinish(const Sensors& s, const char* msg) {
+  _apOn = false; _tpTurn = false; _base = _apBase;
+  if (_log) _log->event(MissionLog::EV_ALIGN_START);
+  strlcpy(_msg, msg, sizeof(_msg)); Serial.printf("[mission] align: %s\n", _msg);
+  _startLeg2(s);
+  strlcpy(_msg, msg, sizeof(_msg));
+}
+
+void RouteMission::_alignStart(const Sensors& s, uint32_t now, float& l, float& r) {
+  const float yaw = s.yawNowDeg();
+  l = r = 0;
+  if (now - _apT0 > 60000) { _apFinish(s, "alignment: 60 s used - going on"); return; }
+  if (_apPh == 1) {                                                 // pivot done -> roll sideways (slowly, straight)
+    _apPh = 2; _apRollStart = _dist2; _tgt = yaw; _ds.start(yaw, now); _ds.setTarget(_tgt); _apMs = now; return;
+  }
+  if (_apPh == 2) {
+    if (_dist2 - _apRollStart >= _apRoll || now - _apMs > 14000 || _frontM < 1.0f) {
+      _apPh = 3; _turnNo = 8; _turnTries = 0; _startTurn(s, _apBase); return;   // pivot back to the B-perpendicular heading
+    }
+    _ds.setTarget(_tgt);
+    if (_ds.update(s.imuOk(), yaw, 0.18f, now, l, r) == DriveStraight::FAIL) { if (_log) _log->event(MissionLog::EV_FAILSAFE); l = r = 0; _realign(s, _tgt, "heading failsafe - turning back"); }
+    return;
+  }
+  if (_apPh == 3) {                                                 // pivot back done: the sign moved in our frame
+    const float rolled = _dist2 - _apRollStart, lat = (_apE > 0 ? 0.5f : -0.5f) * rolled, fwd = 0.866f * rolled;
+    if (_apFallback) { _apFinish(s, "late turn: moved by the measured lateness - going on"); return; }
+    _apTX -= lat; _apTY -= fwd; _apTrack = true; _apPh = 0; _apN = 0; _apHead = 0; _apMs = now; _apMeasT0 = now; return;
+  }
+  // phase 0: stand still and measure (one LiDAR snapshot per 250 ms; 8 scans = 2 s, up to 8 s)
+  if (now - _apMs < 250) return;
+  _apMs = now;
+  _apAddScan(s);
+  float e = 0; bool go = false, giveUp = false;
+  float sx, sy;
+  if (_apVote(sx, sy)) {
+    const float d = sx;
+    if (d >= alignLo && d <= alignHi) {
+      char m[64]; snprintf(m, sizeof(m), "sign %.2f m right: aligned - going on", d); _apFinish(s, m); return;
+    }
+    if (_apRound >= 3) { char m[64]; snprintf(m, sizeof(m), "sign %.2f m right after 3 rounds - going on", d); _apFinish(s, m); return; }
+    e = d - alignTarget;
+    if (_apRound >= 1 && fabsf(e) > _apLastE + 0.15f) giveUp = true;      // the last move did not improve: stop moving
+    _apTX = d; _apTY = sy; go = true;
+  } else if (now - _apMeasT0 > 8000) {                              // no sign seen
+    if (_apRound == 0 && _apLate > 0.15f) { e = _apLate; _apFallback = true; go = true; }
+    else { _apFinish(s, "no sign seen - going on"); return; }
+  }
+  if (giveUp) { _apFinish(s, "alignment: the last move did not improve - going on"); return; }
+  if (!go) return;
+  if (_frontM < 1.5f) { _apFinish(s, "alignment: front not free - going on"); return; }
+  _apE = e; _apLastE = fabsf(e); _apRoll = fminf(fabsf(e) / 0.5f, alignMaxRoll); _apRound++; _apN = 0; _apHead = 0;
+  snprintf(_msg, sizeof(_msg), "sign %.2f m off the target: moving %.2f m %s (round %u)", fabsf(e), fabsf(e), e > 0 ? "right" : "left", _apRound);
+  Serial.printf("[mission] align: %s\n", _msg);
+  if (_log) _log->event(MissionLog::EV_ALIGN_START);
+  _apPh = 1; _turnNo = 8; _turnTries = 0; _startTurn(s, wrap180(_apBase + (e > 0 ? -30.0f : 30.0f)));   // right = yaw minus
+}
+
 void RouteMission::_afterTurn(const Sensors& s) {
   const uint32_t now = millis();
   switch (_turnNo) {
@@ -563,16 +654,16 @@ void RouteMission::_afterTurn(const Sensors& s) {
     default:                                                       // T1 done
       if (!boardLineUp) {                                          // v5: straight on, walls steer
         _leg = 2; _base = _turnTgt;
-        const float late = _tpTurn ? clampf(_lateM, 0.0f, 1.2f) : 0.0f;   // max 1.2 m (roll 2.4 m, < 15 s at 0.18)
-        _tpTurn = false;                                           // v10.3: the blind 10-deg shift is replaced by this
-        if (startShift && late > 0.15f) {                          // POSITION FIRST: pivot 30 deg right, roll late/sin30, pivot back
-          _dist2 = 0; _bdLockDir = _turnTgt; _bdRollM = late / 0.5f; _posMove = true; _bp = 1;
-          snprintf(_msg, sizeof(_msg), "turned %.2f m late: moving %.2f m right before the open sea", late, late);
-          Serial.printf("[mission] %s\n", _msg);
-          _turnNo = 8; _turnTries = 0; _startTurn(s, wrap180(_turnTgt - 30.0f));   // right = yaw minus
+        if (startShift) {                                          // v10.3: POSITION FIRST - stop, look at the sign / pillar, move if needed
+          _dist2 = 0; _tgt = _base; _apOn = true; _apPh = 0; _apRound = 0; _apN = 0; _apHead = 0; _apLastE = 99; _apTrack = _apFallback = false;
+          _apBase = _turnTgt; _apT0 = _apMs = _apMeasT0 = now;
+          _apLate = _tpTurn ? clampf(_lateM, 0.0f, 1.2f) : 0.0f; _tpTurn = false;
+          _ds.start(s.yawNowDeg(), now); _ds.setTarget(_tgt);
+          strlcpy(_msg, "turn done: measuring the sign / pillar on the right", sizeof(_msg));
+          _go(L2_ALIGN);
           break;
         }
-        _startLeg2(s); break;
+        _tpTurn = false; _startLeg2(s); break;
       }
       _leg = 2; _dist2 = 0; _base = _turnTgt; _tgt = _base;
       _bp = 0; _bdN = 0; _bdMs = 0;
@@ -988,7 +1079,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
     if (_st == MANUAL && back == L2_GO) { _base = yaw; _tgt = yaw; _refKind = 0; _refN = _refI = 0; _frontSeen = false; _latOff = 0; _seaEi = 0; _shiftOff = 0; _shiftEndM = 0; }
     if (_st == MANUAL && (back == L1_FOLLOW || back == L3_FOLLOW || back == L4_FOLLOW)) { _tgt = yaw; _wallScanMs = 0; }
     _msg[0] = 0;
-    if (back == L2_ALIGN) { _base = _turnTgt; _startLeg2(s); }   // after a pause / take-over: straight on
+    if (back == L2_ALIGN) { _apOn = false; _base = _turnTgt; _startLeg2(s); }   // after a pause / take-over: straight on
     else if (back == L1_FOLLOW || back == L2_GO || back == L3_FOLLOW || back == L4_FOLLOW) { _ds.start(yaw, now); _ds.setTarget(_tgt); _rlMs = now; _go(back); }
     else if (back == T1_TURN || back == T1_SETTLE) {
       // the operator may have turned it (partly) by hand: finish the remaining part, or go on if it is done
@@ -1159,6 +1250,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
       // No board within 4 m / 30 s -> open sea on the B-perpendicular heading (as v3).
       if (_frontM < 0.45f) { emergency = true; _prev = L2_ALIGN; if (_log) _log->event(MissionLog::EV_HOLD); _go(HOLD); break; }
       if (_bp != 2 && _near(holdM, now)) { _prev = L2_ALIGN; if (_log) _log->event(MissionLog::EV_HOLD); _go(HOLD); break; }
+      if (_apOn) { _alignStart(s, now, l, r); break; }                // v10.3 start alignment
       if (_bp == 0) {
         if (now - _bdMs >= 250) {
           _bdMs = now;
