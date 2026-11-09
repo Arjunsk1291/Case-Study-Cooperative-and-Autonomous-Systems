@@ -135,6 +135,7 @@ private:
  private:
   bool _guard(const Sensors& s, uint32_t now, bool& emergency);  // front: wall -> realign, else people rule (HOLD)
   bool _landmark(const Sensors& s, float& nearBehind, float& nearRight, int maxDeg = 162) const;
+  bool _rightAhead(const Sensors& s) const;   // v10.2: a pillar on the right is still ahead of (rover - pillarPastM): do not turn yet (v6 timing)
   bool _frontWall(const Sensors& s, float maxM) const;   // flat wall ahead (Kethan's frontWallWithin)
   bool _frontWallWide(const Sensors& s, float maxM) const;   // v9: open-sea end wall must be >= 1.1 m to each side
   // v9 turn structure (see .cpp)

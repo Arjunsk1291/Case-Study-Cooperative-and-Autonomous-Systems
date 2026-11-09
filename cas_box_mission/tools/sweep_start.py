@@ -11,10 +11,10 @@ for n in RT.RUNS:
     base = None; out = []
     for off in (-8, -4, -2, 0, 2, 4, 8):
         tv = F.TurnV9(); res = None
-        for L, d, rel, anc in sc:
+        for L, d, rel, anc, gap in sc:
             dd = d + off
             if anc is not None and tv.anchor is None: tv.set_anchor(anc + off)
-            res = tv.step(L, dd, rel)
+            tv.ingap = gap; res = tv.step(L, dd, rel)
             if res: break
         pred = res[1] - off if res else (tv.lock - off + tv.sp if tv.lock is not None else None)
         out.append(pred)

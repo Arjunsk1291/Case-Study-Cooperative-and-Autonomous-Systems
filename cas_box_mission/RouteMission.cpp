@@ -417,6 +417,19 @@ float RouteMission::_structChoice(uint8_t nMin, float spread) const {
 // front passed the flat-wall check -> fake end wall -> right turn in the middle of the open sea). Real end walls in
 // every log: the same forward distance (+-0.3 m) over +-48 deg = more than +-1.3 m. Here: on EACH side >= 2 beams
 // (22-62 deg) within 0.5 m of the front's forward distance and >= 1.1 m to the side.
+// v10.2 (campus_10: turned with the pillar still 0.3-0.6 m AHEAD at 1.0 m right -> faced it at 0.84 m after the turn).
+// v6 timing = the pillar's near face pillarPastM (0.40 m) BEHIND. Every good turn (campus2/3/5/6, test1/2) had nothing on
+// the right 0.3-2.0 m out between -0.40 m and +1.5 m; every bad one (campus_9, campus_10, log8) had a pillar there.
+bool RouteMission::_rightAhead(const Sensors& s) const {
+  for (int i = 0; i < Sensors::kLidarPoints; i++) {
+    const uint16_t cm = s.lidarCm(i);
+    if (cm < 35) continue;
+    const float a = (i * 4 + 2) * DEG_TO_RAD, d = cm / 100.0f, x = d * sinf(a), y = d * cosf(a);
+    if (x >= 0.3f && x <= 2.0f && y > -pillarPastM && y < 1.5f) return true;
+  }
+  return false;
+}
+
 bool RouteMission::_frontWallWide(const Sensors& s, float maxM) const {
   if (!_frontWall(s, maxM)) return false;
   float fc[8]; int nf = 0;
@@ -916,7 +929,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
         if (now - _tpMs >= 250) {
           _tpMs = now;
           _structAdd(s);
-          if (_dist >= lo - 6.0f) _structUpdate();
+          if (_dist >= lo - 6.0f && (_wallOk || _lostAt < 0)) _structUpdate();   // v10.2: no sign sightings inside the B gap (left wall lost)
           if (_dist >= lo - 1.0f) {
             float nb, nr;
             if (_landmark(s, nb, nr, 162)) {           // v8 edge (exact v8 timing) - used only next to the structure
@@ -944,7 +957,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
         };
         float tgt = -1; const char* why = "";
         if (_sLock >= 0) {
-          const float e = med(_tpEdges, _tpEN, _sLock - 0.8f, _sLock + 0.8f);
+          const float e = med(_tpEdges, _tpEN, _sLock - 0.8f, _sLock + 2.0f);   // v10.2: the pillar may be up to 2 m after the lock (campus_10)
           tgt = e > -90 ? e + pillarPastM : _sLock + structPastM; why = "turn structure";
         } else {
           const float soft = _structChoice(2, 0.4f);   // partly hidden (people in front of it): 0.3 m later
@@ -954,7 +967,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
             if (e > -90) { tgt = e + pillarPastM; why = "pillar in the B-gap window (structure not seen)"; }
           }
         }
-        if (tgt >= 0 && _dist >= tgt) {
+        if (tgt >= 0 && _dist >= tgt && !_rightAhead(s)) {   // v10.2: never with the pillar still beside / ahead (v6 timing)
           _tpTurn = true; _tpY = pillarPastM + (_dist - tgt);
           if (_log) { _log->event(MissionLog::EV_TURN_PILLAR); _log->event(MissionLog::EV_OP_TURN); }
           snprintf(_msg, sizeof(_msg), "%s at %.1f m: turning right", why, _dist);
@@ -964,7 +977,8 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
           break;
         }
       }
-      if (_dist >= ((autoTurn && usePillar) ? (_gapAnchor >= 0 ? _gapAnchor + 5.35f + 1.2f + 1.5f : _askAt + 15.0f) : _askAt)) {
+      if (_dist >= ((autoTurn && usePillar) ? (_gapAnchor >= 0 ? _gapAnchor + 5.35f + 1.2f + 1.5f : _askAt + 15.0f) : _askAt) ||
+          (autoTurn && usePillar && _sLock >= 0 && _dist >= _sLock + 3.5f)) {   // v10.2: locked but the pillar never passed -> ask
         if (_log) _log->event(MissionLog::EV_T1_ASK);
         _tpTurn = false;
         if (autoTurn && !usePillar) {

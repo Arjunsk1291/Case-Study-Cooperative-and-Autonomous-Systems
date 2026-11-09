@@ -145,7 +145,7 @@ def fig_turn():
     for ax, (title, key) in zip(axs, runs):
         sc, T = RT.leg1(key)
         pts = []
-        for L, d, rel, anc in sc:
+        for L, d, rel, anc, *_ in sc:
             for i in range(90):
                 cm = L[i]
                 if not cm or cm > 600: continue
@@ -153,7 +153,7 @@ def fig_turn():
                 pts.append((dd * math.sin(a), d + dd * math.cos(a)))
         ax.scatter([p[0] for p in pts if -2.5 < p[0] < 6], [p[1] for p in pts if -2.5 < p[0] < 6], s=0.25, c='#8A939C', linewidths=0, rasterized=True)
         tv = F.TurnV9(); res = None; anchor = None
-        for L, d, rel, anc in sc:
+        for L, d, rel, anc, *_ in sc:
             if anc is not None and tv.anchor is None: tv.set_anchor(anc)
             res = tv.step(L, d, rel)
             if res: break

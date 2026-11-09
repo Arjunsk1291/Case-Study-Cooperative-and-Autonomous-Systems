@@ -336,6 +336,16 @@ class StructGrid:
         return best
 
 
+def right_ahead(L, pp=0.40):
+    """v10.2 RouteMission::_rightAhead: an object 0.3-2.0 m to the right between -pp and +1.5 m (pillar not passed yet)"""
+    for b in range(90):
+        cm = L[b]
+        if not cm or cm < 35: continue
+        a = math.radians(b * 4 + 2); x = cm / 100 * math.sin(a); y = cm / 100 * math.cos(a)
+        if 0.3 <= x <= 2.0 and -pp < y < 1.5: return True
+    return False
+
+
 class TurnV9:
     """Mirror of the v9 leg-1 turn decision (case L1_FOLLOW).
     1. STRUCTURE CANDIDATES (every scan from turnAt - win): all structure-like bands (StructGrid). A candidate is
@@ -389,7 +399,7 @@ class TurnV9:
     def step(s, L, dist, rel_deg=0.0):
         """one 250 ms scan. Returns None (keep driving) or (reason, dist) = turn now"""
         s.G.add(L, dist, rel_deg)
-        s._update(dist)
+        if not getattr(s, 'ingap', False): s._update(dist)      # v10.2: no structure sightings inside the B gap
         s.lock = s._choice()
         # pillar edges as in v8 (bins to 162 deg) - used ONLY next to a locked structure (exact v8 timing there);
         # without a lock only the 138-deg version (no follower) and only from turnAt on
@@ -399,16 +409,18 @@ class TurnV9:
                 if lm: e = getattr(s, key, []) + [dist - lm[0]]; setattr(s, key, e[-7:])
         med = lambda v: sorted(v)[len(v) // 2] if v else None
         if s.lock is not None:
-            near = [e for e in s.edges if abs(e - s.lock) <= 0.8]
+            near = [e for e in s.edges if -0.8 <= e - s.lock <= 2.0]          # v10.2
             tgt = med(near) + s.pp if near else s.lock + s.sp
-            return ("structure", dist) if dist >= tgt else None
+            if dist >= tgt and not right_ahead(L, s.pp): return ("structure", dist)
+            if dist >= s.lock + 3.5: return ("ASK (pillar not passed)", dist)
+            return None
         # soft lock (people hid it for a while): 2 sightings 0.4 m apart, turn 0.3 m later than a full lock
         soft = s._choice(2, 0.4)
-        if soft is not None and dist >= soft + s.sp + 0.3: return ("structure-soft", dist)
+        if soft is not None and dist >= soft + s.sp + 0.3 and not right_ahead(L, s.pp): return ("structure-soft", dist)
         lo, hi = s._win()
         if s.anchor is not None and dist >= lo:
             e2 = [e for e in getattr(s, 'edges2', []) if lo - 0.5 <= e <= hi + 0.5]
-            if e2 and dist - sorted(e2)[len(e2) // 2] >= s.pp: return ("pillar-in-gap-window", dist)
+            if e2 and dist - sorted(e2)[len(e2) // 2] >= s.pp and not right_ahead(L, s.pp): return ("pillar-in-gap-window", dist)
         ask = (s.anchor + s.GAP_TO_STRUCT + s.GAP_WIN + 1.5) if s.anchor is not None else s.turn_at + 15.0
         if dist >= ask: return ("ASK (sign not found)", dist)
         return None
