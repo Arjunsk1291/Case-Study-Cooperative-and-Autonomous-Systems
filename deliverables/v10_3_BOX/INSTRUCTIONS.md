@@ -100,3 +100,7 @@ Every 250 ms record now also has: **learned wheel trim, heading-hold correction,
 5. **Unchanged:** pillar counting and the structure turn (`replay_turn.py`: 11 old logs identical, and campus_10.3 locks the structure at 21.8 m, 5.4 m after the gap end); `L2_GO` row / building / B-wall; first-turn, end-wall and sea-gate replays identical.
 
 **What to check at the next run:** at the start the page should say "start: wall found, turning X deg…" if you place it crooked; in the Open Sea "end board X m right (target 1.20) - correcting" about 3 m before the end wall; on leg 4 the walkway should keep 1+ m from the benches; "ramp opening … ahead" only near 25–32 m. Press MARK when it drifts, and send the log and the video again.
+
+### Final simulation tables (end board and leg 4)
+**End board** (`tools/sim_end_board.py`, 10 runs per cell, lateral error to the strip at 38.5 m, rule OFF → ON, median): clean ±1 m start 0.10–0.12 → 0.05; sparse row + gyro +3°/min, start 0 m: −0.27 → −0.13; gyro −3°/min: start 0 m +0.34 → +0.17, start +1 m +1.56 → +0.90; slide +3 %: −0.45 → −0.27; slide −3 %: +0.77 → +0.39. **It was never worse than OFF in any of the 15 cells.** It does nothing when the rover is 1.5 m or more off (board not in view: 0/10 in two cells, 4/10 in one), and it cannot remove a 1 m error completely in the last 3 m.
+**Leg 4 walkway** (`tools/sim_l4_walk.py`, 90 runs per row): heading bias +12° OLD mud 31/90, NEW 0/90; +6° OLD 20/90, NEW 0/90; 0°, −6°, −12°: no mud for either, NEW closest approach ≥0.52 m and always the same offset (+0.22 m).
