@@ -51,7 +51,14 @@ The end-wall turn stalled for 35–42 s in runs 3 and 4. Only the pivot was ever
 4. **End-wall turn:** with the front ≤1.0 m, SHIFT goes **backwards** 0.3 m at 0.20, but only if nothing is within 0.8 m behind. That gives SWING and ARC room again.
 5. The phone page now says "Mission v10.3".
 
-Compile: 1,267,328 B (96 %), no new warnings.
+Compile: see below (96 %), no new warnings.
+
+## NEW ROVER (number 7): not driven yet
+- **Drift is learned automatically** (`DriveStraight.h`). The heading hold moves its steady correction into a learned wheel trim. Now: the first 40 s of driving learn fast (time constant 6 s, then 15 s), and the limit is 0.40 (was 0.20). `tools/sim_drive_trim.py` (the kit-04 calibration model, 5 seeds each): natural drift of ±3°/s: heading error under 1° (0.20 limit: fine); ±4°/s: the old limit failed (5 of 5 at −4°/s, 3 of 5 at +4°/s), the new one is fine at +4°/s and fails 2 of 5 at −4°/s; ±5°/s and more: fails both. Beyond that the rover pauses with "correction saturated" instead of driving off.
+- **The fixed starting trim (−0.046) is from kit 04.** It is only a starting point; the learning removes any difference within about 40 s of driving, i.e. during leg 1.
+- **Not corrected automatically (be aware):** the distance. The box counts commanded speed × time, not wheel turns. If rover 7 is faster or slower than rover 1–6 at the same command, the distance windows (turn window, Open Sea row 10–24.5 m, end wall at 85 % of 36 m) shift. The landmarks (sign structure, store-front row, end wall) are found by LiDAR, so a few percent is absorbed, but a large difference is not.
+- **First test on rover 7, what to look at and send me:** the page shows "trim learned" under the heading line: write down its value at the end of leg 1 and at the end of the Open Sea. Put a tape measure on the floor for the first 10 m of leg 1 and tell me how far it really went. Send the `mis_*.bin` and the video as usual. With that I can fit the trim and the distance scale to this rover (and compare with rover 1–6).
+
 
 ## Field test checklist
 - Start ~1.0 m from the B wall, parallel to it.

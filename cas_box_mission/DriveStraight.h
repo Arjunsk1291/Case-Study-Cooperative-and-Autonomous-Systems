@@ -36,7 +36,8 @@ public:
   float kP = 0.045f, kD = 0.0015f, corrMax = 0.10f, corrFrac = 0.40f, corrRate = 0.30f, deadDeg = 0.5f;
   // 3 trim learning
   bool learn = true;
-  float learnTauS = 15.0f, learnMax = 0.20f, learnBelowDeg = 6.0f;
+  // v10.3 (new rover): the first 40 s of driving learn fast (6 s -> 15 s), limit 0.40 (about +-3.4 deg/s of natural drift; 0.20 failed at +-4)
+  float learnTauS = 15.0f, learnTauFastS = 6.0f, learnMax = 0.40f, learnBelowDeg = 6.0f;
   // 4 failsafe
   float failErrDeg = 12.0f, warnErrDeg = 5.0f, jumpDeg = 30.0f;
   uint32_t failErrMs = 2000, failSatMs = 5000, imuLostMs = 500;
@@ -84,11 +85,13 @@ public:
 
     // 3 learning: move the steady part of c into the trim (c = v * trimEquivalent)
     if (learn && v > 0.1f && ae < learnBelowDeg && dt > 0 && dt < 0.1f) {
-      const float move = (_c / v) * dt / learnTauS;
+      const float tau = learnTauFastS + (learnTauS - learnTauFastS) * fminf(1.0f, _driveS / 40.0f);
+      const float move = (_c / v) * dt / tau;
       _learned = _clamp(_learned + move, -learnMax, learnMax);
       _c -= move * v;                                  // the same amount leaves the correction: output unchanged now
     }
 
+    if (v > 0.1f && dt > 0 && dt < 0.1f) _driveS += dt;      // total driving time (not reset by start(): the learned trim stays too)
     // 4 failsafe
     _status = OK; _reason = "";
     // timers: a separate "running" flag + the start time (2026-11-07: "start = now | 1" could lie 1 ms in the
@@ -108,6 +111,7 @@ public:
   const char* reason() const { return _reason; }
   float errorDeg() const { return _err; }          // + = target is to the left
   float correction() const { return _c; }
+  float driveSeconds() const { return _driveS; }
   float learned() const { return _learned; }       // extra trim learned on this ground
   float totalTrim() const { return trim + _learned; }
 
@@ -124,7 +128,7 @@ private:
   Status _status = OK;
   const char* _reason = "";
   bool _started = false;
-  float _target = 0, _prevYaw = 0, _rate = 0, _c = 0, _err = 0, _learned = 0;
+  float _target = 0, _prevYaw = 0, _rate = 0, _c = 0, _err = 0, _learned = 0, _driveS = 0;
   uint32_t _lastMs = 0, _errMs = 0, _satMs = 0, _imuBadMs = 0;
   bool _errOn = false, _satOn = false, _imuBad = false;
   uint8_t _jumps = 0;
