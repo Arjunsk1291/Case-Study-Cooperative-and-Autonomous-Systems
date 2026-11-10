@@ -1,5 +1,5 @@
 // =============================================================================================
-//  cas_box_mission v10.3 - AUTONOMOUS mission B -> right turn -> open sea -> leg 3 -> T3 -> leg 4 to Block I, with full
+//  cas_box_mission v11 - AUTONOMOUS mission B -> right turn -> open sea -> leg 3 -> T3 -> leg 4 to Block I, with full
 //  logging (2026-11-07 evening). Box ESP32 ("ESP32 Dev Module", partition Default). NO camera any more.
 // =============================================================================================
 //  Phone: Wi-Fi CAS-Box-04 / CASbox04 -> http://192.168.14.1  (mission dashboard)

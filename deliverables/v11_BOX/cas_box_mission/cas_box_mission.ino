@@ -1,5 +1,5 @@
 // =============================================================================================
-//  cas_box_mission v10.3 - AUTONOMOUS mission B -> right turn -> open sea -> leg 3 -> T3 -> leg 4 to Block I, with full
+//  cas_box_mission v11 - AUTONOMOUS mission B -> right turn -> open sea -> leg 3 -> T3 -> leg 4 to Block I, with full
 //  logging (2026-11-07 evening). Box ESP32 ("ESP32 Dev Module", partition Default). NO camera any more.
 // =============================================================================================
 //  Phone: Wi-Fi CAS-Box-04 / CASbox04 -> http://192.168.14.1  (mission dashboard)
@@ -20,7 +20,7 @@
 #include <esp_wifi.h>
 #include <esp_system.h>
 
-const int BOX_ID = 4;
+const int BOX_ID = 7;
 #define WIFI_TX_START WIFI_POWER_8_5dBm
 #define WIFI_TX_RUN WIFI_POWER_15dBm
 const float MAX_SPEED = 0.30f;
