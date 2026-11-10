@@ -1768,7 +1768,8 @@ void RouteMission::fillLog(MissionLog::Sample& d, const Sensors& s, const RoverL
   if (_leg >= 2) d.crabDeg = _drift1.rate() * 60.0f;   // leg 2+: drift seen on leg 1 (logged only, not used)
   if (_st == L2_GO) { d.wallD = _refOff; d.wallAngDeg = _latOff; }   // v6: corridor offset (m) + side term (deg)
   if (_leg == 1) d.crabDeg = _sLock;                    // v9: locked turn-structure position (m along leg 1, -1 = none)
-  if (_leg == 4) d.pillars = _l4Ph * 10 + (_eaPh > 9 ? 9 : _eaPh);   // v9: leg-4 phase x10 + edge-assist step
+  if (_leg == 4) d.pillars = _l4Ph * 10 + (_eaPh > 9 ? 9 : _eaPh);
+  d.trimLearned = _ds.learned(); d.corr = _ds.correction(); d.yawRate = _ds.yawRateDegS(); d.crabEst = _crabEst; d.boost = _boost; d.driveS = _ds.driveSeconds();   // v10.3 new-rover data   // v9: leg-4 phase x10 + edge-assist step
 }
 
 String RouteMission::_statusJson(const Sensors& s, const RoverLink& rover) {

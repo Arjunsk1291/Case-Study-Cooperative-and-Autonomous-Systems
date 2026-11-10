@@ -112,6 +112,7 @@ public:
   float errorDeg() const { return _err; }          // + = target is to the left
   float correction() const { return _c; }
   float driveSeconds() const { return _driveS; }
+  float yawRateDegS() const { return _rate; }
   float learned() const { return _learned; }       // extra trim learned on this ground
   float totalTrim() const { return trim + _learned; }
 

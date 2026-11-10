@@ -51,7 +51,7 @@ The end-wall turn stalled for 35–42 s in runs 3 and 4. Only the pivot was ever
 4. **End-wall turn:** with the front ≤1.0 m, SHIFT goes **backwards** 0.3 m at 0.20, but only if nothing is within 0.8 m behind. That gives SWING and ARC room again.
 5. The phone page now says "Mission v10.3".
 
-Compile: see below (96 %), no new warnings.
+Compile: 1,267,776 B (96 %), no new warnings.
 
 ## NEW ROVER (number 7): not driven yet
 - **Drift is learned automatically** (`DriveStraight.h`). The heading hold moves its steady correction into a learned wheel trim. Now: the first 40 s of driving learn fast (time constant 6 s, then 15 s), and the limit is 0.40 (was 0.20). `tools/sim_drive_trim.py` (the kit-04 calibration model, 5 seeds each): natural drift of ±3°/s: heading error under 1° (0.20 limit: fine); ±4°/s: the old limit failed (5 of 5 at −4°/s, 3 of 5 at +4°/s), the new one is fine at +4°/s and fails 2 of 5 at −4°/s; ±5°/s and more: fails both. Beyond that the rover pauses with "correction saturated" instead of driving off.
@@ -69,3 +69,10 @@ Compile: see below (96 %), no new warnings.
 - If it shows `step line ahead, not lined up … waiting`: wait 20 s, or take over, line it up and press GO.
 - Avoid manual take-overs in the Open Sea, because each one resets the heading base.
 - Send the new `mis_*.bin` plus the videos.
+
+## The log carries everything for rover 7 (log version 5)
+Every 250 ms record now also has: **learned wheel trim, heading-hold correction, yaw rate, crab estimate, speed boost, seconds driven** (decoder: `trim_learned`, `hold_corr`, `yaw_rate`, `crab_est`, `boost`, `drive_s`). Together with what was already there: the 90-beam LiDAR, 5 ultrasonics, gyro yaw / pitch / roll, GPS, battery voltage, the pad command and the real wheel output (`cmd_*`, `out_*`, the manual flag), the state, the references, the end-wall / structure / alignment / ramp-opening events. Old v4 logs still decode.
+- **How to drive the test:** start autonomously, drive by hand whenever you want (the log keeps running in MANUAL, the pad command is recorded), give it back when you like. Press the log's **MARK** button at interesting moments (a turn, a bump, a person).
+- **Start the video before the log** and say "go" aloud (or show the phone clock) so I can sync them.
+- **Storage:** about 1 kB per second. Delete old logs on the page if it says "flash full".
+- **Distance:** please also note with a tape measure the real length of one stretch you drove straight (for example the first 10 m of leg 1), because the box has no wheel encoders.

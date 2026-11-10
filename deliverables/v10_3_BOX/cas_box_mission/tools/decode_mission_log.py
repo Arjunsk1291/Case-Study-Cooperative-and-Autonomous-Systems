@@ -9,7 +9,9 @@ speed_boost, motion_m_s, ref_type (v5: open-sea heading reference). In leg 2+ cr
 import csv, struct, sys
 
 FMT = "<IiiHBBhhhBBBBbbbbBH5H90HhhhHhHHBBhhHHBB"
-SIZE = struct.calcsize(FMT)
+FMT5 = FMT + "hhhhhH"      # v10.3 record (log version 5): learned trim, heading-hold correction, yaw rate, crab estimate, boost, drive seconds
+SIZE4 = struct.calcsize(FMT)
+SIZE = struct.calcsize(FMT5)
 STATES = ["ready", "leg1_follow", "t1_ask", "t1_turn", "t1_settle", "l2_look", "l2_ask", "l2_board", "l2_go", "hold",
           "end_ask", "manual", "paused", "done", "l3_follow", "l4_follow"]
 EVENTS = {0: "", 1: "start", 2: "pillar", 3: "t1_ask", 4: "op_turn", 5: "op_on1m", 6: "manual_on", 7: "manual_off",
@@ -34,14 +36,15 @@ TACTICS = ["pivot", "rest", "swing", "arc", "shift"]
 def decode(path):
     data = open(path, "rb").read()
     magic, ver, npts, rsize, period, start = struct.unpack("<6sBBHHI", data[:16])
-    if magic != b"CASLOG" or ver != 4:
-        raise SystemExit(f"{path}: not a v4 mission log (magic {magic}, version {ver})")
-    if rsize != SIZE:
+    if magic != b"CASLOG" or ver not in (4, 5):
+        raise SystemExit(f"{path}: not a v4/v5 mission log (magic {magic}, version {ver})")
+    fmt = FMT5 if ver == 5 else FMT
+    if rsize != (SIZE if ver == 5 else SIZE4):
         raise SystemExit(f"{path}: record size {rsize} != decoder {SIZE} - decoder and firmware differ")
     n = (len(data) - 16) // rsize
     rows = []
     for k in range(n):
-        v = struct.unpack(FMT, data[16 + k * rsize: 16 + (k + 1) * rsize])
+        v = struct.unpack(fmt, data[16 + k * rsize: 16 + (k + 1) * rsize])
         i = 0
         def take(c):
             nonlocal i
@@ -52,6 +55,7 @@ def decode(path):
         rtt = take(1); batt = take(1); us = take(5); lid = take(90)
         tgt, err, crab = take(3); wd = take(1); wa = take(1); dist = take(1); front = take(1)
         rows_, conf = take(2); coff, cang = take(2); ssent, sok = take(2); loopx4, ds = take(2)
+        ext = take(6) if ver == 5 else (0, 0, 0, 0, 0, 0)
         r = dict(t_s=round((ms - start) / 1000.0, 2), state=STATES[state] if state < len(STATES) else state, leg=leg,
                  event=EVENTS.get(ev, ev), pillars=pillars,
                  lat=lat / 1e7, lon=lon / 1e7, hdop=hdop / 100, near_inten=round(hdop / 100), sats=sats, gps_fix=flags & 1,
@@ -62,6 +66,7 @@ def decode(path):
                  us_front=us[0], us_left=us[1], us_right=us[2], us_back=us[3], us_front_angled=us[4],
                  target_deg=tgt / 100, heading_err_deg=err / 100, crab_deg=crab / 100, wall_d_m=wd / 100, wall_ang_deg=wa / 10,
                  leg_dist_m=dist / 100, front_m=front / 100, loop_max_ms=loopx4 * 4, ds_status=ds)
+        r.update(trim_learned=ext[0] / 1000, hold_corr=ext[1] / 1000, yaw_rate=ext[2] / 100, crab_est=ext[3] / 100, boost=ext[4] / 1000, drive_s=ext[5] / 10)
         if V2:
             r.update(cam_rows=rows_, cam_conf=conf, cam_off_px=coff / 10, cam_ang_deg=cang / 10, snaps_sent=ssent, snaps_ok=sok)
         else:

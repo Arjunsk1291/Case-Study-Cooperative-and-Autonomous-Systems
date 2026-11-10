@@ -38,6 +38,7 @@ public:
     uint8_t camRows = 0, camConf = 0; float camOff = 0, camAng = 0;
     uint16_t snapsSent = 0, snapsOk = 0;
     float loopMaxMs = 0;
+    float trimLearned = 0, corr = 0, yawRate = 0, crabEst = 0, boost = 0, driveS = 0;   // v10.3 (new rover): drift learning + heading hold, logged every record
   };
 
   static const uint16_t kPeriodMs = 250;
@@ -72,10 +73,11 @@ public:
     uint16_t wallDcm; int16_t wallAngX10; uint16_t distCm, frontCm;
     uint8_t camRows, camConf; int16_t camOffX10, camAngX10; uint16_t snapsSent, snapsOk;
     uint8_t loopMaxX4ms, dsStatus;
+    int16_t trimX1000, corrX1000, rateX100, crabEstX100, boostX1000; uint16_t driveX10;   // v5 record (log version 5)
   };
 #pragma pack(pop)
   // must match tools/decode_mission_log.py ('<IiiHBBhhhBBBBbbbbBH5H90HhhhHhHHBBhhHHBB' = 249 bytes)
-  static_assert(sizeof(Rec) == 249, "MissionLog::Rec layout changed - update tools/decode_mission_log.py");
+  static_assert(sizeof(Rec) == 261, "MissionLog::Rec layout changed - update tools/decode_mission_log.py");
   static_assert(sizeof(Header) == 16, "MissionLog::Header layout");
 
 private:

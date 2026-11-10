@@ -80,6 +80,8 @@ void MissionLog::_fill(Rec& r, const Sensors& s, const Sample& d, uint8_t ev) {
   r.camRows = d.camRows; r.camConf = d.camConf; r.camOffX10 = toI16(d.camOff * 10); r.camAngX10 = toI16(d.camAng * 10);
   r.snapsSent = d.snapsSent; r.snapsOk = d.snapsOk;
   r.loopMaxX4ms = (uint8_t)constrain(lroundf(d.loopMaxMs / 4.0f), 0L, 255L); r.dsStatus = d.dsStatus;
+  r.trimX1000 = toI16(d.trimLearned * 1000); r.corrX1000 = toI16(d.corr * 1000); r.rateX100 = toI16(d.yawRate * 100);
+  r.crabEstX100 = toI16(d.crabEst * 100); r.boostX1000 = toI16(d.boost * 1000); r.driveX10 = toU16(lroundf(d.driveS * 10));
 }
 
 void MissionLog::_start() {
@@ -95,7 +97,7 @@ void MissionLog::_start() {
   snprintf(_fileName, sizeof(_fileName), "mis_%03d.bin", next);
   _file = LittleFS.open(String("/") + _fileName, "w");
   if (!_file) { strlcpy(_error, "cannot create file", sizeof(_error)); return; }
-  Header h; memcpy(h.magic, "CASLOG", 6); h.version = 4; h.lidarPoints = Sensors::kLidarPoints;
+  Header h; memcpy(h.magic, "CASLOG", 6); h.version = 5; h.lidarPoints = Sensors::kLidarPoints;
   h.recordSize = sizeof(Rec); h.periodMs = kPeriodMs; h.startMs = millis();
   _file.write((const uint8_t*)&h, sizeof(h));
   char imgName[24]; snprintf(imgName, sizeof(imgName), "/img_%03d.bin", next);
