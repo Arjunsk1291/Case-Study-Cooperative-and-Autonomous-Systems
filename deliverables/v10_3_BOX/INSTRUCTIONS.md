@@ -38,10 +38,20 @@ The end-wall turn stalled for 35–42 s in runs 3 and 4. Only the pivot was ever
    - **Harsh conditions** (falling-snow noise in every scan, 25 % dropouts, 20 % ghosts, pivot error 6°, slip 8 %, a person beside the sign in half of the runs): in-band starts untouched 120 of 120; late starts within 0.5 m 131 of 144; ended worse than before 0 of 144.
    - **Full table (end-wall error, median, late starts +0.7…+1.8 m, v10.2 → v10.3):** clean 0.1–0.15 → 0.01–0.04 m; sparse row 0.3–1.6 → 0.02–0.07 m; gyro −3°/min 1.3–2.4 → 0.2–0.35 m. **Exception, a constant 3 % sideways slide (slanted cobbles) in one direction:** v10.3 ends 0.5–0.8 m, v10.2 0.1–0.5 m, because that slide happens to push a left start back onto the strip; aligned starts get no such help. In that case alignment is not an advantage. Starts inside the band are never moved (100/100 in every table).
    - **The Open Sea logic (`L2_GO`) is unchanged.** A stronger correction (±12°) or an earlier row (from 6 m) did not help in the simulation.
+3b. **Start pose: any place, any heading ("Start open sea HERE" button and after every turn)** (`_beginStartPose`, `_wallLine`, orient phases 10/11):
+   - **Orient.** The rover stands still and takes 8 scans. The B wall (the cement structure behind the start) is the dominant straight line within 0.6–4 m (≥8 points, ≥2 m long). The sign pillar, the board and the structure ahead-left are too short to be mistaken for it. It then pivots in place (full power) to face **away** from the wall (max 2 pivots), then measures again.
+   - **After the autonomous turn** it only checks: heading within 8° of "wall exactly behind" → nothing; 8–25° off → corrects; more → ignores it (the wall check never overrules a good turn). On the real post-turn scans of all 11 logs the wall was found every time and the heading was within 7°, so no good turn would be moved.
+   - **From the button (placed anywhere, facing the wall, left, right or front):** it turns to the wall-normal heading, which becomes the Open Sea heading, then looks for the sign pillar in a wider window (up to 2.6 m ahead or behind, everything at or behind the wall excluded), then the alignment from 3b above (up to 4 rounds, 100 s).
+   - **No hold during orient.** The rover only turns in place there, so a wall closer than 0.45 m does not trigger a hold (people hold works again once it drives).
+   - **Simulation** (`tools/sim_start_pose.py`: pose x −1…+2 m, 1–3 m from the wall, any heading 0–360°, B wall ending 3.5 m right of the strip, pillar + board, a second pole, the structure ahead-left, people): 260 of 300 end with heading within 8°, lateral offset within 0.5 m and no contact. Heading after orient: median 2.3°, 90 % within 5.0°. Lateral offset: median 0.17 m. Time 26 s median.
+   - **Harsh** (snow noise, 25 % dropouts, pivot error 6°, slip 8 %): 231 of 300; heading 90 % within 7.1°.
+   - **Where it fails (honest):** mainly starts 2.5 m or more from the pillar with a person standing near it. A standing person looks exactly like the pillar to the 2D LiDAR, so the rover can line up on the person. Those placements: 6 of 15 succeed. A few contacts (4 of 300) with the pillar or the wall. **Place the rover in the 3×3 block area (pillar within about 2 m), keep people away from the pillar during the start.**
+   - **Wall end as a reference:** not used. The B wall ends 2.3–4.2 m right of the strip in the logs, too variable; the sign pillar (0.9–1.6 m) is the lateral reference.
+   - **Pillar counting and the Open Sea landmarks are unchanged** (structure first; row, building, end wall as in v10.2).
 4. **End-wall turn:** with the front ≤1.0 m, SHIFT goes **backwards** 0.3 m at 0.20, but only if nothing is within 0.8 m behind. That gives SWING and ARC room again.
 5. The phone page now says "Mission v10.3".
 
-Compile: 1,264,848 B (96 %), no new warnings.
+Compile: 1,267,328 B (96 %), no new warnings.
 
 ## Field test checklist
 - Start ~1.0 m from the B wall, parallel to it.

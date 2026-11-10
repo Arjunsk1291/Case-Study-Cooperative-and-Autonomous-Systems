@@ -17,6 +17,8 @@ import sys, math, random; sys.path.insert(0, '.')
 import sim_open_sea as S, fwmirror as F
 
 TARGET, BAND_LO, BAND_HI, MAX_ROLL, MAX_ROUNDS = 1.3, 0.85, 1.75, 1.6, 3
+YMIN = -1.0      # lowest y (rover frame, m) of the first look; placed anywhere: wall distance behind - 0.4 (the B wall itself is not the sign)
+WIDE = False     # placed anywhere (Start open sea HERE): the pillar may be 2.6 m ahead / behind, not only abeam +-1 m
 
 
 def start_world(rng, person=False, clutter=True):
@@ -28,6 +30,14 @@ def start_world(rng, person=False, clutter=True):
     if person:
         qx, qy = rng.uniform(-2.8, -1.9), rng.uniform(-2.5, -0.5); segs += [((qx - .2, qy - .2), (qx + .2, qy - .2)), ((qx + .2, qy - .2), (qx + .2, qy + .2)), ((qx - .2, qy + .2), (qx + .2, qy + .2)), ((qx - .2, qy + .2), (qx - .2, qy - .2))]
     return segs
+
+
+def min_dist(segs, px, py):
+    best = 9e9
+    for (ax, ay), (bx, by) in segs:
+        dx, dy = bx - ax, by - ay; L2 = dx * dx + dy * dy
+        u = 0 if L2 == 0 else max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / L2)); best = min(best, math.hypot(px - ax - u * dx, py - ay - u * dy))
+    return best
 
 
 def right_pts(L):
@@ -43,7 +53,8 @@ def window_pts(L, track=None):
     """points of one scan that may be the sign: first look 0.3-4.5 m right, abeam y -1.0..+1.0 m; following (track = where the
     pillar must be after a roll): within 0.6 m of it. At most 24 per scan (the box keeps the same)."""
     P = right_pts(L)
-    if track is None: C = [(x, y) for x, y in P if 0.3 <= x <= 4.5 and -1.0 < y < 1.0]
+    yl = 2.6 if WIDE else 1.0
+    if track is None: C = [(x, y) for x, y in P if 0.3 <= x <= 4.5 and max(-yl, YMIN) < y < yl]
     else: C = [(x, y) for x, y in P if math.hypot(x - track[0], y - track[1]) <= 0.6 and x > 0.3]
     return sorted(C)[:24]
 
@@ -56,7 +67,7 @@ def vote(scans, rad=0.15, need=4):
         for (x, y) in sc:
             sup = []
             for sc2 in scans:
-                near = [(x2, y2) for (x2, y2) in sc2 if math.hypot(x2 - x, y2 - y) <= rad]
+                near = [(x2, y2) for (x2, y2) in sc2 if math.hypot(x2 - x, y2 - y) <= rad + 0.05 * x]   # beam spacing grows with range
                 if near: sup.append(min(near, key=lambda p: math.hypot(p[0] - x, p[1] - y)))
             if len(sup) >= need:
                 m = (sum(p[0] for p in sup) / len(sup), sum(p[1] for p in sup) / len(sup))
@@ -79,9 +90,9 @@ class StartAlign:
         return 'move', d - TARGET
 
 
-def align(rng, x0, slip=0.0, person=False, dropout=0.12, pivot_sd=3.0):
+def align(rng, x0, slip=0.0, person=False, dropout=0.12, pivot_sd=3.0, y0=-1.5, th0=-math.pi / 2, segs=None, hits=None):
     """returns (x after, heading error deg, seconds, rounds, moved)"""
-    segs = start_world(rng, person); x, y, th = x0, -1.5, math.radians(-90); A = StartAlign(); t = 0.0; moved = False
+    segs = segs if segs is not None else start_world(rng, person); x, y, th = x0, y0, th0; base = th0; A = StartAlign(); t = 0.0; moved = False
     herr = 0.0
     for _ in range(40):
         # measure: 5 scans (2 s) standing still
@@ -102,11 +113,14 @@ def align(rng, x0, slip=0.0, person=False, dropout=0.12, pivot_sd=3.0):
         th1 = th - a + math.radians(rng.gauss(0, pivot_sd)); t += 3.0     # pivot (full power, ~3 s with the ramps)
         step = roll * (1 + rng.gauss(0, 0.05)); t += step / 0.18
         dx, dy = step * math.cos(th1), step * math.sin(th1)
+        if hits is not None:
+            for k in range(1, 9):
+                if min_dist(segs, x + dx * k / 8, y + dy * k / 8) < 0.28: hits.append(1)
         x += dx; y += dy
         # the pillar in the NEW rover frame (odometry: the rover moved right by -dx and forward by -dy, then turned back)
         A.track = (m[0] + dx, m[1] - (-dy))
         x += slip * step * rng.choice((-1, 1))                             # slip sideways
-        err = rng.gauss(0, pivot_sd); th = math.radians(-90) + math.radians(err); herr = err; t += 3.0
+        err = rng.gauss(0, pivot_sd); th = base + math.radians(err); herr = err; t += 3.0
     return x, herr, t, A.round, moved
 
 

@@ -68,6 +68,7 @@ public:
   bool startShift = true;     // v10.3: late turn -> stop, pivot 30 deg right, roll, pivot back BEFORE the open sea
   // v10.3 START ALIGNMENT (tools/sim_start_align.py): after EVERY right turn stop and measure the sign / pillar on the right.
   // 0.85-1.75 m (every good run: 0.9-1.6 m) -> nothing; else pivot 30 deg, roll, pivot back, measure again (max 3 rounds / 60 s)
+  static constexpr float TURN_OK_DEG = 8.0f;
   float alignLo = 0.85f, alignHi = 1.75f, alignTarget = 1.3f, alignMaxRoll = 1.6f;
   // v6 (campus5 + run.mp4): LANDMARK CORRIDOR. The tactile strip of the open sea runs parallel to a straight row of
   // permanent landmarks on its LEFT (trees in grates + stakes + sign / lamp posts, ~9-24 m) at ~6.5 m (campus_2 6.2-6.6,
@@ -200,6 +201,10 @@ private:
   float _apPX[8][24], _apPY[8][24], _apBase = 0, _apRoll = 0, _apRollStart = 0, _apTX = 0, _apTY = 0, _apE = 0, _apLate = 0, _apLastE = 99;
   uint8_t _apNs[8], _apHead = 0;
   uint32_t _apMs = 0, _apT0 = 0, _apMeasT0 = 0;
+  // v10.3 START POSE (tools/sim_start_pose.py): placed anywhere / facing anywhere -> find the B wall, face away from it, then the pillar
+  bool _apPlaced = false, _apPlaced0 = false; uint8_t _apOrient = 0, _apWn = 0; float _apBear[8], _apWd[8], _apYMin = -1.0f; bool _apWok[8];
+  bool _wallLine(const Sensors& s, float& bearing, float& dist) const;
+  void _beginStartPose(const Sensors& s, bool placed);
   void _apAddScan(const Sensors& s);
   bool _apVote(float& x, float& y) const;
   void _apFinish(const Sensors& s, const char* msg);

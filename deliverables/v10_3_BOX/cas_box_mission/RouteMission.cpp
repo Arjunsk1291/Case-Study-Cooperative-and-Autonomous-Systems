@@ -556,6 +556,56 @@ bool RouteMission::_boardFit(const Sensors& s, float dMin, float dMax, float& di
 // v10.3 START ALIGNMENT. The sign pillar / board stands 0.9-1.6 m right of the strip in every good run (campus_3/5/6,
 // test2, log8, campus_9, c102_4); the late turns read 2.0 m (campus_10) and 2.9 m (c102_3). Nearest object 0.3-4.5 m right,
 // abeam (y -1.0..+1.0 m), >= 2 points within 0.8 m of it; after a roll it is followed by odometry (0.6 m around where it must be).
+// v10.3 START POSE: the B wall (cement structure) behind the start = the dominant straight line within 0.6-4 m (>= 8 points on it,
+// >= 2 m long, rms <= 6 cm; RANSAC over pairs >= 0.5 m apart, 10 cm band). Out: bearing of its foot point (deg clockwise from the
+// front: 180 = exactly behind) and its distance. The sign pillar / board (1.1 m) and the structure ahead-left are too short.
+bool RouteMission::_wallLine(const Sensors& s, float& bearing, float& dist) const {
+  float px[Sensors::kLidarPoints], py[Sensors::kLidarPoints]; int m = 0;
+  for (int i = 0; i < Sensors::kLidarPoints; i++) {
+    const uint16_t cm = s.lidarCm(i);
+    if (!cm || cm < 60 || cm > 400) continue;
+    const float a = (i * 4 + 2) * DEG_TO_RAD, d = cm / 100.0f;
+    px[m] = d * cosf(a); py[m] = d * sinf(a); m++;                    // x forward, y right
+  }
+  if (m < 8) return false;
+  int bestK = 0; float bnx = 0, bny = 0, bc = 0;
+  for (int i = 0; i < m; i++) for (int j = i + 1; j < m; j++) {
+    const float dx = px[j] - px[i], dy = py[j] - py[i], n = sqrtf(dx * dx + dy * dy);
+    if (n < 0.5f) continue;
+    const float nx = -dy / n, ny = dx / n, c = nx * px[i] + ny * py[i];
+    int k = 0; for (int q = 0; q < m; q++) if (fabsf(nx * px[q] + ny * py[q] - c) < 0.10f) k++;
+    if (k > bestK) { bestK = k; bnx = nx; bny = ny; bc = c; }
+  }
+  if (bestK < 8) return false;
+  float mx = 0, my = 0; int k = 0;
+  for (int q = 0; q < m; q++) if (fabsf(bnx * px[q] + bny * py[q] - bc) < 0.10f) { mx += px[q]; my += py[q]; k++; }
+  mx /= k; my /= k;
+  float sxx = 0, syy = 0, sxy = 0;
+  for (int q = 0; q < m; q++) if (fabsf(bnx * px[q] + bny * py[q] - bc) < 0.10f) { const float a = px[q] - mx, b = py[q] - my; sxx += a * a; syy += b * b; sxy += a * b; }
+  const float th = 0.5f * atan2f(2 * sxy, sxx - syy), ux = cosf(th), uy = sinf(th);
+  float lo = 1e9f, hi = -1e9f, sq = 0;
+  for (int q = 0; q < m; q++) if (fabsf(bnx * px[q] + bny * py[q] - bc) < 0.10f) {
+    const float al = (px[q] - mx) * ux + (py[q] - my) * uy, r = -uy * (px[q] - mx) + ux * (py[q] - my);
+    lo = fminf(lo, al); hi = fmaxf(hi, al); sq += r * r;
+  }
+  if (hi - lo < 2.0f || sqrtf(sq / k) > 0.06f) return false;
+  const float d = -uy * mx + ux * my, fx = -uy * d, fy = ux * d;     // foot point of the perpendicular
+  bearing = atan2f(fy, fx) * RAD_TO_DEG; dist = fabsf(d);
+  return true;
+}
+
+// Start of the pose routine: stand still, find the wall, face away from it, then the sign pillar (phase 0...). placed = the "Start
+// open sea HERE" button (any position / heading in the start area); otherwise right after the autonomous turn (only small corrections).
+void RouteMission::_beginStartPose(const Sensors& s, bool placed) {
+  const uint32_t now = millis();
+  _leg = 2; _dist2 = 0; _tgt = _base; _apOn = true; _apPh = 10; _apRound = 0; _apN = 0; _apHead = 0; _apLastE = 99; _apWn = 0; _apOrient = 0;
+  _apTrack = _apFallback = false; _apPlaced = false; _apPlaced0 = placed; _apYMin = -1.0f;
+  _apT0 = _apMs = _apMeasT0 = now;
+  _ds.start(s.yawNowDeg(), now); _ds.setTarget(_tgt);
+  strlcpy(_msg, placed ? "start here: looking for the B wall behind" : "turn done: checking the wall behind, then the sign pillar", sizeof(_msg));
+  _go(L2_ALIGN);
+}
+
 // The rover STANDS STILL while it measures, so a real object is at the same place in every scan; snow flakes, ghosts and a person
 // walking by are not (simulated: random near returns made the plain "nearest point" fail, the vote did not). Per scan the points
 // that may be the sign (<= 24); the last 8 scans; the nearest point that has a point within 0.15 m in >= 4 of them is the sign.
@@ -565,7 +615,8 @@ void RouteMission::_apAddScan(const Sensors& s) {
     const uint16_t cm = s.lidarCm(i);
     if (!cm || cm < 35) continue;
     const float a = (i * 4 + 2) * DEG_TO_RAD, d = cm / 100.0f, x = d * sinf(a), y = d * cosf(a);
-    const bool in = _apTrack ? (x > 0.3f && hypotf(x - _apTX, y - _apTY) <= 0.6f) : (x >= 0.3f && x <= 4.5f && y > -1.0f && y < 1.0f);
+    const float yl = _apPlaced ? 2.6f : 1.0f;                       // placed anywhere: the pillar may be 2.6 m ahead / behind; the wall itself is excluded (_apYMin)
+    const bool in = _apTrack ? (x > 0.3f && hypotf(x - _apTX, y - _apTY) <= 0.6f) : (x >= 0.3f && x <= 4.5f && y > fmaxf(-yl, _apYMin) && y < yl);
     if (in) { px[n] = x; py[n] = y; n++; }
   }
   _apNs[_apHead] = n; _apHead = (_apHead + 1) & 7; if (_apN < 8) _apN++;
@@ -577,7 +628,7 @@ bool RouteMission::_apVote(float& bx, float& by) const {
   for (int a = 0; a < 8; a++) for (int i = 0; i < _apNs[a]; i++) {
     const float x = _apPX[a][i], y = _apPY[a][i]; float sx = 0, sy = 0; int cnt = 0;
     for (int b = 0; b < 8; b++) {
-      float bd = 0.15f, qx = 0, qy = 0; bool f = false;
+      float bd = 0.15f + 0.05f * x, qx = 0, qy = 0; bool f = false;           // beam spacing grows with range
       for (int j = 0; j < _apNs[b]; j++) { const float d = hypotf(_apPX[b][j] - x, _apPY[b][j] - y); if (d <= bd) { bd = d; qx = _apPX[b][j]; qy = _apPY[b][j]; f = true; } }
       if (f) { sx += qx; sy += qy; cnt++; }
     }
@@ -598,7 +649,38 @@ void RouteMission::_apFinish(const Sensors& s, const char* msg) {
 void RouteMission::_alignStart(const Sensors& s, uint32_t now, float& l, float& r) {
   const float yaw = s.yawNowDeg();
   l = r = 0;
-  if (now - _apT0 > 60000) { _apFinish(s, "alignment: 60 s used - going on"); return; }
+  if (now - _apT0 > (_apPlaced ? 100000u : 60000u)) { _apFinish(s, "alignment: time used - going on"); return; }
+  if (_apPh == 11) { _apPh = 10; _apWn = 0; _apMs = now; return; }   // orient pivot done: look at the wall again
+  if (_apPh == 10) {                                                // stand still, find the B wall (8 scans), face away from it
+    if (now - _apMs < 250) return;
+    _apMs = now;
+    float b, d; const bool f = _wallLine(s, b, d);
+    _apBear[_apWn] = b; _apWd[_apWn] = d; _apWok[_apWn] = f; _apWn++;
+    if (_apWn < 8) return;
+    _apWn = 0;
+    float v[8]; int n = 0; for (int i = 0; i < 8; i++) if (_apWok[i]) v[n++] = _apBear[i];
+    float med = 0; int agree = 0;
+    if (n >= 5) {
+      for (int i = 1; i < n; i++) { float t = v[i]; int j = i - 1; while (j >= 0 && v[j] > t) { v[j + 1] = v[j]; j--; } v[j + 1] = t; }
+      med = v[n / 2]; for (int i = 0; i < 8; i++) if (_apWok[i] && fabsf(wrap180(_apBear[i] - med)) <= 8.0f) agree++;
+    }
+    if (agree < 5) { _apYMin = -1.0f; _apPlaced = false; _apPh = 0; _apN = 0; _apHead = 0; _apMeasT0 = now;
+      strlcpy(_msg, "no B wall line seen - using the heading as it is", sizeof(_msg)); return; }
+    float ds[8]; int k = 0; for (int i = 0; i < 8; i++) if (_apWok[i] && fabsf(wrap180(_apBear[i] - med)) <= 8.0f) ds[k++] = _apWd[i];
+    for (int i = 1; i < k; i++) { float t = ds[i]; int j = i - 1; while (j >= 0 && ds[j] > t) { ds[j + 1] = ds[j]; j--; } ds[j + 1] = t; }
+    const float wd = ds[k / 2], turn = wrap180(med + 180.0f);          // deg to the RIGHT that makes the wall exactly behind
+    const bool autoMode = !_apPlaced0;
+    if (fabsf(turn) > TURN_OK_DEG && _apOrient < 2 && (!autoMode || fabsf(turn) <= 25.0f)) {
+      _apOrient++; _apBase = wrap180(yaw - turn);
+      snprintf(_msg, sizeof(_msg), "B wall %.1f m behind-ish: turning %.0f deg to face away from it", wd, turn);
+      Serial.printf("[mission] start pose: %s\n", _msg); if (_log) _log->event(MissionLog::EV_ALIGN_START);
+      _apPh = 11; _turnNo = 8; _turnTries = 0; _startTurn(s, _apBase); return;
+    }
+    if (_apPlaced0) _apBase = wrap180(yaw - turn);                      // placed: the wall-normal heading is the open-sea heading
+    _apYMin = _apPlaced0 ? -wd + 0.4f : -1.0f; _apPlaced = _apPlaced0;
+    snprintf(_msg, sizeof(_msg), "B wall %.1f m behind, heading %s - looking for the sign pillar", wd, fabsf(turn) <= TURN_OK_DEG ? "ok" : "left as it is");
+    _apPh = 0; _apN = 0; _apHead = 0; _apMeasT0 = now; return;
+  }
   if (_apPh == 1) {                                                 // pivot done -> roll sideways (slowly, straight)
     _apPh = 2; _apRollStart = _dist2; _tgt = yaw; _ds.start(yaw, now); _ds.setTarget(_tgt); _apMs = now; return;
   }
@@ -626,7 +708,7 @@ void RouteMission::_alignStart(const Sensors& s, uint32_t now, float& l, float& 
     if (d >= alignLo && d <= alignHi) {
       char m[64]; snprintf(m, sizeof(m), "sign %.2f m right: aligned - going on", d); _apFinish(s, m); return;
     }
-    if (_apRound >= 3) { char m[64]; snprintf(m, sizeof(m), "sign %.2f m right after 3 rounds - going on", d); _apFinish(s, m); return; }
+    if (_apRound >= (_apPlaced ? 4 : 3)) { char m[64]; snprintf(m, sizeof(m), "sign %.2f m right after %u rounds - going on", d, _apRound); _apFinish(s, m); return; }
     e = d - alignTarget;
     if (_apRound >= 1 && fabsf(e) > _apLastE + 0.15f) giveUp = true;      // the last move did not improve: stop moving
     _apTX = d; _apTY = sy; go = true;
@@ -654,13 +736,9 @@ void RouteMission::_afterTurn(const Sensors& s) {
     default:                                                       // T1 done
       if (!boardLineUp) {                                          // v5: straight on, walls steer
         _leg = 2; _base = _turnTgt;
-        if (startShift) {                                          // v10.3: POSITION FIRST - stop, look at the sign / pillar, move if needed
-          _dist2 = 0; _tgt = _base; _apOn = true; _apPh = 0; _apRound = 0; _apN = 0; _apHead = 0; _apLastE = 99; _apTrack = _apFallback = false;
-          _apBase = _turnTgt; _apT0 = _apMs = _apMeasT0 = now;
-          _apLate = _tpTurn ? clampf(_lateM, 0.0f, 1.2f) : 0.0f; _tpTurn = false;
-          _ds.start(s.yawNowDeg(), now); _ds.setTarget(_tgt);
-          strlcpy(_msg, "turn done: measuring the sign / pillar on the right", sizeof(_msg));
-          _go(L2_ALIGN);
+        if (startShift) {                                          // v10.3: POSITION FIRST - wall check, then the sign pillar
+          _apBase = _turnTgt; _apLate = _tpTurn ? clampf(_lateM, 0.0f, 1.2f) : 0.0f; _tpTurn = false;
+          _beginStartPose(s, false); _apBase = _turnTgt;
           break;
         }
         _tpTurn = false; _startLeg2(s); break;
@@ -1097,7 +1175,9 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
   } else if (c == C_L2HERE && (_st == MANUAL || _st == PAUSED || _st == T1_ASK || _st == IDLE || _st == DONE)) {
     if ((_st == IDLE || _st == DONE) && _log) _log->start();
     if (_dist < 2.0f) _pitch0 = s.pitchDeg();
-    _base = yaw; _startLeg2(s);
+    _base = yaw;
+    if (startShift) { _apBase = yaw; _apLate = 0; _tpTurn = false; _beginStartPose(s, true); _apBase = yaw; }   // v10.3: any position, any heading
+    else _startLeg2(s);
   } else if (c == C_FINISH && _st != IDLE) {
     if (_log) { _log->event(MissionLog::EV_DONE); _log->stop(); }
     strlcpy(_msg, "finished - log saved", sizeof(_msg));
@@ -1248,8 +1328,9 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
       //   distance off by > 0.15 m -> pivot 12-30 deg towards / away, roll |e|/sin(a), pivot back = sideways move
       //   then pivot PARALLEL to the board (if > 3 deg off) -> heading locked -> open sea.
       // No board within 4 m / 30 s -> open sea on the B-perpendicular heading (as v3).
-      if (_frontM < 0.45f) { emergency = true; _prev = L2_ALIGN; if (_log) _log->event(MissionLog::EV_HOLD); _go(HOLD); break; }
-      if (_bp != 2 && _near(holdM, now)) { _prev = L2_ALIGN; if (_log) _log->event(MissionLog::EV_HOLD); _go(HOLD); break; }
+      const bool orienting = _apOn && _apPh >= 10;                     // standing still / pivoting in place: no hold (placed next to a wall)
+      if (!orienting && _frontM < 0.45f) { emergency = true; _prev = L2_ALIGN; if (_log) _log->event(MissionLog::EV_HOLD); _go(HOLD); break; }
+      if (!orienting && _bp != 2 && _near(holdM, now)) { _prev = L2_ALIGN; if (_log) _log->event(MissionLog::EV_HOLD); _go(HOLD); break; }
       if (_apOn) { _alignStart(s, now, l, r); break; }                // v10.3 start alignment
       if (_bp == 0) {
         if (now - _bdMs >= 250) {

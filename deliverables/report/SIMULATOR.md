@@ -35,6 +35,7 @@ We cannot bring crowds, snow or a hundred different starting positions to the ca
 | Turn at the right pillar with people around | `python3 sim_people.py` | 5,670 cases, 93.3 % on target, 0 wrong pillar |
 | Start alignment after a late turn (v10.3) | `python3 sim_start_align.py` | in-band starts untouched 100/100; late starts (+0.7 … +2.2 m) end 0.06–0.2 m off the strip |
 | Start alignment in snow noise, 25 % dropouts, pivot error 6°, slip 8 %, people | `--stress` | untouched 120/120 in band; 131 of 144 late starts within 0.5 m; 0 of 144 worse. (A first version using the plain nearest point failed here: 13 of 144 worse. The simulator found it before the field did.) |
+| Start pose: placed anywhere in the start area, facing any direction (wall, left, right, front) | `python3 sim_start_pose.py` | 260 of 300 within 8° / 0.5 m, no contact; heading median 2.3°; under stress 231 of 300. Fails mostly with a person standing next to the pillar. |
 | Ramp opening on leg 4 | `python3 sim_l4_gap.py` | 180 approaches: 0 hits on the stairs |
 
 ## 5. How to run it
