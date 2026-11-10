@@ -2,6 +2,8 @@
 """replay_end_wall.py - every real Open Sea log: where would the v9 end-wall rule and the v10 rule stop?
 v9: gate 0.70*36 m, _frontWallWide with MEDIAN f0, condition continuous 0.8 s.
 v10: gate 0.85*36 m, NEAREST f0, leaky counter +2/-1 per 250 ms, trigger 6.  Both: front <= 1.5 m, level (pitch vs 3 s LP, 2 deg, 1 s)."""
+import sys as _s
+END_M = float(_s.argv[1]) if len(_s.argv) > 1 else 1.8      # v12 endWallM (v11: 1.5)
 import sys, math, glob; sys.path.insert(0, '.')
 import decode_mission_log as D, fwmirror as F
 
@@ -37,7 +39,7 @@ for f in sorted([g for g in glob.glob('../../Log_run/**/*.bin', recursive=True) 
         last = t; level = t - lvl_ms >= 1.0
         L = [r['lidar_%03d' % (i * 4)] for i in range(90)]; d = r['leg_dist_m']; fm = r['front_m']
         c9 = d >= 0.70 * 36 and fm <= 1.5 and level and wide(L, 1.8, False)
-        c10 = d >= 0.85 * 36 and fm <= 1.5 and level and wide(L, 1.8, True)
+        c10 = d >= 0.85 * 36 and fm <= END_M and level and wide(L, END_M + 0.3, True)
         if t9 is None:
             if c9: on9 = on9 or t
             else: on9 = None

@@ -1,10 +1,10 @@
-# BOX firmware v10.3: fixes from the campus_10.2 runs (9 Nov 2026)
+# BOX firmware v11 (v10.3 plus the rover-7 fixes): fixes from the campus_10.2 runs (9 Nov 2026)
 
-Flash `BOX_v10_3_cas_box_mission_0x0.bin` at **0x0**, 115200 baud, DIO / 40 MHz / 4 MB. **Never "Erase All Flash".**
+Flash `BOX_v11_cas_box_mission_0x0.bin` at **0x0**, 115200 baud, DIO / 40 MHz / 4 MB. **Never "Erase All Flash".**
 Check first that the port is the box: the serial output shows `[imu]` and `[rover] searching`. The rover firmware is untouched.
 
 ```
-esptool --chip esp32 --port /dev/ttyUSB0 --baud 115200 write-flash -z --flash-mode dio --flash-freq 40m --flash-size 4MB 0x0 BOX_v10_3_cas_box_mission_0x0.bin
+esptool --chip esp32 --port /dev/ttyUSB0 --baud 115200 write-flash -z --flash-mode dio --flash-freq 40m --flash-size 4MB 0x0 BOX_v11_cas_box_mission_0x0.bin
 ```
 
 ## What the 3 runs showed (logs `Log_run/campus_10.2/`)
@@ -51,7 +51,7 @@ The end-wall turn stalled for 35–42 s in runs 3 and 4. Only the pivot was ever
 4. **End-wall turn:** with the front ≤1.0 m, SHIFT goes **backwards** 0.3 m at 0.20, but only if nothing is within 0.8 m behind. That gives SWING and ARC room again.
 5. The phone page now says "Mission v10.3".
 
-Compile: 1,269,712 B (96 %), no new warnings.
+Compile: 1,269,744 B (96 %), no new warnings.
 
 ## NEW ROVER (number 7): not driven yet
 - **Drift is learned automatically** (`DriveStraight.h`). The heading hold moves its steady correction into a learned wheel trim. Now: the first 40 s of driving learn fast (time constant 6 s, then 15 s), and the limit is 0.40 (was 0.20). `tools/sim_drive_trim.py` (the kit-04 calibration model, 5 seeds each): natural drift of ±3°/s: heading error under 1° (0.20 limit: fine); ±4°/s: the old limit failed (5 of 5 at −4°/s, 3 of 5 at +4°/s), the new one is fine at +4°/s and fails 2 of 5 at −4°/s; ±5°/s and more: fails both. Beyond that the rover pauses with "correction saturated" instead of driving off.

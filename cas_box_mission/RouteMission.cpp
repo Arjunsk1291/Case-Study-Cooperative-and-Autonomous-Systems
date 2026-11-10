@@ -826,7 +826,7 @@ void RouteMission::_startLeg4(const Sensors& s) {
   _wallGoodMs = millis(); _wallScanMs = 0;
   _tgt = _wallDir; _l3Seen = _wallOk; _noWallFrom = -1;
   _ds.start(s.yawNowDeg(), millis()); _ds.setTarget(_tgt);
-  _l4Ph = 0; _rampSeen = false; _railN = 0; _railOk = false; _rampMs = _levelOkMs = 0; _l4ScanMs = 0; _entN = 0; _entFrom = _corrFrom = -1;
+  _l4Ph = 0; _rampSeen = false; _railN = 0; _railBits = 0; _l4RailOff = 99.0f; _railOk = false; _rampMs = _levelOkMs = 0; _l4ScanMs = 0; _entN = 0; _entFrom = _corrFrom = -1;
   _gN = _gAge = _gLineN = 0; _gHave = _gCommit = _gWaitOn = false; _gWaitMs = 0;
   _l4DirN = _l4DirI = 0; _l4ObjSet = false;
   _eaPh = 0; _eaN = 0; _eaHighMs = 0; _pMin = _pMinNext = s.pitchDeg(); _pMinMs = millis();
@@ -856,12 +856,13 @@ void RouteMission::_l4Walk(const Sensors& s, uint32_t now) {
     const float d = dirOf(ang, ref);
     if (fabsf(wrap180(d - ref)) <= (_l4Ph >= 2 ? 20.0f : 15.0f)) { rail = true; rd = d; roff = off; }
   }
+  _l4RailOff = (rail && roff > 0.2f && roff < 2.0f) ? roff : 99.0f;   // v12: for the ramp-opening guard
   if (_l4Ph == 1) {
     // v10.3 (campus_10.3: benches, hydrant and the mud edge were 0.5-1.3 m left and below the old 1.0 m minimum): all left objects 0.4-4.5 m
     if (LineRef::rowFit(s, 270, 60, 0.4f, 4.5f, 0.12f, 4, 0.6f, 0.3f, ang, off, n) && off < 0) {
       const float d = dirOf(ang, _l4Dir);
       if (fabsf(wrap180(d - _l4Dir)) <= 12.0f) {
-        if (!_l4KeepSet) { _l4KeepSet = true; _l4Keep = clampf(-off, 1.3f, 4.5f); }
+        if (!_l4KeepSet) { _l4KeepSet = true; _l4Keep = l4KeepM; }      // v12: taught distance (c102_3), not the first one seen
         _l4Dir = wrap180(_l4Dir + clampf(wrap180(d - _l4Dir), -0.5f, 0.5f));
         want = wrap180(_l4Dir + clampf(10.0f * (-off - _l4Keep), -6.0f, 6.0f));   // too far from the left edge -> left
       }
@@ -885,8 +886,9 @@ void RouteMission::_l4Walk(const Sensors& s, uint32_t now) {
       if (fabsf(f) <= 0.6f && sd >= 1.4f && sd <= 2.6f) { leftWide = true; leftD = sd; }
     }
     if (leftWide && rail && (leftD + roff < 2.4f || leftD + roff > 3.3f)) leftWide = false;   // corridor width 2.8 m (log8, campus_9)
-    if (rail && roff >= 0.35f && roff <= 1.3f && leftWide) _railN++; else _railN = 0;   // v10: campus_9 right railing 0.90-0.99 m
-    if (_railN >= 4) {
+    _railBits = (uint8_t)(((_railBits << 1) | ((rail && roff >= 0.35f && roff <= 1.5f && leftWide) ? 1 : 0)) & 0x1F);   // v12: 3 of the last 5 scans (campus_11: 205/323 scans, never 4 in a row before the opening finder turned it)
+    _railN = (uint8_t)__builtin_popcount(_railBits);
+    if (_railN >= 3) {
       _l4Ph = 2; _l4PhStart = _dist; _railDir = rd; _railD = clampf(roff, 0.5f, 0.7f); _railOk = true; _railGoodMs = now;
       if (_log) _log->event(MissionLog::EV_RAILING);
       snprintf(_msg, sizeof(_msg), "railing corridor: keeping %.2f m to the right railing", _railD);
@@ -936,7 +938,7 @@ void RouteMission::_l4Walk(const Sensors& s, uint32_t now) {
     if (gr == 2) return;
     if (gr == 1) {                                                  // > 18 deg: jump (realign = ramped stop + full-power pivot)
       const float d = wrap180(gw - _tgt);
-      _tgt = fabsf(d) > 18.0f ? gw : wrap180(_tgt + clampf(d, -2.0f, 2.0f));
+      _tgt = wrap180(_tgt + clampf(d, -2.0f, 2.0f));               // v12: always 2 deg per scan, no jump / pivot
       return;
     }
   } else _gWaitOn = false;
@@ -970,7 +972,8 @@ bool RouteMission::_l4FindGap(const Sensors& s, float rot, float ymin, Gap& g) c
     bool found = false;
     for (int q = 0; q + 1 < m && !found; q++) {                    // left to right: the first valid one is the leftmost
       const float a = xs[q], b = xs[q + 1], w = b - a, cx = 0.5f * (a + b);
-      if (w < 2.2f || w > 4.0f || fabsf(cx) > 4.0f) continue;
+      if (w < 2.2f || w > 4.0f || cx > 1.5f || cx < -2.5f) continue;   // v12: the ramp is beside the facade (left); campus_11 took an opening 3 m RIGHT = beyond the parapet
+      if (a >= _l4RailOff - 0.3f) continue;                              // v12: starts at / beyond the right railing (parapet) = the steps
       bool nearPt = false; int fac = 0, rail = 0;
       for (int i = 0; i < n; i++) {
         if (px[i] > a + 0.2f && px[i] < b - 0.2f && py[i] > 0.3f && py[i] < y0 - 0.6f) { nearPt = true; break; }
@@ -1010,7 +1013,8 @@ float RouteMission::_l4LineAhead(const Sensors& s, float rot) const {   // neare
 int8_t RouteMission::_l4Gap(const Sensors& s, float yaw, float& want) {
   if (_gCommit) { want = _l4Dir; return 1; }
   const float rot = wrap180(_l4Dir - yaw);
-  Gap g; const bool got = _l4FindGap(s, rot, _gHave ? 0.8f : 2.5f, g);
+  Gap g; bool got = _l4FindGap(s, rot, _gHave ? 0.8f : 2.5f, g);
+  if (got && _gHave && fabsf(g.c - _gConf.c) > 0.6f) got = false;   // v12 tracking gate: campus_11 jumped from +0.4 m to +3.5 m (beyond the parapet) -> 50 deg pivot
   const float yl = _l4LineAhead(s, rot);
   _gLineN = (yl > 0 && yl <= 6.0f) ? (uint8_t)min(_gLineN + 1, 50) : 0;
   if (got) { if (_gN == 5) { for (int i = 0; i < 4; i++) _gBuf[i] = _gBuf[i + 1]; _gN = 4; } _gBuf[_gN++] = g; _gAge = 0; }
@@ -1035,7 +1039,7 @@ int8_t RouteMission::_l4Gap(const Sensors& s, float yaw, float& want) {
     want = _l4Dir; return 1;
   }
   if (fabsf(_gConf.c) <= 0.3f) { want = _l4Dir; return 1; }
-  const float left = clampf(atan2f(-_gConf.c, fmaxf(_gConf.y0 - 1.0f, 0.8f)) * RAD_TO_DEG, -50.0f, 50.0f);
+  const float left = clampf(atan2f(-_gConf.c, fmaxf(_gConf.y0 - 1.0f, 0.8f)) * RAD_TO_DEG, -12.0f, 25.0f);   // v12: max 25 deg toward the facade, 12 deg to the right
   want = wrap180(_l4Dir + left);                                    // left = yaw plus
   return 1;
 }
@@ -1531,7 +1535,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
         _lastMvT = _mvT;
         // sideways shift right at the start: offset ramps in / out at 1 deg per scan (the 12 deg failsafe never sees a jump)
         _shiftOff += clampf((_dist2 < _shiftEndM ? 10.0f : 0.0f) - _shiftOff, -1.0f, 1.0f);
-        _tgt = wrap180(_base - _shiftOff + _latOff + seaTrimDeg);
+        _tgt = wrap180(_base - _shiftOff + _latOff + seaTrimDeg - _ebOff);   // v12: the end-board offset ONCE per refresh (v11 subtracted it every tick: campus_11 +102 deg jump)
       }
       // END BOARD (v10.3, campus_10.3): the board / low wall on the right is seen only in the last 3-5 m before the end wall (0.68-1.75 m in 7 logs: the
       // distance tells how wide the rover ended: rover 7 1.57, campus_9 1.74, c102_3 0.98). After the gate: a right-side line 0.4-3.0 m, parallel to the path
@@ -1552,7 +1556,6 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
         } else if (_ebOn && now - _aimSeenMs > 1000) _ebOff += clampf(0.0f - _ebOff, -0.5f, 0.5f);
         else if (!_ebOn) _ebN = 0;
       }
-      if (_ebOn) _tgt = wrap180(_tgt - _ebOff);                              // right = yaw minus
       _ds.setTarget(_tgt);
       if (_ds.update(s.imuOk(), yaw, _cruise(), now, l, r) == DriveStraight::FAIL) { if (_log) _log->event(MissionLog::EV_FAILSAFE); l = r = 0; _realign(s, _tgt, "heading failsafe - turning back"); }
       break;
@@ -1572,12 +1575,12 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
       if (_guard(s, now, emergency)) break;
       if (l4 && _l4Ph == 2 && ((_entFrom >= 0 && _dist - _entFrom >= 1.5f) || (_corrFrom >= 0 && _dist - _corrFrom > 25.0f))) {
         if (_log) _log->event(MissionLog::EV_AT_I);
-        _finishRoute(_entFrom >= 0 ? "ARRIVED: Block I (KARL entrance) - stopped" : "ARRIVED: 25 m along the railing corridor - stopped");
+        _finishRoute(_entFrom >= 0 ? "ARRIVED at the KARL glass (Block I). Drive MANUALLY to H now - the log keeps recording (Finish saves it)." : "ARRIVED: 25 m along the railing corridor. Drive MANUALLY to H now - the log keeps recording.");
         break;
       }
       if (l4 && _edgeAssist(s, now, l, r, wheels)) break;      // v9: stuck at an edge -> push / back up / push
       if (_dist > leg3MaxM) { _finishRoute("maximum leg distance driven"); break; }
-      if (fabsf(wrap180(_tgt - yaw)) > 18.0f && now - _rlMs > 1000) { _realign(s, _tgt, "off the wall line - turning parallel"); break; }
+      if (!(l4 && _l4Ph >= 1) && fabsf(wrap180(_tgt - yaw)) > 18.0f && now - _rlMs > 1000) { _realign(s, _tgt, "off the wall line - turning parallel"); break; }   // v12: never a pivot on the leg-4 walkway (campus_11: 50 deg pivot at 29 m)
       _leg1(s, l, r);                               // left wall follower (leg 4 after the wall: _l4Walk)
       if (_st != L3_FOLLOW && _st != L4_FOLLOW) break;   // failsafe pause inside
       if (l4 && _l4Ph == 1 && _gWaitOn) {          // v10.3: step line close, not lined up with the ramp -> never enter
@@ -1590,7 +1593,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
       if (l4 && _l4Ph >= 1) {                       // v9: walkway / railing / ramp - no "wall ended" stop
         if (_l4Ph == 3 && _dist - _l4PhStart > 6.0f) {
           l = r = 0; if (_log) _log->event(MissionLog::EV_AT_I);
-          _finishRoute("ARRIVED: top of the ramp (6 m on the level after it) - stopped");
+          _finishRoute("ARRIVED: top of the ramp (Block I). Drive MANUALLY to H now - the log keeps recording (Finish saves it).");
         }
         break;
       }
@@ -1599,7 +1602,7 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
         if (_noWallFrom < 0) _noWallFrom = _dist;
         const bool ended = _l3Seen && _dist - _noWallFrom >= wallEndM, none = !_l3Seen && _dist >= 4.0f;
         if (l4 && (ended || none)) {                // v9: the wall after T3 ended -> walkway along the interlock
-          _l4Ph = 1; _l4PhStart = _dist; _l4Dir = _l3Seen ? _wallDir : _expDir; _l4KeepSet = false; _railN = 0;
+          _l4Ph = 1; _l4PhStart = _dist; _l4Dir = _l3Seen ? _wallDir : _expDir; _l4KeepSet = false; _railN = 0; _railBits = 0;
           if (_l3Seen && _l4DirN >= 12) {                    // v10.3: the wall END (corner, edge push) distorts the last direction: campus_10.3 -24.9 vs -36.6 deg
             float t[48]; for (int i = 0; i < _l4DirN; i++) t[i] = wrap180(_l4DirBuf[i] - _wallDir);
             for (int i = 1; i < _l4DirN; i++) { float v = t[i]; int j = i - 1; while (j >= 0 && t[j] > v) { t[j + 1] = t[j]; j--; } t[j + 1] = v; }

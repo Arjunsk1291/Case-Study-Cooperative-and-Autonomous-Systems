@@ -11,6 +11,7 @@ Metrics at y = 20 m: lateral offset (left = negative), closest approach to any l
 import sys, math, random; sys.path.insert(0, '.')
 import fwmirror as F
 from sim_open_sea import ray
+KEEP_V12 = 2.1     # v12: taught left distance (c102_3); None = v11 (first distance seen)
 
 def w180(a): return (a + 180) % 360 - 180
 def box(x0, y0, x1, y1): return [((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)), ((x1, y1), (x0, y1)), ((x0, y1), (x0, y0))]
@@ -47,7 +48,7 @@ def run(Lb, bias, x0, new, seed, hydrant=True, second=False, half_deg=None, trac
         if fit and fit[1] < 0:
             d = w180(yaw - fit[0])
             if abs(w180(d - l4dir)) <= 12.0:
-                if keep is None: keep = max(cfg['klo'], min(cfg['khi'], -fit[1]))
+                if keep is None: keep = (KEEP_V12 if (new and KEEP_V12) else max(cfg['klo'], min(cfg['khi'], -fit[1])))
                 l4dir = w180(l4dir + max(-0.5, min(0.5, w180(d - l4dir))))
                 want = w180(l4dir + max(-6.0, min(6.0, 10.0 * (-fit[1] - keep))))
         if new:                                                       # hard clearance

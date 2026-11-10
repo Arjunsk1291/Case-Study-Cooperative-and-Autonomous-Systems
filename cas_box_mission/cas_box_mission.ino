@@ -1,6 +1,6 @@
 // =============================================================================================
-//  cas_box_mission v11 - AUTONOMOUS mission B -> right turn -> open sea -> leg 3 -> T3 -> leg 4 to Block I, with full
-//  logging (2026-11-07 evening). Box ESP32 ("ESP32 Dev Module", partition Default). NO camera any more.
+//  cas_box_mission v12 - AUTONOMOUS mission B -> right turn -> open sea -> leg 3 -> T3 -> leg 4 to the KARL glass (Block I), then a
+//  prompt to drive MANUALLY to H with the log still recording (2026-11-10). Box ESP32 ("ESP32 Dev Module", partition Default). NO camera.
 // =============================================================================================
 //  Phone: Wi-Fi CAS-Box-04 / CASbox04 -> http://192.168.14.1  (mission dashboard)
 //  Kept from the tested programs: gentle ramps for every command (GentleDrive), pivots only at 0.50,

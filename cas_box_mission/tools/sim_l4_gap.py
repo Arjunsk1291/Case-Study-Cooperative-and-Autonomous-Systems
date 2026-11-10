@@ -14,6 +14,7 @@ from replay_l4_gap import find_gap, pts
 from sim_open_sea import ray
 
 HALF = 0.13          # rover half width
+PIVOT = False         # v12: no pivot (v10.3/v11: >18 deg = stop + pivot)
 Y = 14.0             # the cross line is 14 m ahead of the start (left wall ended ~12-16 m before it in the logs)
 
 
@@ -60,6 +61,7 @@ class GapCtl:
         if s.commit: return 0.0, False                       # inside the opening at <= 1.6 m: straight through
         gap = find_gap(L, ymin=0.8 if s.conf else 2.5, rot=hdg); yl = line_ahead(L, 1.0, rot=hdg)   # confirmed: track it down to 0.8 m
         s.lineN = s.lineN + 1 if yl is not None and yl <= 6.0 else 0
+        if gap and s.conf is not None and not PIVOT and abs(gap[1] - s.conf[1]) > 0.6: gap = None      # v12 tracking gate
         if gap: s.buf = (s.buf + [gap])[-5:]; s.age = 0
         else: s.age += 1
         if s.age > 8: s.buf = []; s.conf = None
@@ -75,9 +77,9 @@ class GapCtl:
             if not (a + 0.35 <= -HALF and HALF <= b - 0.35): return None, True
             s.commit = True; return 0.0, False
         if abs(c) <= 0.3: return 0.0, False                  # lined up: walkway direction (perpendicular to the line)
-        # aim at a point 1 m before the opening centre (rover frame); >= 18 deg away = stop + pivot (full power)
         left = math.degrees(math.atan2(-c, max(y0 - 1.0, 0.8)))   # walkway frame: bearing of the aim point
-        return max(-50.0, min(50.0, -left)), False
+        if PIVOT: return max(-50.0, min(50.0, -left)), False
+        return -max(-12.0, min(25.0, left)), False            # v12: max 25 deg left (toward the facade), 12 deg right, no pivot
 
 
 def run(seed, dx, dth, variant, use, leave=None):
@@ -98,7 +100,7 @@ def run(seed, dx, dth, variant, use, leave=None):
                 t += 0.25; waited += 0.25; ctl.lineN = 0; continue                       # wait in place (ramped stop)
             if w is not None: want = math.radians(w)
         e = (want - tgt + math.pi) % (2 * math.pi) - math.pi
-        if abs(e) > math.radians(18): tgt = want; th = want; t += 2.0      # stop (ramp) + pivot at full power: time only
+        if PIVOT and abs(e) > math.radians(18): tgt = want; th = want; t += 2.0      # v11: stop (ramp) + pivot at full power: time only
         else: tgt += max(-math.radians(2), min(math.radians(2), e))
         for _ in range(5):
             e = (tgt - th + math.pi) % (2 * math.pi) - math.pi

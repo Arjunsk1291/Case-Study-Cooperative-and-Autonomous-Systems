@@ -10,12 +10,12 @@ w180 = F.w180
 EB_TARGET = 1.2
 LIM, WIN_HI = 12.0, 3.0         # steering limit (deg) and farthest board distance accepted (m)
 
-def run_eb(seed, eb, bias_dpm=0.0, turn_err=4.0, x0=0.0, slide=0.0, blind=0.3, board_x=-1.2, **wk):
+def run_eb(seed, eb, bias_dpm=0.0, turn_err=4.0, x0=0.0, slide=0.0, blind=0.3, board_x=-1.2, preset=None, eb_target=None, **wk):
     rng = random.Random(seed); segs = S.world(rng, **wk)
     segs.append(((board_x, -34.5), (board_x, -39.0)))                       # the board: right of the strip (right = -x), seen in the last 5 m
     th = math.radians(-90 + turn_err); x, y = x0, -1.0; drift = 0.0
     yaw = lambda: w180(math.degrees(th) + drift)
-    C = F.OpenSea(-90.0, **dict(F.OpenSea.V7, leg2=38.0))
+    C = F.OpenSea(-90.0, **dict(preset or F.OpenSea.V7, leg2=38.0)); tgt_eb = EB_TARGET if eb_target is None else eb_target
     v = 0.22; dt = 0.05; t = 0; last = -1; d2 = 0; tgt = -90.0; on = False; n = 0; edir = 0.0; eoff = 0.0; seen = 0.0; first = None
     while t < 500:
         if t - last >= 0.25:
@@ -30,7 +30,7 @@ def run_eb(seed, eb, bias_dpm=0.0, turn_err=4.0, x0=0.0, slide=0.0, blind=0.3, b
                         n = n + 1 if (n and abs(w[1] - edir) < 5.0) else 1; edir = w[1]
                         if n >= 4: on = True; first = (round(d2, 1), round(w[0], 2))
                     else:
-                        seen = t; eoff += max(-1.0, min(1.0, max(-LIM, min(LIM, 10.0 * (w[0] - EB_TARGET))) - eoff))
+                        seen = t; eoff += max(-1.0, min(1.0, max(-LIM, min(LIM, 10.0 * (w[0] - tgt_eb))) - eoff))
                 elif on and t - seen > 1.0: eoff += max(-0.5, min(0.5, 0.0 - eoff))
                 elif not on: n = 0
             if on: tgt = w180(tgt - eoff)

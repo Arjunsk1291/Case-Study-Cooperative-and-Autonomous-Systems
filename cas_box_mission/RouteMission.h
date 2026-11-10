@@ -40,7 +40,7 @@ public:
   bool autoTurn = true;       // false: stop and ask at turnAtM (old behaviour)
   float leg2ExpM = 36.0f;     // open sea length (log_027: 36 m). End wall accepted after 85 % (v10; real ones: 37.8-49 m of 36 expected) of it
   float leg2MaxM = 50.0f;     // never drive more on leg 2
-  float endWallM = 1.5f;      // stop this far from the end wall
+  float endWallM = 1.8f;      // stop this far from the end wall (v12: 1.5 -> 1.8, more room for the right turn; campus_11 request)
   float holdM = 0.60f;        // something closer -> stop and wait (people)
   float crabPriorDeg = 0.0f;  // LiDAR offset fixed -> no crab
   float crabGain = 0.7f;
@@ -75,8 +75,8 @@ public:
   // campus5 on the strip 6.8), and to the far building front at ~3.0 m (~28-37 m). Both are followed like distant
   // walls: heading parallel + side distance. No gyro drift correction in the open sea (campus5: it caused the drift).
   bool useRows = true;
-  float rowOffsetM = 6.65f;   // strip -> left landmark row (v7: median of the campus_6 teaching run, 6.55-6.87)
-  float bldOffsetM = 3.0f;    // strip -> left building front near the end
+  float rowOffsetM = 7.3f;    // strip -> left landmark row (v7: 6.65 from campus_6; v12: +0.65 m away from the poles - rover 7 ended 1-1.5 m left of the tactile strip on the cobbles, campus_10.3 / campus_11 video)
+  float bldOffsetM = 3.65f;   // v12: +0.65 m like the row (else the building section pulls the rover back left after 26 m)
   // v7 cross-track PID on the row distance (simulated V6 vs V7, tools/sim_open_sea.py): deg per m of side error,
   // deg per (m*s) integral (a constant sideways pull: slanted cobbles), deg per (m/s) damping. Integral max 4 deg.
   float seaKp = 10.0f, seaKi = 1.5f, seaKd = 20.0f;
@@ -87,7 +87,8 @@ public:
   float nearMinInten = 0.0f;  // v8: LiDAR near-point intensity filter (0 = off; set from the logged near_inten)
   float seaTrimDeg = 0.0f;    // optional fixed heading trim (logs: no constant pull, mean -0.9 +- 2.5 deg) - leave 0
   bool useEndBoard = true;   // v10.3: end-board correction on (campus_10.3 request: if it goes wide it corrects with the board)
-  float ebTarget = 1.2f;      // m right of the rover at the end (board distance in the 6 good runs 0.7-1.3, median 1.2; rover 7 1.57, campus_9 1.74 = wide)
+  float l4KeepM = 2.1f;       // v12: leg-4 walkway: left objects (benches, planter, building base) kept at this distance (c102_3 reached I at 1.8-2.3 m; campus_11 ran at 1.5-1.8 m on the cobbles)
+  float ebTarget = 0.9f;      // m right of the rover at the end (board distance in the 6 good runs 0.7-1.3, median 1.2; rover 7 1.57, campus_9 1.74 = wide)
   float pillarPastM = 0.40f;   // v5c: turn this far past the pillar (was 0.60): crossing ~0.2-0.3 m closer to the pillar line
   float pillarSideM = 0.60f;
   float turnWinM = 5.0f;      // look for the turn pillar from (turnAtM - turnWinM); without one: turn at turnAtM + 2.5
@@ -245,6 +246,7 @@ private:
   uint32_t _rampMs = 0, _levelOkMs = 0, _railGoodMs = 0, _l4ScanMs = 0;
   float _l4DirBuf[48]; uint8_t _l4DirN = 0, _l4DirI = 0;   // v10.3 (campus_10.3): last 48 smoothed wall directions -> the median is the walkway heading
   float _l4ObjKeep = 0; bool _l4ObjSet = false;
+  float _l4RailOff = 99.0f; uint8_t _railBits = 0;   // v12: right railing / parapet offset of this scan (99 = none); corridor = 3 of the last 5 scans
   // v10.3 leg-4 RAMP OPENING (campus_10.2 run 4 drove onto the stairs 1.9 m right of it): tools/replay_l4_gap.py
   struct Gap { float y0, c, a, b; };
   Gap _gBuf[5], _gConf; uint8_t _gN = 0, _gAge = 0, _gLineN = 0; bool _gHave = false, _gCommit = false, _gWaitOn = false;

@@ -1,0 +1,440 @@
+{
+ "note": "landmark_leg4.py - LANDMARK TABLE of the leg-4 walkway to the KARL glass, from the real logs (writes landmark_leg4_db.json).",
+ "bins_m": 2.0,
+ "runs": {
+  "campus_11": {
+   "events_since_wall_end": {
+    "ramp_opening": 16.5
+   },
+   "bins": {
+    "0": {
+     "scans": 30,
+     "right_m": null,
+     "left_m": 1.15
+    },
+    "2": {
+     "scans": 30,
+     "right_m": null,
+     "left_m": 2.07
+    },
+    "4": {
+     "scans": 30,
+     "right_m": null,
+     "left_m": null
+    },
+    "6": {
+     "scans": 30,
+     "right_m": null,
+     "left_m": 1.55
+    },
+    "8": {
+     "scans": 30,
+     "right_m": null,
+     "left_m": 1.86
+    },
+    "10": {
+     "scans": 30,
+     "right_m": null,
+     "left_m": 1.78
+    },
+    "12": {
+     "scans": 30,
+     "right_m": null,
+     "left_m": null
+    },
+    "14": {
+     "scans": 30,
+     "right_m": null,
+     "left_m": null
+    },
+    "16": {
+     "scans": 255,
+     "right_m": 1.8,
+     "left_m": 1.88
+    },
+    "18": {
+     "scans": 68,
+     "right_m": 1.2,
+     "left_m": 1.6
+    },
+    "20": {
+     "scans": 80,
+     "right_m": 1.13,
+     "left_m": 1.68
+    }
+   }
+  },
+  "campus_10.3": {
+   "events_since_wall_end": {},
+   "bins": {
+    "0": {
+     "scans": 31,
+     "right_m": null,
+     "left_m": 1.51
+    },
+    "2": {
+     "scans": 26,
+     "right_m": null,
+     "left_m": 2.24
+    },
+    "4": {
+     "scans": 26,
+     "right_m": null,
+     "left_m": null
+    },
+    "6": {
+     "scans": 26,
+     "right_m": null,
+     "left_m": null
+    },
+    "8": {
+     "scans": 11,
+     "right_m": null,
+     "left_m": null
+    }
+   }
+  },
+  "c102_4": {
+   "events_since_wall_end": {},
+   "bins": {
+    "0": {
+     "scans": 20,
+     "right_m": null,
+     "left_m": 1.07
+    },
+    "2": {
+     "scans": 28,
+     "right_m": null,
+     "left_m": null
+    },
+    "4": {
+     "scans": 27,
+     "right_m": null,
+     "left_m": null
+    },
+    "6": {
+     "scans": 21,
+     "right_m": null,
+     "left_m": null
+    },
+    "8": {
+     "scans": 19,
+     "right_m": null,
+     "left_m": null
+    },
+    "10": {
+     "scans": 21,
+     "right_m": null,
+     "left_m": 2.66
+    },
+    "12": {
+     "scans": 20,
+     "right_m": null,
+     "left_m": 2.78
+    },
+    "14": {
+     "scans": 19,
+     "right_m": null,
+     "left_m": null
+    },
+    "16": {
+     "scans": 19,
+     "right_m": null,
+     "left_m": null
+    },
+    "18": {
+     "scans": 21,
+     "right_m": 1.91,
+     "left_m": 3.41
+    },
+    "20": {
+     "scans": 123,
+     "right_m": null,
+     "left_m": 3.03
+    },
+    "22": {
+     "scans": 207,
+     "right_m": null,
+     "left_m": 3.0
+    }
+   }
+  },
+  "c102_3": {
+   "events_since_wall_end": {
+    "railing": 17.8,
+    "at_block_I": 31.0
+   },
+   "bins": {
+    "0": {
+     "scans": 26,
+     "right_m": null,
+     "left_m": 1.8
+    },
+    "2": {
+     "scans": 28,
+     "right_m": null,
+     "left_m": null
+    },
+    "4": {
+     "scans": 20,
+     "right_m": null,
+     "left_m": null
+    },
+    "6": {
+     "scans": 19,
+     "right_m": null,
+     "left_m": 1.33
+    },
+    "8": {
+     "scans": 20,
+     "right_m": null,
+     "left_m": 1.87
+    },
+    "10": {
+     "scans": 20,
+     "right_m": null,
+     "left_m": null
+    },
+    "12": {
+     "scans": 18,
+     "right_m": null,
+     "left_m": null
+    },
+    "14": {
+     "scans": 19,
+     "right_m": null,
+     "left_m": null
+    },
+    "16": {
+     "scans": 18,
+     "right_m": 0.98,
+     "left_m": 1.95
+    },
+    "18": {
+     "scans": 17,
+     "right_m": 1.01,
+     "left_m": 1.83
+    },
+    "20": {
+     "scans": 20,
+     "right_m": 0.92,
+     "left_m": 1.89
+    },
+    "22": {
+     "scans": 20,
+     "right_m": 0.87,
+     "left_m": 1.98
+    },
+    "24": {
+     "scans": 21,
+     "right_m": null,
+     "left_m": 2.04
+    },
+    "26": {
+     "scans": 19,
+     "right_m": null,
+     "left_m": 2.08
+    },
+    "28": {
+     "scans": 19,
+     "right_m": null,
+     "left_m": null
+    },
+    "30": {
+     "scans": 32,
+     "right_m": null,
+     "left_m": 2.35
+    }
+   }
+  },
+  "c102_2": {
+   "events_since_wall_end": {
+    "railing": 17.1,
+    "ramp": 23.6,
+    "at_block_I": 27.9
+   },
+   "bins": {
+    "0": {
+     "scans": 22,
+     "right_m": null,
+     "left_m": 1.67
+    },
+    "2": {
+     "scans": 22,
+     "right_m": null,
+     "left_m": null
+    },
+    "4": {
+     "scans": 22,
+     "right_m": null,
+     "left_m": 1.48
+    },
+    "6": {
+     "scans": 21,
+     "right_m": null,
+     "left_m": 1.69
+    },
+    "8": {
+     "scans": 29,
+     "right_m": null,
+     "left_m": 2.04
+    },
+    "10": {
+     "scans": 22,
+     "right_m": null,
+     "left_m": null
+    },
+    "12": {
+     "scans": 22,
+     "right_m": null,
+     "left_m": null
+    },
+    "14": {
+     "scans": 21,
+     "right_m": 1.62,
+     "left_m": 2.49
+    },
+    "16": {
+     "scans": 20,
+     "right_m": 0.5,
+     "left_m": 2.36
+    },
+    "18": {
+     "scans": 22,
+     "right_m": 0.53,
+     "left_m": 2.3
+    },
+    "20": {
+     "scans": 21,
+     "right_m": 0.54,
+     "left_m": 2.27
+    },
+    "22": {
+     "scans": 22,
+     "right_m": null,
+     "left_m": 2.26
+    },
+    "24": {
+     "scans": 19,
+     "right_m": null,
+     "left_m": 2.23
+    },
+    "26": {
+     "scans": 19,
+     "right_m": null,
+     "left_m": 2.39
+    },
+    "28": {
+     "scans": 160,
+     "right_m": 1.62,
+     "left_m": 2.37
+    }
+   }
+  },
+  "campus_9": {
+   "events_since_wall_end": {},
+   "bins": {
+    "0": {
+     "scans": 24,
+     "right_m": null,
+     "left_m": 1.22
+    },
+    "2": {
+     "scans": 30,
+     "right_m": null,
+     "left_m": 2.33
+    },
+    "4": {
+     "scans": 32,
+     "right_m": null,
+     "left_m": null
+    },
+    "6": {
+     "scans": 28,
+     "right_m": null,
+     "left_m": 1.27
+    },
+    "8": {
+     "scans": 27,
+     "right_m": null,
+     "left_m": 1.11
+    },
+    "10": {
+     "scans": 27,
+     "right_m": null,
+     "left_m": 0.81
+    },
+    "12": {
+     "scans": 28,
+     "right_m": null,
+     "left_m": 0.84
+    },
+    "14": {
+     "scans": 28,
+     "right_m": null,
+     "left_m": null
+    },
+    "16": {
+     "scans": 26,
+     "right_m": null,
+     "left_m": null
+    },
+    "18": {
+     "scans": 28,
+     "right_m": null,
+     "left_m": null
+    },
+    "20": {
+     "scans": 28,
+     "right_m": 2.03,
+     "left_m": 2.0
+    },
+    "22": {
+     "scans": 31,
+     "right_m": 0.91,
+     "left_m": 1.93
+    },
+    "24": {
+     "scans": 34,
+     "right_m": 0.93,
+     "left_m": 1.89
+    },
+    "26": {
+     "scans": 26,
+     "right_m": 0.96,
+     "left_m": 1.85
+    },
+    "28": {
+     "scans": 28,
+     "right_m": 1.05,
+     "left_m": 1.8
+    },
+    "30": {
+     "scans": 27,
+     "right_m": null,
+     "left_m": 1.74
+    },
+    "32": {
+     "scans": 37,
+     "right_m": null,
+     "left_m": 1.72
+    },
+    "34": {
+     "scans": 33,
+     "right_m": null,
+     "left_m": 1.97
+    },
+    "36": {
+     "scans": 28,
+     "right_m": null,
+     "left_m": 1.94
+    },
+    "38": {
+     "scans": 27,
+     "right_m": null,
+     "left_m": 1.84
+    }
+   }
+  }
+ }
+}

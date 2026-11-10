@@ -26,7 +26,7 @@ def pts(L, rot=0.0):
     return P
 
 
-def find_gap(L, ymin=2.5, ymax=10.0, xspan=2.0, rot=0.0):
+def find_gap(L, ymin=2.5, ymax=10.0, xspan=2.0, rot=0.0, rail_off=99.0, v12=True):
     P = [(x, y) for x, y in pts(L, rot) if abs(x) <= 7.0]
     best = None
     for k in range(int(ymin / 0.25), int(ymax / 0.25)):
@@ -37,6 +37,7 @@ def find_gap(L, ymin=2.5, ymax=10.0, xspan=2.0, rot=0.0):
         cands = []
         for a, b in zip(xs, xs[1:]):
             if b - a < 2.2 or b - a > 4.0: continue        # ramp opening 2.7-3.8 m; wider = open space / stairs
+            if v12 and ((a + b) / 2 > 1.5 or (a + b) / 2 < -2.5 or a >= rail_off - 0.3): continue   # v12: beside the facade, not beyond the parapet
             cx = (a + b) / 2
             far = [y for x, y in P if a + 0.2 < x < b - 0.2 and y > y0 + 0.6]
             near = [y for x, y in P if a + 0.2 < x < b - 0.2 and y < y0 - 0.6 and y > 0.3]
