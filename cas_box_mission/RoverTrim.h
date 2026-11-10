@@ -15,5 +15,6 @@
 // only 8.6 deg/s per unit. => verify outdoors (one Step 3 run), and the navigation program keeps a
 // gentle gyro heading hold on top of this trim.
 static const float kTrimSpeed = 0.25f;
-static const float kTrimIndoor025 = -0.046f;   // indoor tiles, speed 0.25
+// ROVER 7 (campus_10.3, 10 Nov): the learning needed +0.30 on top of -0.046, so the total is about +0.25. It is the start value now (rover 1-6: -0.046).
+static const float kTrimIndoor025 = +0.25f;
 static const float kTrimGainDegSPerUnit = 8.6f; // measured at 0.25: drift change per unit trim

@@ -51,7 +51,7 @@ The end-wall turn stalled for 35–42 s in runs 3 and 4. Only the pivot was ever
 4. **End-wall turn:** with the front ≤1.0 m, SHIFT goes **backwards** 0.3 m at 0.20, but only if nothing is within 0.8 m behind. That gives SWING and ARC room again.
 5. The phone page now says "Mission v10.3".
 
-Compile: 1,267,776 B (96 %), no new warnings.
+Compile: 1,269,712 B (96 %), no new warnings.
 
 ## NEW ROVER (number 7): not driven yet
 - **Drift is learned automatically** (`DriveStraight.h`). The heading hold moves its steady correction into a learned wheel trim. Now: the first 40 s of driving learn fast (time constant 6 s, then 15 s), and the limit is 0.40 (was 0.20). `tools/sim_drive_trim.py` (the kit-04 calibration model, 5 seeds each): natural drift of ±3°/s: heading error under 1° (0.20 limit: fine); ±4°/s: the old limit failed (5 of 5 at −4°/s, 3 of 5 at +4°/s), the new one is fine at +4°/s and fails 2 of 5 at −4°/s; ±5°/s and more: fails both. Beyond that the rover pauses with "correction saturated" instead of driving off.
@@ -76,3 +76,27 @@ Every 250 ms record now also has: **learned wheel trim, heading-hold correction,
 - **Start the video before the log** and say "go" aloud (or show the phone clock) so I can sync them.
 - **Storage:** about 1 kB per second. Delete old logs on the page if it says "flash full".
 - **Distance:** please also note with a tape measure the real length of one stretch you drove straight (for example the first 10 m of leg 1), because the box has no wheel encoders.
+
+## ROVER 7, FIRST RUN (campus_10.3) AND WHAT WAS CHANGED AFTER IT
+**What the log showed** (`Log_run/campus_10.3/mis_001 (5).bin`, figures in `figures/`):
+- **Open Sea:** heading error under 1.5°, end position equal to the good runs (4.7 m from the end wall's left end, good runs 4.5–5.1 m). The row converged to 6.7 m. Like the good runs it drifts and corrects itself; it needs about 12 m before it sees the row.
+- **Trim:** the learning sat at +0.30…+0.40, the limit I had set, so rover 7 drifts about 3°/s.
+- **End board:** the board on the right is seen in the last 3–5 m of **every** run at 0.68–1.75 m; the distance tells how wide the rover ended (rover 7 1.57 m, campus_9 1.74 m, c102_2 2.12 m, the good ones 0.7–1.3 m).
+- **Leg 4, the mud:** after the wall ended at 12.7 m the walkway heading was **−24.9° while the wall ran at −36.6°**: 11.7° to the left, toward the benches and the mud. The same bias, always to the left, is in all other logs (+2.2…+4.6°). Benches / hydrant were 0.5–0.8 m left from 18 m, below the 1.0 m minimum of the old left-edge fit. At 20.8 m the ramp-opening finder fired once (false) because its frame was rotated by that 11.7°.
+
+**Changes (all still v10.3):**
+1. **Trim for rover 7:** start trim +0.25 (was −0.046 of rover 1–6), learning limit 0.60. The log carries `trim_learned`.
+2. **Open Sea end-board correction** (was off): after 85 % of the crossing a right-side line 0.4–3.0 m, parallel within 12°, 4 consistent fits → steer to **1.2 m** (10°/m, max 12°, ramped 1° per scan, fades out when the line is lost). The offset is NOT part of the end-wall turn target (so leg 3 keeps its heading). Page setting `ebt`. The row / building / B-wall logic is unchanged (`replay_sea_gate.py`: identical on 6 logs).
+   - Real scans (`tools/replay_end_board.py`): it engages 3 m before the end in all 9 logs, no false lines; at the end it would command rover 7 +3.4°, campus_9 +5.2°, c102_2 +8.9°, and −0.4…+1.4° for the good ones.
+   - Simulation (`tools/sim_end_board.py`): it halves errors up to about 1 m (see the table below); a rover 1.5 m or more off cannot be rescued in 3 m.
+3. **Leg 4:**
+   - The walkway heading is the **median of the last 12 s of wall directions**, not the last (distorted) one. Replay (`tools/replay_leg4_dir.py`): the old error was +2.2…+11.8° in 5 logs, the new one is within 0.4°.
+   - **Left clearance:** the left-object line now uses 0.4–4.5 m (benches, hydrant, railing, mud edge, ≥4 points) and keeps the first distance (1.3–4.5 m); anything closer than 0.9 m abeam on the left steers right (never left).
+   - **Ramp-opening wait:** only after an opening was confirmed, and for a bare cross line only after 9 m on the walkway.
+   - Simulation (`tools/sim_l4_walk.py`, benches/hydrant at 0.8–3.4 m, 90 runs per row): with a +12° heading bias the old rule ended in the mud in 31 of 90 runs and came within 0.5 m of an object in 45; the new rule 0 of 90, never closer than 0.52 m. The clearance alone (stale heading kept) is not enough (18 of 90 close calls): both parts are needed. `sim_l4_gap.py`: the ramp opening is unchanged.
+4. **Mission start at the B facade** (`_startOrient`): the old start refused to run unless the wall was already parallel on the left. Now the rover stands still, finds the facade as the dominant straight line within 0.6–4 m, turns (in place, full power, max 2 pivots) so the wall is on its **left**, then starts the wall follower. It keeps the wall distance it has if that is 0.8–1.6 m (all 11 real starts: 0.98–1.59 m, unchanged); placed further away it closes in to 1.6 m. No wall found: "Not started", never a guess. The log starts at once, so the orient is recorded.
+   - Simulation (`tools/sim_start_leg1.py`: 0.7–2.7 m from the facade, 0–3 m along it, ANY heading 0–360°, glass-door gap, window recess, people): **295 of 300** end with the wall on the left within 10° (median 2.4°, time 8 s); the other 5 are "no wall found". Under snow noise, 25 % dropouts, pivot error 6°, slip 8 %: **280 of 300**.
+   - Replay on the real leg-1 starts of 11 logs: the wall is found on the left (−89…−94°) every time, the turn needed is under 4°, so nothing would be turned.
+5. **Unchanged:** pillar counting and the structure turn (`replay_turn.py`: 11 old logs identical, and campus_10.3 locks the structure at 21.8 m, 5.4 m after the gap end); `L2_GO` row / building / B-wall; first-turn, end-wall and sea-gate replays identical.
+
+**What to check at the next run:** at the start the page should say "start: wall found, turning X deg…" if you place it crooked; in the Open Sea "end board X m right (target 1.20) - correcting" about 3 m before the end wall; on leg 4 the walkway should keep 1+ m from the benches; "ramp opening … ahead" only near 25–32 m. Press MARK when it drifts, and send the log and the video again.

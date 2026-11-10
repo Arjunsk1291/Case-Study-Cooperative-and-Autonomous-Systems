@@ -37,7 +37,7 @@ public:
   // 3 trim learning
   bool learn = true;
   // v10.3 (new rover): the first 40 s of driving learn fast (6 s -> 15 s), limit 0.40 (about +-3.4 deg/s of natural drift; 0.20 failed at +-4)
-  float learnTauS = 15.0f, learnTauFastS = 6.0f, learnMax = 0.40f, learnBelowDeg = 6.0f;
+  float learnTauS = 15.0f, learnTauFastS = 6.0f, learnMax = 0.60f, learnBelowDeg = 6.0f;
   // 4 failsafe
   float failErrDeg = 12.0f, warnErrDeg = 5.0f, jumpDeg = 30.0f;
   uint32_t failErrMs = 2000, failSatMs = 5000, imuLostMs = 500;

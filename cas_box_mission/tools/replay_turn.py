@@ -10,7 +10,8 @@ B = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../Log_run/')
 RUNS = {'campus2': 'campus_2/mis_002.bin', 'campus3': 'campus_3/mis_001 4.bin', 'campus5': 'campus5/mis_001 8.bin',
         'campus6': 'campus_6/mis_001 14 (1).bin', 'test1': 'campus_6/New_log/test1_failed in open sea.bin',
         'test2': 'campus_6/New_log/test2_successfull till the turn.bin', 'log8': 'log8/mis_001 17.bin', 'campus9': 'campus_9/mis_001.bin', 'campus10': 'campus_10/mis_001 (1).bin',
-        'c102_2': 'campus_10.2/mis_001 (2).bin', 'c102_3': 'campus_10.2/mis_001 (3).bin', 'c102_4': 'campus_10.2/mis_001 (4).bin'}
+        'c102_2': 'campus_10.2/mis_001 (2).bin', 'c102_3': 'campus_10.2/mis_001 (3).bin', 'c102_4': 'campus_10.2/mis_001 (4).bin',
+        'c103 (rover 7)': 'campus_10.3/mis_001 (5).bin'}
 
 
 def leg1(name):

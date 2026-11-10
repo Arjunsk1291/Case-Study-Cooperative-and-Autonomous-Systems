@@ -46,7 +46,7 @@ bool RouteMission::begin(AsyncWebServer* server, MissionLog* log) {
     f("trim", seaTrimDeg, -8.0f, 8.0f); f("l4wall", leg4WallM, 0.5f, 2.5f); f("l3wall", leg3WallM, 0.4f, 1.5f);
     f("ninten", nearMinInten, 0.0f, 255.0f);
     f("kp", seaKp, 0.0f, 30.0f); f("ki", seaKi, 0.0f, 5.0f); f("kd", seaKd, 0.0f, 60.0f);
-    if (q->hasParam("rows")) useRows = q->getParam("rows")->value() == "1"; f("bside", boardSideM, 0.3f, 1.5f); f("boff", boardOffsetDeg, -15.0f, 15.0f);
+    if (q->hasParam("rows")) useRows = q->getParam("rows")->value() == "1"; f("bside", boardSideM, 0.3f, 1.5f); f("ebt", ebTarget, 0.5f, 2.0f); f("boff", boardOffsetDeg, -15.0f, 15.0f);
     if (q->hasParam("l4")) leg4 = q->getParam("l4")->value() == "1";
     leg2MaxM = fmaxf(50.0f, leg2ExpM * 1.4f);
     q->send(200, "application/json", "{\"ok\":true}");
@@ -268,7 +268,7 @@ void RouteMission::_startLeg2(const Sensors& s) {
   _base = wrap180(_base - crabGain * crabUse);             // _base set by the caller (turn target or current heading)
   _tgt = _base;
   _leg = 2; _dist2 = 0; _ebOn = false; _ebN = 0; _aimMs = 0;
-  _refType = 0; _refKind = 0; _refN = _refI = 0; _refMs = 0; _rearSeen = _frontSeen = false; _lastMvT = _mvT;
+  _refType = 0; _refKind = 0; _refN = _refI = 0; _refMs = 0; _rearSeen = _frontSeen = false; _lastMvT = _mvT; _ebOff = 0;
   _latOff = 0; _refOff = 0; _seaEi = 0; _rowSeen = _bldSeen = false;
   // the turn came later than pillarPastM past the pillar (it was only seen late): move right WHILE DRIVING -
   // 10 deg right for (extra / sin 10 deg), then straight. No stop, no extra pivots. Max 1.0 m sideways.
@@ -483,7 +483,7 @@ void RouteMission::_endWall(const Sensors& s) {
   if (!leg3) { _ask(END_ASK, "End wall reached: open sea crossed."); return; }
   strlcpy(_msg, "open sea crossed - turning right for leg 3", sizeof(_msg));
   _turnNo = 2; _turnTries = 0;
-  _startTurn(s, wrap180(_tgt - 90.0f));
+  _startTurn(s, wrap180(_tgt + _ebOff - 90.0f));          // v10.3: the end-board steering offset is not part of the turn target
 }
 
 // LEG 3: the end wall of the open sea is now on the LEFT -> same wall follower as leg 1, distance = what it sees now
@@ -726,6 +726,34 @@ void RouteMission::_alignStart(const Sensors& s, uint32_t now, float& l, float& 
   _apPh = 1; _turnNo = 8; _turnTries = 0; _startTurn(s, wrap180(_apBase + (e > 0 ? -30.0f : 30.0f)));   // right = yaw minus
 }
 
+// v10.3 MISSION-START ORIENT. The rover may stand anywhere in the start area facing any way (facade / backwards / the sea / the pool). Stand still, 8 scans: the
+// B facade is the dominant straight line within 0.6-4 m. Wall on the LEFT = foot-point bearing 270 deg: turn = bearing + 90 (deg clockwise). <= 8 deg -> the normal start
+// (wall follower, left wall parallel); else pivot in place (full power, max 2 pivots) and look again. No wall -> "Not started", never a guess.
+void RouteMission::_startOrient(const Sensors& s, uint32_t now) {
+  if (_st != IDLE) return;                                              // pivoting: T1_TURN / T1_SETTLE
+  if (now - _soT0 > 60000) { _soOn = false; strlcpy(_msg, "Not started: could not turn parallel to the wall in 60 s", sizeof(_msg)); return; }
+  if (now - _soMs < 250) return;
+  _soMs = now;
+  float b = 0, d = 0; const bool f = _wallLine(s, b, d);
+  _soBear[_soN] = b; _soDist[_soN] = d; _soOk[_soN] = f; _soN++;
+  if (_soN < 8) return;
+  _soN = 0;
+  float v[8]; int n = 0; for (int i = 0; i < 8; i++) if (_soOk[i]) v[n++] = _soBear[i];
+  float med = 0; int agree = 0;
+  if (n >= 5) {
+    for (int i = 1; i < n; i++) { float t = v[i]; int j = i - 1; while (j >= 0 && v[j] > t) { v[j + 1] = v[j]; j--; } v[j + 1] = t; }
+    med = v[n / 2]; for (int i = 0; i < 8; i++) if (_soOk[i] && fabsf(wrap180(_soBear[i] - med)) <= 8.0f) agree++;
+  }
+  if (agree < 5) { _soOn = false; strlcpy(_msg, "Not started: no wall line within 4 m - place the rover near the B wall", sizeof(_msg)); return; }
+  const float turn = wrap180(med + 90.0f);                              // deg to the RIGHT that puts the wall on the left
+  if (fabsf(turn) <= TURN_OK_DEG) { _soOn = false; _cmd = C_START; strlcpy(_msg, "wall on the left - starting", sizeof(_msg)); return; }
+  if (_soRound >= 2) { _soOn = false; strlcpy(_msg, "Not started: could not turn parallel to the wall", sizeof(_msg)); return; }
+  _soRound++; _turnNo = 10; _turnTries = 0;
+  snprintf(_msg, sizeof(_msg), "start: wall found, turning %.0f deg to have it on the left", turn);
+  Serial.printf("[mission] %s\n", _msg); if (_log) _log->event(MissionLog::EV_ALIGN_START);
+  _startTurn(s, wrap180(s.yawNowDeg() - turn));
+}
+
 void RouteMission::_afterTurn(const Sensors& s) {
   const uint32_t now = millis();
   switch (_turnNo) {
@@ -733,6 +761,7 @@ void RouteMission::_afterTurn(const Sensors& s) {
     case 3: _startLeg4(s); break;
     case 8: _go(L2_ALIGN); _bdMs = 0; break;                       // board positioning continues
     case 9: _ds.start(s.yawNowDeg(), now); _ds.setTarget(_tgt); _rlMs = now; _wallScanMs = 0; _go(_rlBack); break;
+    case 10: _go(IDLE); _soMs = now; _soN = 0; break;                  // v10.3 start orient: pivot done -> look at the wall again
     default:                                                       // T1 done
       if (!boardLineUp) {                                          // v5: straight on, walls steer
         _leg = 2; _base = _turnTgt;
@@ -769,6 +798,7 @@ void RouteMission::_leg4Wall(const Sensors& s, uint32_t now) {
       if (!_wallOk && _log) _log->event(MissionLog::EV_L4_WALL);
       _wallOk = true; _wallGoodMs = now;
       _wallDir = wrap180(_wallDir + clampf(wrap180(d - _wallDir), -1.0f, 1.0f));   // smooth, max 1 deg per scan
+      _l4DirBuf[_l4DirI] = _wallDir; _l4DirI = (_l4DirI + 1) % 48; if (_l4DirN < 48) _l4DirN++;   // v10.3: history for the walkway heading
       _wall.ok = true; _wall.distM = -off; _wall.angleDeg = wrap180(_wallDir - yaw); _wall.rmsM = 0; _wall.points = (uint8_t)n;
       const float approach = clampf(20.0f * (-off - _dSet), -15.0f, 15.0f);   // too far -> turn left (+), 20 deg/m
       want = wrap180(_wallDir + approach);
@@ -798,6 +828,7 @@ void RouteMission::_startLeg4(const Sensors& s) {
   _ds.start(s.yawNowDeg(), millis()); _ds.setTarget(_tgt);
   _l4Ph = 0; _rampSeen = false; _railN = 0; _railOk = false; _rampMs = _levelOkMs = 0; _l4ScanMs = 0; _entN = 0; _entFrom = _corrFrom = -1;
   _gN = _gAge = _gLineN = 0; _gHave = _gCommit = _gWaitOn = false; _gWaitMs = 0;
+  _l4DirN = _l4DirI = 0; _l4ObjSet = false;
   _eaPh = 0; _eaN = 0; _eaHighMs = 0; _pMin = _pMinNext = s.pitchDeg(); _pMinMs = millis();
   if (_log) _log->event(MissionLog::EV_L4_START);
   snprintf(_msg, sizeof(_msg), "leg 4 (after T3): left wall %s", _wallOk ? "seen" : "not seen yet");
@@ -826,13 +857,24 @@ void RouteMission::_l4Walk(const Sensors& s, uint32_t now) {
     if (fabsf(wrap180(d - ref)) <= (_l4Ph >= 2 ? 20.0f : 15.0f)) { rail = true; rd = d; roff = off; }
   }
   if (_l4Ph == 1) {
-    if (LineRef::rowFit(s, 270, 40, 1.0f, 3.0f, 0.10f, 5, 0.8f, 0.4f, ang, off, n) && off < 0) {
+    // v10.3 (campus_10.3: benches, hydrant and the mud edge were 0.5-1.3 m left and below the old 1.0 m minimum): all left objects 0.4-4.5 m
+    if (LineRef::rowFit(s, 270, 60, 0.4f, 4.5f, 0.12f, 4, 0.6f, 0.3f, ang, off, n) && off < 0) {
       const float d = dirOf(ang, _l4Dir);
       if (fabsf(wrap180(d - _l4Dir)) <= 12.0f) {
-        if (!_l4KeepSet) { _l4KeepSet = true; _l4Keep = clampf(-off, 1.3f, 2.4f); }
+        if (!_l4KeepSet) { _l4KeepSet = true; _l4Keep = clampf(-off, 1.3f, 4.5f); }
         _l4Dir = wrap180(_l4Dir + clampf(wrap180(d - _l4Dir), -0.5f, 0.5f));
         want = wrap180(_l4Dir + clampf(10.0f * (-off - _l4Keep), -6.0f, 6.0f));   // too far from the left edge -> left
       }
+    }
+    {                                                              // v10.3 hard clearance: nothing closer than 0.9 m on the left abeam -> steer right (never left)
+      float minL = 9.0f;
+      for (int i = 55; i <= 80; i++) {
+        const uint16_t cm = s.lidarCm(i);
+        if (!cm || cm < 35) continue;
+        const float a2 = (i * 4 + 2) * DEG_TO_RAD, d2 = cm / 100.0f, sd = -d2 * sinf(a2), f = d2 * cosf(a2);
+        if (fabsf(f) <= 0.9f && sd >= 0.3f) minL = fminf(minL, sd);
+      }
+      if (minL < 0.9f && !_gHave) want = wrap180(want - clampf(15.0f * (0.9f - minL), 0.0f, 8.0f));
     }
     bool leftWide = false;
     float leftD = 0;
@@ -985,7 +1027,7 @@ int8_t RouteMission::_l4Gap(const Sensors& s, float yaw, float& want) {
       _gHave = true; _gConf = _gBuf[last];
     }
   }
-  if (!_gHave) return (_gLineN >= 3 && yl <= 2.0f) ? 2 : 0;
+  if (!_gHave) return (_gLineN >= 3 && yl <= 2.0f && _dist - _l4PhStart >= 9.0f) ? 2 : 0;   // v10.3: not for the cross line at 6 m (campus_10.3 20.8 m); openings were 11-17 m after the walkway start
   const float half = 0.13f;
   if (_gConf.y0 <= 1.6f) {
     if (!(_gConf.a + 0.35f <= -half && half <= _gConf.b - 0.35f)) return 2;
@@ -1115,19 +1157,26 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
 
   // ---- commands from the page
   const uint8_t c = _cmd; _cmd = C_NONE;
+  if (c == C_STOP || c == C_FINISH || c == C_MANUAL) _soOn = false;     // v10.3: cancels the start orient
+  if (_soOn) _startOrient(s, now);
   if (c == C_START && (_st == IDLE || _st == DONE)) {
     const WallFit w = WallFit::measure(s, true, nullptr);
     if (!rover.connected()) strlcpy(_msg, "Not started: rover not connected", sizeof(_msg));
     else if (!s.imuOk() || !s.lidarOk()) strlcpy(_msg, "Not started: IMU / LiDAR not ready", sizeof(_msg));
-    else if (!w.ok || fabsf(w.angleDeg) > 20) strlcpy(_msg, "Not started: no wall on the LEFT (place the rover parallel to the B wall)", sizeof(_msg));
-    else {
-      _dSet = clampf(w.distM, 0.7f, 2.2f); _wallDir = wrap180(s.yawDeg() + w.angleDeg); _wall = w; _wallOk = true; _wyN = _wyI = 0;
+    else if (!w.ok || fabsf(w.angleDeg) > 20) {
+      if (startShift && !_soOn) {                                       // v10.3: not parallel on the left -> find the wall and turn
+        _soOn = true; _soN = 0; _soRound = 0; _soT0 = _soMs = now;
+        if (_log && !_log->active()) _log->start();                     // the log records the orient too
+        strlcpy(_msg, "start: looking for the B wall (standing still)", sizeof(_msg));
+      } else strlcpy(_msg, "Not started: no wall on the LEFT (place the rover parallel to the B wall)", sizeof(_msg));
+    } else {
+      _dSet = clampf(w.distM, 0.8f, 1.6f);                              // v10.3: leg 1 wall distance 0.8-1.6 m (all 11 good starts: 0.98-1.59 m = unchanged; placed further away it closes in) _wallDir = wrap180(s.yawDeg() + w.angleDeg); _wall = w; _wallOk = true; _wyN = _wyI = 0;
       _tgt = _wallDir; _dist = _dist2 = 0; _leg = 1; _pillarsN = 0; _pillarNear = false; _lastPillarM = -9; _rightOpenFrom = -1;
       _crabEst = 0; _crabN = 0; _cN = _cI = 0; _nextCrabM = 0; _askAt = turnAtM; _pitch0 = s.pitchDeg(); _pitchLp = s.pitchDeg(); _boost = 0; _tpTurn = _aimOn = false; _tpClear = 0; _tpEN = 0; _structReset();
       _wallGoodMs = now; _acqN = _jumpN = 0; _dSetPending = false; _rlMs = 0;
       _drift1.reset();
       _ds.start(yaw, now); _ds.setTarget(_tgt);
-      if (_log) { _log->start(); _log->event(MissionLog::EV_START); }
+      if (_log) { if (!_log->active()) _log->start(); _log->event(MissionLog::EV_START); }
       snprintf(_msg, sizeof(_msg), "started: left wall at %.2f m, turn right after %.1f m", _dSet, _askAt);
       _go(L1_FOLLOW);
     }
@@ -1484,24 +1533,26 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
         _shiftOff += clampf((_dist2 < _shiftEndM ? 10.0f : 0.0f) - _shiftOff, -1.0f, 1.0f);
         _tgt = wrap180(_base - _shiftOff + _latOff + seaTrimDeg);
       }
-      // END BOARD (campus_3: signboard on the right ~0.65 m before the end wall): after 70 %, 2 consistent right-side
-      // line fits -> stay parallel to it at the distance first seen (no forced distance); when it ends, keep its direction
+      // END BOARD (v10.3, campus_10.3): the board / low wall on the right is seen only in the last 3-5 m before the end wall (0.68-1.75 m in 7 logs: the
+      // distance tells how wide the rover ended: rover 7 1.57, campus_9 1.74, c102_3 0.98). After the gate: a right-side line 0.4-3.0 m, parallel to the path
+      // within 12 deg, 4 consistent fits -> steer to ebTarget (10 deg/m, max 12 deg, ramped 1 deg per scan); line lost -> the offset fades out (0.5 deg per scan).
       if (useEndBoard && _dist2 >= gate && now - _aimMs >= 250) {
         _aimMs = now;
         float dir, dist;
-        if (_boardFit(s, 0.3f, 1.5f, dir, dist)) {
+        if (_boardFit(s, 0.4f, 3.0f, dir, dist) && fabsf(wrap180(dir - _base)) <= 12.0f) {
           if (!_ebOn) {
             if (_ebN && fabsf(wrap180(dir - _ebDir)) < 5.0f) _ebN++; else _ebN = 1;
             _ebDir = dir;
-            if (_ebN >= 2) { _ebOn = true; _ebKeep = clampf(dist, 0.5f, 1.2f); if (_log) _log->event(MissionLog::EV_END_BOARD);
-              snprintf(_msg, sizeof(_msg), "end board %.2f m right - following it", dist); }
+            if (_ebN >= 4) { _ebOn = true; if (_log) _log->event(MissionLog::EV_END_BOARD);
+              snprintf(_msg, sizeof(_msg), "end board %.2f m right (target %.2f) - correcting", dist, ebTarget); }
           } else {
-            _ebDir = wrap180(_ebDir + 0.3f * wrap180(dir - _ebDir));
             _aimSeenMs = now;
-            _tgt = wrap180(_ebDir - clampf(10.0f * (dist - _ebKeep), -6.0f, 6.0f));   // right side: too far -> turn right
+            _ebOff += clampf(clampf(10.0f * (dist - ebTarget), -12.0f, 12.0f) - _ebOff, -1.0f, 1.0f);   // too far from the board -> turn right (+ offset = right)
           }
-        } else if (_ebOn && now - _aimSeenMs > 1000) _tgt = _ebDir;
+        } else if (_ebOn && now - _aimSeenMs > 1000) _ebOff += clampf(0.0f - _ebOff, -0.5f, 0.5f);
+        else if (!_ebOn) _ebN = 0;
       }
+      if (_ebOn) _tgt = wrap180(_tgt - _ebOff);                              // right = yaw minus
       _ds.setTarget(_tgt);
       if (_ds.update(s.imuOk(), yaw, _cruise(), now, l, r) == DriveStraight::FAIL) { if (_log) _log->event(MissionLog::EV_FAILSAFE); l = r = 0; _realign(s, _tgt, "heading failsafe - turning back"); }
       break;
@@ -1549,6 +1600,12 @@ void RouteMission::update(const Sensors& s, RoverLink& rover, float padL, float 
         const bool ended = _l3Seen && _dist - _noWallFrom >= wallEndM, none = !_l3Seen && _dist >= 4.0f;
         if (l4 && (ended || none)) {                // v9: the wall after T3 ended -> walkway along the interlock
           _l4Ph = 1; _l4PhStart = _dist; _l4Dir = _l3Seen ? _wallDir : _expDir; _l4KeepSet = false; _railN = 0;
+          if (_l3Seen && _l4DirN >= 12) {                    // v10.3: the wall END (corner, edge push) distorts the last direction: campus_10.3 -24.9 vs -36.6 deg
+            float t[48]; for (int i = 0; i < _l4DirN; i++) t[i] = wrap180(_l4DirBuf[i] - _wallDir);
+            for (int i = 1; i < _l4DirN; i++) { float v = t[i]; int j = i - 1; while (j >= 0 && t[j] > v) { t[j + 1] = t[j]; j--; } t[j + 1] = v; }
+            _l4Dir = wrap180(_wallDir + t[_l4DirN / 2]);       // median of the last 12 s of wall directions
+          }
+          _l4ObjSet = false;
           _l4Flat = s.pitchDeg(); _l4ScanMs = 0;
           if (_log) _log->event(MissionLog::EV_L4_OPEN);
           snprintf(_msg, sizeof(_msg), "leg 4: wall ended - walkway on %.0f deg, looking for the railings", _l4Dir);

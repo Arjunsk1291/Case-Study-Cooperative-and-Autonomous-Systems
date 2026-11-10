@@ -86,7 +86,8 @@ public:
   float leg3WallM = 0.6f;     // v8: leg 3 (wall after the open sea, before T3) closes in to this distance
   float nearMinInten = 0.0f;  // v8: LiDAR near-point intensity filter (0 = off; set from the logged near_inten)
   float seaTrimDeg = 0.0f;    // optional fixed heading trim (logs: no constant pull, mean -0.9 +- 2.5 deg) - leave 0
-  bool useEndBoard = false;           // after leg 3: T3 = turn LEFT at the building corner, follow the next left wall until it ends
+  bool useEndBoard = true;   // v10.3: end-board correction on (campus_10.3 request: if it goes wide it corrects with the board)
+  float ebTarget = 1.2f;      // m right of the rover at the end (board distance in the 6 good runs 0.7-1.3, median 1.2; rover 7 1.57, campus_9 1.74 = wide)
   float pillarPastM = 0.40f;   // v5c: turn this far past the pillar (was 0.60): crossing ~0.2-0.3 m closer to the pillar line
   float pillarSideM = 0.60f;
   float turnWinM = 5.0f;      // look for the turn pillar from (turnAtM - turnWinM); without one: turn at turnAtM + 2.5
@@ -204,6 +205,9 @@ private:
   // v10.3 START POSE (tools/sim_start_pose.py): placed anywhere / facing anywhere -> find the B wall, face away from it, then the pillar
   bool _apPlaced = false, _apPlaced0 = false; uint8_t _apOrient = 0, _apWn = 0; float _apBear[8], _apWd[8], _apYMin = -1.0f; bool _apWok[8];
   bool _wallLine(const Sensors& s, float& bearing, float& dist) const;
+  // v10.3 mission-start orient (campus_10.3 start photos): placed anywhere / facing any way at the B facade -> find the wall, turn so it is on the LEFT, then start
+  bool _soOn = false; uint8_t _soN = 0, _soRound = 0; float _soBear[8], _soDist[8]; bool _soOk[8]; uint32_t _soMs = 0, _soT0 = 0;
+  void _startOrient(const Sensors& s, uint32_t now);
   void _beginStartPose(const Sensors& s, bool placed);
   void _apAddScan(const Sensors& s);
   bool _apVote(float& x, float& y) const;
@@ -219,7 +223,7 @@ private:
   // entrance board: 0 search, 1 sideways pivot, 2 sideways roll, 3 parallel pivot
   uint8_t _bp = 0, _bdN = 0; float _bdDir[7], _bdDist[7], _bdLockDir = 0, _bdRollM = 0, _bdRollStart = 0; uint32_t _bdMs = 0;
   // end board
-  uint8_t _ebN = 0; float _ebKeep = 0, _ebDir = 0; bool _ebOn = false;
+  uint8_t _ebN = 0; float _ebKeep = 0, _ebDir = 0, _ebOff = 0; bool _ebOn = false;
   // v5 open-sea references + gyro drift
   DriftEst _drift1;                             // gyro drift measured on the leg-1 wall stretches
   float _mvT = 0, _lastMvT = 0;                 // driving time (s) - the BNO055 drifts only while driving
@@ -239,6 +243,8 @@ private:
   uint8_t _l4Ph = 0, _railN = 0; bool _rampSeen = false, _l4KeepSet = false, _railOk = false;
   float _l4Dir = 0, _l4Keep = 0, _railDir = 0, _railD = 0.6f, _l4Flat = 0, _l4PhStart = 0;
   uint32_t _rampMs = 0, _levelOkMs = 0, _railGoodMs = 0, _l4ScanMs = 0;
+  float _l4DirBuf[48]; uint8_t _l4DirN = 0, _l4DirI = 0;   // v10.3 (campus_10.3): last 48 smoothed wall directions -> the median is the walkway heading
+  float _l4ObjKeep = 0; bool _l4ObjSet = false;
   // v10.3 leg-4 RAMP OPENING (campus_10.2 run 4 drove onto the stairs 1.9 m right of it): tools/replay_l4_gap.py
   struct Gap { float y0, c, a, b; };
   Gap _gBuf[5], _gConf; uint8_t _gN = 0, _gAge = 0, _gLineN = 0; bool _gHave = false, _gCommit = false, _gWaitOn = false;
